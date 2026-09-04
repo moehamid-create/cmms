@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: cmms
+    runtime: docker
+    plan: starter
+    healthCheckPath: /healthz
+    disk:
+      name: cmms-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /data
+      # PORT is set automatically by Render — do not hardcode it.

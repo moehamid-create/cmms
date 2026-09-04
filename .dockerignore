@@ -1,0 +1,9 @@
+node_modules/
+npm-debug.log
+Dockerfile
+.dockerignore
+.git/
+cmms.db-shm
+cmms.db-wal
+.env
+.DS_Store
