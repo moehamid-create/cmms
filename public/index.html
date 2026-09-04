@@ -720,6 +720,7 @@ function migrate(d){
   const defC=d.compounds[0].id;
   d.users.forEach(u=>{
     if(u.phone==null)u.phone='';
+    if(u.email==null)u.email='';
     if(!Array.isArray(u.cmpIds))u.cmpIds=(u.role==='admin')?[]:[defC];
     if(u.role!=='admin'&&!u.cmpIds.some(x=>d.compounds.some(c=>c.id===x)))
       u.cmpIds=d.compounds.map(c=>c.id);
@@ -937,12 +938,6 @@ function togglePwVisibility(){
     if(btn) btn.textContent = db.lang==='ar'?'إظهار':'Show';
   }
 }
-function quickFill(u){
-  if($('lu')) $('lu').value = u;
-  if($('lp')) $('lp').value = '1234';
-  if($('btnLogin')) $('btnLogin').focus();
-}
-
 function loginHtml(){
   return `<div class="auth-wrapper">
     <!-- Left: Login Form Side -->
@@ -953,8 +948,8 @@ function loginHtml(){
           <p class="auth-sub">${lb('سجل الدخول إلى حسابك للمتابعة||Sign in to your account to continue')}</p>
         </div>
 
-        <!-- Google Sign-In Demo Button -->
-        <button type="button" class="btn-google" onclick="toast('${lb('لتجربة الدخول السريع، اختر أحد الحسابات التجريبية بالأسفل||For quick demo login, select one of the accounts below')}', 'ok')">
+        <!-- Google Sign-In (not enabled) -->
+        <button type="button" class="btn-google" onclick="toast('${lb('الدخول بحساب جوجل غير مفعّل — استخدم بيانات حسابك||Google sign-in is not enabled — use your account credentials')}', 'ok')">
           <svg class="google-icon" width="18" height="18" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
             <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
@@ -972,7 +967,7 @@ function loginHtml(){
           <div class="form-group">
             <label for="lu">${lb('البريد الإلكتروني أو اسم المستخدم||Email or Username')}</label>
             <div class="input-icon-wrap">
-              <input id="lu" type="text" placeholder="you@example.com" autocomplete="username" required value="admin">
+              <input id="lu" type="text" placeholder="you@example.com" autocomplete="username" required value="">
               <span class="input-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
               </span>
@@ -982,10 +977,10 @@ function loginHtml(){
           <div class="form-group">
             <div class="label-row">
               <label for="lp">${lb('كلمة المرور||Password')}</label>
-              <a href="javascript:void(0)" onclick="toast('${lb('كلمة المرور الافتراضية لجميع الحسابات هي: 1234||Default password for all accounts is: 1234')}', 'ok')" class="forgot-link">${lb('نسيت كلمة المرور؟||Forgot password?')}</a>
+              <a href="javascript:void(0)" onclick="toast('${lb('تواصل مع مدير النظام لإعادة تعيين كلمة المرور||Contact your administrator to reset your password')}', 'ok')" class="forgot-link">${lb('نسيت كلمة المرور؟||Forgot password?')}</a>
             </div>
             <div class="input-icon-wrap password-wrap">
-              <input id="lp" type="password" placeholder="••••••••" autocomplete="current-password" required value="1234">
+              <input id="lp" type="password" placeholder="••••••••" autocomplete="current-password" required value="">
               <span class="input-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               </span>
@@ -998,17 +993,6 @@ function loginHtml(){
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </button>
         </form>
-
-        <!-- Quick demo accounts -->
-        <div class="demo-accounts">
-          <div class="demo-title">⚡ ${lb('تسجيل دخول تجريبي سريع (كلمة المرور: 1234):||Quick Demo Access (Password: 1234):')}</div>
-          <div class="demo-chips">
-            <button type="button" class="demo-chip" onclick="quickFill('admin')">👑 ${lb('مدير النظام||Admin')}</button>
-            <button type="button" class="demo-chip" onclick="quickFill('eng')">🛠️ ${lb('المهندس||Engineer')}</button>
-            <button type="button" class="demo-chip" onclick="quickFill('sami')">🔧 ${lb('فني (سامي)||Tech (Sami)')}</button>
-            <button type="button" class="demo-chip" onclick="quickFill('store')">📦 ${lb('المستودع||Store')}</button>
-          </div>
-        </div>
 
         <div class="auth-card-footer">
           <span>${lb('ليس لديك حساب؟||Don\'t have an account?')}</span>
@@ -1126,9 +1110,10 @@ async function doLogin(e){
     console.warn('Backend server not reachable, using local database mode.');
   }
 
-  if(!serverOk){
+    if(!serverOk){
     if(!db){ db = loadLocalDb(); db = migrate(db); }
-    const localUser = (db.users || []).find(x => (x.u.toLowerCase() === rawU.toLowerCase() || x.u.toLowerCase() === u) && String(x.p) === String(p));
+    const rl = rawU.toLowerCase();
+    const localUser = (db.users || []).find(x => (String(x.u||'').toLowerCase() === rl || String(x.u||'').toLowerCase() === u || (x.email && String(x.email).toLowerCase() === rl)) && String(x.p) === String(p));
     if(!localUser){
       return toast(lb('⚠ اسم المستخدم أو كلمة المرور غير صحيحة||⚠ Wrong username or password'), 'err');
     }
@@ -2929,7 +2914,7 @@ function vUsers(){
   return `<div class="toolbar"><button class="btn" onclick="userForm()">＋ ${lb('مستخدم جديد||New User')}</button></div>
   <div class="card"><h2>${lb('المستخدمون||Users')} (${db.users.length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الاسم||Name')}</th><th>${lb('الدخول||Username')}</th><th>${lb('الدور||Role')}</th><th>${lb('الجوال||Mobile')}</th><th>${lb('المجمعات||Compounds')}</th><th></th></tr>
-  ${db.users.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td>${esc(u.u)}</td>
+  ${db.users.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td>${esc(u.u)}${u.email?`<br><span class="muted" dir="ltr">${esc(u.email)}</span>`:''}</td>
     <td><span class="badge ${u.role==='admin'?'b-down':u.role==='tech'?'b-open':'b-prog'}">${ROLES[u.role]}</span></td>
     <td>${esc(u.phone||'—')}</td>
     <td>${u.role==='admin'?`<span class="badge b-ok">${lb('الكل||All')}</span>`:(u.cmpIds||[]).map(id=>cmpName(id)).join('، ')||'—'}</td>
@@ -2944,6 +2929,7 @@ function userForm(id){
   <div class="fg">
     <div><label>${lb('الاسم الكامل *||Full Name *')}</label><input id="fu_n" value="${esc(u.name||'')}"></div>
     <div><label>${lb('اسم الدخول *||Username *')}</label><input id="fu_u" value="${esc(u.u||'')}"></div>
+    <div><label>${lb('البريد الإلكتروني (للدخول أيضاً)||Email (also for login)')}</label><input id="fu_e" type="email" dir="ltr" placeholder="name@company.com" value="${esc(u.email||'')}"></div>
     <div><label>${lb('كلمة المرور *||Password *')}</label><input id="fu_p" value="${esc(u.p||'')}"></div>
     <div><label>${lb('الدور||Role')}</label><select id="fu_r">${Object.keys(ROLES).map(k=>`<option value="${k}" ${u.role===k?'selected':''}>${ROLES[k]}</option>`).join('')}</select></div>
     <div><label>${lb('رقم الجوال (لواتساب)||Mobile (for WhatsApp)')}</label><input id="fu_ph" value="${esc(u.phone||'')}" placeholder="${lb('05xxxxxxxx||05xxxxxxxx')}"></div>
@@ -2958,15 +2944,18 @@ function userForm(id){
 }
 function saveUser(id){
   const n=$('fu_n').value.trim(),un=$('fu_u').value.trim(),p=$('fu_p').value;
+  const email=$('fu_e').value.trim().toLowerCase();
   if(!n||!un||!p)return toast(lb('⚠ أكمل الحقول||⚠ Fill all fields'),'err');
-  if(db.users.some(x=>x.u===un&&x.id!==id))return toast(lb('⚠ اسم الدخول مستخدم||⚠ Username taken'),'err');
+  if(email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return toast(lb('⚠ البريد الإلكتروني غير صحيح||⚠ Invalid email'),'err');
+  if(db.users.some(x=>x.u.toLowerCase()===un.toLowerCase()&&x.id!==id))return toast(lb('⚠ اسم الدخول مستخدم||⚠ Username taken'),'err');
+  if(email&&db.users.some(x=>String(x.email||'').toLowerCase()===email&&x.id!==id))return toast(lb('⚠ البريد مستخدم لحساب آخر||⚠ Email already used'),'err');
   const cmpIds=[...document.querySelectorAll('.fu_cmp:checked')].map(x=>x.value);
   const role=(id&&id===me.id)?'admin':$('fu_r').value; /* المدير يبقى مديراً — لا يستطيع سحب صلاحيته من نفسه */
   if(role!=='admin'&&!cmpIds.length)return toast(lb('⚠ اختر مجمعاً واحداً على الأقل لهذا المستخدم||⚠ Pick at least one compound for this user'),'err');
   const phone=$('fu_ph').value.trim();
   if(id){const x=db.users.find(y=>y.id===id);
-    Object.assign(x,{name:n,u:un,p,role,phone,cmpIds,activeCmp:(x.activeCmp&&(cmpIds.includes(x.activeCmp)||role==='admin'))?x.activeCmp:''});}
-  else db.users.push({id:uid('U'),name:n,u:un,p,role,phone,cmpIds,activeCmp:''});
+    Object.assign(x,{name:n,u:un,p,email,role,phone,cmpIds,activeCmp:(x.activeCmp&&(cmpIds.includes(x.activeCmp)||role==='admin'))?x.activeCmp:''});}
+  else db.users.push({id:uid('U'),name:n,u:un,p,email,role,phone,cmpIds,activeCmp:''});
   persist();closeModal();paintTab();toast(lb('✔ تم||Saved'),'ok');
 }
 function delUser(id){if(!confirm(lb('حذف المستخدم؟||Delete user?')))return;

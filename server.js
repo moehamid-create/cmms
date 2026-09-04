@@ -104,7 +104,7 @@ setInterval(() => {
 function seedState(){
   const rid=p=>p+crypto.randomBytes(5).toString('hex');
   const C=rid('C');
-  const U=o=>Object.assign({id:rid('U'),phone:'',cmpIds:null,activeCmp:''},o);
+  const U=o=>Object.assign({id:rid('U'),phone:'',email:'',cmpIds:null,activeCmp:''},o);
   const d={
     lang:'ar',ver:6,seq:0,prSeq:0,poSeq:0,rnSeq:0,prjSeq:0,ctSeq:0,seeded:false,
     users:[
@@ -207,7 +207,12 @@ app.post('/api/login', loginRateLimit, async (req,res)=>{
   const {u,p} = req.body || {};
   const rawU = String(u||'').trim().toLowerCase();
   const uname = rawU.includes('@') ? rawU.split('@')[0] : rawU;
-  const user = (st.data.users||[]).find(x=>(x.u.toLowerCase()===rawU || x.u.toLowerCase()===uname) && x.p===String(p||''));
+  /* الدخول باسم المستخدم أو البريد الإلكتروني */
+  const user = (st.data.users||[]).find(x => {
+    const uu = String(x.u || '').toLowerCase();
+    const em = String(x.email || '').toLowerCase();
+    return (uu === rawU || uu === uname || (em && em === rawU)) && x.p === String(p||'');
+  });
   if(!user)  return res.status(401).json({error:'BAD_LOGIN'});
   const token = crypto.randomBytes(24).toString('hex');
   sessions.set(token,{userId:user.id, at:Date.now()});
