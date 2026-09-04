@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>نظام أملاكي — إدارة صيانة المجمعات</title>
+<title>أملاكي — إدارة صيانة المجمعات</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600;700;800&family=Readex+Pro:wght@300;400;500;600;700&family=Reem+Kufi:wght@500;600;700&display=swap" rel="stylesheet">
@@ -1050,7 +1050,7 @@ function loginHtml(){
         <div class="hero-brand">
           <div class="hero-logo-box">أ</div>
           <div class="hero-brand-text">
-            <span class="hero-app-name">${lb('نظام أملاكي||Amlaki System')}</span>
+            <span class="hero-app-name">${lb('أملاكي||Amlaki')}</span>
             <span class="hero-app-sub">${lb('إدارة صيانة وتشغيل المجمعات والمرافق||Compound & Facility Maintenance')}</span>
           </div>
         </div>
@@ -1280,7 +1280,7 @@ function shell(){
   <div class="layout">
     <aside class="side">
       <div class="brand"><span class="logo">أ</span>
-        <span class="brand-t">${lb('نظام أملاكي||Amlaki CMMS')}<small>${lb('إدارة صيانة المجمعات||Compound Maintenance')}</small></span>
+        <span class="brand-t">${lb('أملاكي||Amlaki')}<small>${lb('إدارة صيانة المجمعات||Compound Maintenance')}</small></span>
       </div>
       ${cmpSel}
       <div class="sidediv"></div>
@@ -1309,9 +1309,9 @@ function shell(){
           <button class="bell" title="${lb('الإشعارات||Notifications')}" onclick="notifModal()">🔔${uc?`<span class="bellb">${uc}</span>`:''}</button>
         </span>
       </div>
-      <div class="printhead">${lb('نظام أملاكي||Amlaki CMMS')} — ${esc(cmpName(act))} — ${fmtD(todayISO())}</div>
+      <div class="printhead">${lb('أملاكي||Amlaki')} — ${esc(cmpName(act))} — ${fmtD(todayISO())}</div>
       <main id="view"></main>
-      <footer>${lb('نظام أملاكي||Amlaki CMMS')} v1.0 · Web+SQLite — ${lb('مجمعات متعددة · واتساب · مزامنة فورية||Multi-compound · WhatsApp · Live sync')}</footer>
+      <footer>${lb('أملاكي||Amlaki')} v1.0 · Web+SQLite — ${lb('مجمعات متعددة · واتساب · مزامنة فورية||Multi-compound · WhatsApp · Live sync')}</footer>
     </div>
   </div>`;
 }
@@ -1512,6 +1512,19 @@ function kpi(ic,num,lbl,tab,warn,extra){
     <div class="khead"><span class="kico">${ic}</span>${extra||''}</div>
     <div class="num">${num}</div><div class="lbl">${lbl}</div></div>`;
 }
+/* متأخرة؟ وقتاً أو عدّاداً */
+function pmIsLate(p){ if(daysUntil(nextDueOf(p))<=0)return true; const md=meterDueIn(p); return md!=null&&md<=0; }
+/* قفزة من تنبيه الداشبورد إلى السجل المصفّى مباشرة */
+function goAlert(i){
+  const a=(window._alerts||[])[i];if(!a)return;
+  TAB=a.tab;
+  if(a.tab==='wos'){FILT.wos=a.q||'';FILT.woStatus=a.ws||'all';}
+  else if(a.tab==='inv')FILT.inv=a.q||'';
+  else if(a.tab==='assets')FILT.assets=a.q||'';
+  else if(a.tab==='proc')FILT.procTab='pr';
+  render();
+}
+function goWO(no){TAB='wos';FILT.wos=no;FILT.woStatus='all';render();}
 function vDash(){
   const act=activeCmp();
   const scope=(isTech()?db.wos.filter(w=>w.assigneeId===me.id):db.wos).filter(w=>w.compoundId===act);
@@ -1521,21 +1534,22 @@ function vDash(){
   const down=db.assets.filter(a=>a.status==='down'&&a.compoundId===act);
   const low=db.inv.filter(i=>Number(i.qty)<=Number(i.minQty));
   const pmAll=isTech()?[]:db.pms.filter(p=>p.compoundId===act);
-  const pmLateN=isTech()?0:pmAll.filter(p=>daysUntil(nextDueOf(p))<=0).length;
+  const pmLateN=isTech()?0:pmAll.filter(p=>pmIsLate(p)).length;
   const pmSoonList=isTech()?[]:pmAll.filter(p=>daysUntil(nextDueOf(p))<=14)
     .sort((a,b)=>daysUntil(nextDueOf(a))-daysUntil(nextDueOf(b)));
-  /* --- مؤشرات الأداء: متجاوز الاستحقاق + MTTR + التزام الصيانة الدورية --- */
+  /* --- مؤشرات الأداء: متجاوز الاستحقاق + MTTR (آخر 90 يوم) + التزام الصيانة الدورية --- */
   const odN=unclosed.filter(w=>w.dueDate&&daysUntil(w.dueDate)<0).length;
-  const closedW=scope.filter(w=>w.status==='closed'&&w.closedAt);
+  const cut90=Date.now()-90*864e5;
+  const closedW=scope.filter(w=>w.status==='closed'&&w.closedAt&&w.closedAt>=cut90);
   const mttrH=closedW.length?closedW.reduce((s,w)=>s+Math.max(0,(w.closedAt-(w.startedAt||w.createdAt||w.closedAt))/36e5),0)/closedW.length:0;
-  const pmOkN=pmAll.filter(p=>daysUntil(nextDueOf(p))>0).length;
+  const pmOkN=pmAll.filter(p=>!pmIsLate(p)).length;
   const pmComp=pmAll.length?Math.round(pmOkN/pmAll.length*100):100;
 
-  /* --- التنبيهات المهمة والطارئة فقط --- */
+  /* --- التنبيهات المهمة والطارئة فقط (كل تنبيه يقفز لسجله المصفّى) --- */
   const alerts=[];
   unclosed.filter(w=>w.priority==='urgent')
-   .forEach(w=>alerts.push({ic:'🔴',h:`<b>${PRIO[w.priority]}</b>: ${esc(w.title)} — ${esc(w.assetName||w.bname||'')}`,tab:'wos'}));
-  pmAll.filter(p=>daysUntil(nextDueOf(p))<=0)
+   .forEach(w=>alerts.push({ic:'🔴',h:`<b>${PRIO[w.priority]}</b>: ${esc(w.title)} — ${esc(w.assetName||w.bname||'')}`,tab:'wos',q:w.no}));
+  pmAll.filter(p=>pmIsLate(p))
    .forEach(p=>alerts.push({ic:'🗓',h:`${lb('صيانة دورية متأخرة:||Overdue PM:')} <b>${esc(p.name)}</b>`,tab:'pm'}));
   pmAll.filter(p=>{const d=daysUntil(nextDueOf(p));return d>0&&d<=3;})
    .forEach(p=>alerts.push({ic:'🗓',h:`${lb('صيانة قريبة:||PM soon:')} <b>${esc(p.name)}</b> (${fmtD(nextDueOf(p))})`,tab:'pm'}));
@@ -1550,8 +1564,11 @@ function vDash(){
       const dd=daysUntil(x.leaseEnd);
       if(dd<=45)alerts.push({ic:'🔑',h:`${dd<0?lb('إيجار منتهٍ:||Expired lease:'):lb('إيجار ينتهي قريباً:||Lease ending:')} <b>${esc(x.name)}</b> (${fmtD(x.leaseEnd)})`,tab:'units'});});
   }
-  low.forEach(i=>alerts.push({ic:'📦',h:`${lb('مخزون تحت الحد:||Low stock:')} <b>${esc(i.name)}</b> (${i.qty} ${esc(i.unit)})`,tab:'inv'}));
-  down.forEach(a=>alerts.push({ic:'⚙️',h:`${esc(a.name)} — ${lb('متوقف||Down')}`,tab:'assets'}));
+  low.forEach(i=>alerts.push({ic:'📦',h:`${lb('مخزون تحت الحد:||Low stock:')} <b>${esc(i.name)}</b> (${i.qty} ${esc(i.unit)})`,tab:'inv',q:i.name}));
+  down.forEach(a=>alerts.push({ic:'⚙️',h:`${esc(a.name)} — ${lb('متوقف||Down')}`,tab:'assets',q:a.name}));
+  window._alerts=alerts;
+  const showAll=!!window._alx;
+  const visA=showAll?alerts:alerts.slice(0,8);
 
   const qa=[];
   qa.push(`<button class="btn" onclick="woForm()">＋ ${lb('بلاغ عطل جديد||New Fault Report')}</button>`);
@@ -1562,7 +1579,8 @@ function vDash(){
   if(isEng()&&!db.seeded&&!db.assets.length&&!db.wos.length)qa.push(`<button class="btn ghost" onclick="loadDemo()">🧪 ${lb('بيانات تجريبية||Demo Data')}</button>`);
 
   const alertsCard=`<div class="card ${isTech()?'dg-6':'dg-7'}"><h2>🔔 ${lb('يحتاج انتباهك (اضغط للمعالجة)||Needs Attention (click to act)')}</h2>
-    ${alerts.length?alerts.slice(0,8).map(a=>`<div class="alert-li alrow" onclick="goTab('${a.tab}')">${a.ic} ${a.h}</div>`).join('')
+    ${alerts.length?visA.map(a=>{const gi=alerts.indexOf(a);return `<div class="alert-li alrow" onclick="goAlert(${gi})">${a.ic} ${a.h}</div>`;}).join('')
+      +(alerts.length>8?`<div style="text-align:center;margin-top:8px"><button class="btn ghost sm" onclick="window._alx=${showAll?'false':'true'};paintTab()">${showAll?lb('عرض أقل||Show less'):lb('عرض الكل||Show all')+' ('+alerts.length+')'}</button></div>`:'')
       :`<div class="empty">👍 ${lb('كل شيء تحت السيطرة||All clear')}</div>`}</div>`;
 
   const stats=`
@@ -1596,7 +1614,7 @@ function miniWoTable(list){
   if(!list.length)return `<div class="empty">${lb('لا يوجد||None')}</div>`;
   return `<div class="tbl-wrap"><table><tr><th>${lb('الرقم||No.')}</th><th>${lb('المهمة||Task')}</th><th>${lb('الأولوية||Priority')}</th><th>${lb('الحالة||Status')}</th></tr>
   ${list.slice().sort((a,b)=>({urgent:0,high:1,normal:2}[a.priority]-{urgent:0,high:1,normal:2}[b.priority]))
-    .map(w=>`<tr><td>${w.no}</td><td><b>${esc(w.title)}</b><br><span class="muted">${esc(w.assetName||'')}</span></td>
+    .map(w=>`<tr onclick="goWO('${w.no}')" style="cursor:pointer" title="${lb('فتح في أوامر الشغل||Open in work orders')}"><td>${w.no}</td><td><b>${esc(w.title)}</b><br><span class="muted">${esc(w.assetName||'')}</span></td>
     <td><span class="badge b-${w.priority}">${PRIO[w.priority]}</span></td>
     <td><span class="badge ${WSTAT[w.status][1]}">${WSTAT[w.status][0]}</span></td></tr>`).join('')}</table></div>`;
 }
