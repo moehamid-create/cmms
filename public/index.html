@@ -637,6 +637,13 @@ function persist(){
   },400);
 }
 function backupOnLaunch(){}
+/* نسخ رابط بوابة المستأجرين (مع مجمع محدد مسبقاً إن أمكن) */
+function copyPortal(){
+  const url=location.origin+'/request.html'+(activeCmp()?('?c='+activeCmp()):'');
+  const done=()=>toast(lb('✔ نُسخ رابط البوابة — الصقه للمستأجرين||✔ Portal link copied — share it with tenants'),'ok');
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(done,()=>{prompt(lb('انسخ الرابط:||Copy the link:'),url);});
+  else prompt(lb('انسخ الرابط:||Copy the link:'),url);
+}
 
 /* ===== BACKUP (DOWNLOAD) ===== */
 function bkNow(){
@@ -1342,7 +1349,9 @@ function saveCmp(iStr,kind){
 }
 function delCmp(i){const c=db.compounds[i];
   if(db.compounds.length<=1)return toast(lb('⚠ لا يمكن حذف آخر مجمع — أنشئ مجمعاً جديداً أولاً||⚠ Cannot delete the last compound — create another first'),'err');
-  const used=db.buildings.some(b=>b.compoundId===c.id)||db.assets.some(a=>a.compoundId===c.id)||db.wos.some(w=>w.compoundId===c.id);
+  const used=db.buildings.some(b=>b.compoundId===c.id)||db.assets.some(a=>a.compoundId===c.id)||db.wos.some(w=>w.compoundId===c.id)
+    ||db.pms.some(p=>p.compoundId===c.id)||db.projects.some(p=>p.compoundId===c.id)||db.contracts.some(p=>p.compoundId===c.id)
+    ||db.employees.some(p=>p.compoundId===c.id)||db.units.some(u=>{const b=db.buildings.find(x=>x.id===u.buildingId);return b&&b.compoundId===c.id;});
   if(used)return toast(lb('⚠ لا يمكن الحذف — توجد بيانات مرتبطة بهذا المجمع||⚠ Cannot delete — data is linked to this compound'),'err');
   if(!confirm(lb('حذف هذا المجمع؟||Delete this compound?')))return;
   db.compounds.splice(i,1);
@@ -1391,9 +1400,9 @@ function vPM(){
     <td>${fmtD(p.lastDone)}</td>
     <td>${du<0?`<span class="badge b-urgent">${lb('متأخرة||OVERDUE')} ${-du} ${lb('يوم||d')}</span> `:''}${fmtD(nd)}</td>
     <td>${esc(p.assigneeName||'—')}</td>
-    <td nowrap>${isEng()?`<button class="btn sm ghost" onclick="pmDone(${i})">✅ ${lb('سجّل إنجاز||Log Done')}</button>
-    <button class="btn sm ghost" onclick="pmForm(${i})">✏</button>
-    <button class="btn sm danger" onclick="delPm(${i})">🗑</button>`:''}</td></tr>`;
+    <td nowrap>${isEng()?`<button class="btn sm ghost" onclick="pmDone('${p.id}')">✅ ${lb('سجّل إنجاز||Log Done')}</button>
+    <button class="btn sm ghost" onclick="pmForm('${p.id}')">✏</button>
+    <button class="btn sm danger" onclick="delPm('${p.id}')">🗑</button>`:''}</td></tr>`;
   });
   return `<div class="toolbar">
     ${isEng()?`<button class="btn" onclick="pmForm()">＋ ${lb('خطة صيانة جديدة||New PM Plan')}</button>
@@ -1404,12 +1413,12 @@ function vPM(){
   <tr><th>${lb('الخطة||Plan')}</th><th>${lb('الأصل||Asset')}</th><th>${lb('التكرار||Frequency')}</th><th>${lb('آخر تنفيذ||Last Done')}</th><th>${lb('الاستحقاق القادم||Next Due')}</th><th>${lb('المسؤول||Assignee')}</th><th></th></tr>
   ${rows||`<tr><td colspan="7"><div class="empty">${lb('لا خطط بعد||No plans yet')}</div></td></tr>`}</table></div></div>`;
 }
-function pmForm(i){
-  const p=i!=null?db.pms[i]:{};
+function pmForm(pid){
+  const p=pid?db.pms.find(x=>x.id===pid)||{}:{};
   const opts=db.assets.filter(a=>a.compoundId===activeCmp()).map(a=>`<option value="${a.id}" ${p.assetId===a.id?'selected':''}>${esc(a.name)}</option>`).join('');
   const act=activeCmp();
   const techs=db.users.filter(u=>u.role==='tech'&&(u.cmpIds||[]).includes(act));
-  modal(`<h3>${i!=null?lb('تعديل خطة||Edit Plan'):lb('خطة صيانة جديدة||New PM Plan')}</h3>
+  modal(`<h3>${pid?lb('تعديل خطة||Edit Plan'):lb('خطة صيانة جديدة||New PM Plan')}</h3>
   <label>${lb('اسم الخطة *||Plan Name *')}</label><input id="fp_n" value="${esc(p.name||'')}">
   <div class="fg">
     <div><label>${lb('الأصل||Asset')}</label><select id="fp_a"><option value="">—</option>${opts}</select></div>
@@ -1422,21 +1431,23 @@ function pmForm(i){
   <label>${lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')}</label>
   <textarea id="fp_t" rows="4">${esc(p.tasks||'')}</textarea>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
-  <button class="btn" onclick="savePM(${i??'null'})">${lb('حفظ||Save')}</button></div>`);
+  <button class="btn" onclick="savePM('${pid||''}')">${lb('حفظ||Save')}</button></div>`);
 }
-function savePM(i){
+function savePM(pid){
   const n=$('fp_n').value.trim();if(!n)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
   const tech=db.users.find(u=>u.id===$('fp_as').value);
   const o={name:n,assetId:$('fp_a').value,compoundId:activeCmp(),freqVal:Math.max(1,+$('fp_fv').value||1),freqUnit:$('fp_fu').value,
     lastDone:$('fp_l').value||todayISO(),assigneeId:$('fp_as').value||'',assigneeName:tech?tech.name:'',tasks:$('fp_t').value};
-  if(i!=null){Object.assign(db.pms[i],o);delete db.pms[i].nextDue;}
+  if(pid){const ex=db.pms.find(x=>x.id===pid);if(!ex)return toast(lb('⚠ الخطة غير موجودة||⚠ Plan not found'),'err');Object.assign(ex,o);delete ex.nextDue;}
   else db.pms.push(Object.assign({id:uid('P')},o));
   persist();closeModal();paintTab();toast(lb('✔ حُفظت الخطة||✔ Plan saved'),'ok');
 }
-function pmDone(i){const p=db.pms[i];p.lastDone=todayISO();
+function pmDone(pid){const p=db.pms.find(x=>x.id===pid);if(!p)return;
+  p.lastDone=todayISO();
   p.nextDue=addDays(todayISO(),intervalDays(p));
   persist();paintTab();toast(lb('✔ سُجل الإنجاز. القادم: ||✔ Logged. Next: ')+fmtD(p.nextDue),'ok');}
-function delPm(i){if(!confirm(lb('حذف الخطة؟||Delete plan?')))return;db.pms.splice(i,1);persist();paintTab();}
+function delPm(pid){if(!confirm(lb('حذف الخطة؟||Delete plan?')))return;
+  const i=db.pms.findIndex(x=>x.id===pid);if(i<0)return;db.pms.splice(i,1);persist();paintTab();}
 
 /* ===== DASHBOARD ===== */
 function monthKey(msOrIso){const d=(typeof msOrIso==='string'&&msOrIso.length===10)?new Date(msOrIso+'T00:00:00'):new Date(msOrIso);
@@ -1470,6 +1481,12 @@ function vDash(){
   const pmLateN=isTech()?0:pmAll.filter(p=>daysUntil(nextDueOf(p))<=0).length;
   const pmSoonList=isTech()?[]:pmAll.filter(p=>daysUntil(nextDueOf(p))<=14)
     .sort((a,b)=>daysUntil(nextDueOf(a))-daysUntil(nextDueOf(b)));
+  /* --- مؤشرات الأداء: متجاوز الاستحقاق + MTTR + التزام الصيانة الدورية --- */
+  const odN=unclosed.filter(w=>w.dueDate&&daysUntil(w.dueDate)<0).length;
+  const closedW=scope.filter(w=>w.status==='closed'&&w.closedAt);
+  const mttrH=closedW.length?closedW.reduce((s,w)=>s+Math.max(0,(w.closedAt-(w.startedAt||w.createdAt||w.closedAt))/36e5),0)/closedW.length:0;
+  const pmOkN=pmAll.filter(p=>daysUntil(nextDueOf(p))>0).length;
+  const pmComp=pmAll.length?Math.round(pmOkN/pmAll.length*100):100;
 
   /* --- التنبيهات المهمة والطارئة فقط --- */
   const alerts=[];
@@ -1498,6 +1515,7 @@ function vDash(){
   if(isEng())qa.push(`<button class="btn ghost" onclick="runScheduler()">⚡ ${lb('تشغيل الجدولة||Run Scheduler')}</button>`);
   if(canInv())qa.push(`<button class="btn ghost" onclick="TAB='inv';render();moveForm('in')">📥 ${lb('وارد مخزون||Stock In')}</button>`);
   if(canProc())qa.push(`<button class="btn ghost" onclick="TAB='proc';FILT.procTab='pr';render();prForm()">🛒 ${lb('طلب شراء||New PR')}</button>`);
+  if(isEng())qa.push(`<button class="btn ghost" onclick="copyPortal()">🏠 ${lb('رابط بوابة المستأجرين||Tenant Portal Link')}</button>`);
   if(isEng()&&!db.seeded&&!db.assets.length&&!db.wos.length)qa.push(`<button class="btn ghost" onclick="loadDemo()">🧪 ${lb('بيانات تجريبية||Demo Data')}</button>`);
 
   const alertsCard=`<div class="card ${isTech()?'dg-6':'dg-7'}"><h2>🔔 ${lb('يحتاج انتباهك (اضغط للمعالجة)||Needs Attention (click to act)')}</h2>
@@ -1507,7 +1525,10 @@ function vDash(){
   const stats=`
     ${kpi('🧾',openN,lb('بلاغات مفتوحة||Open Reports'),'wos')}
     ${kpi('🔴',urgN,lb('طوارئ غير مغلقاة||Open Urgent'),'wos',urgN>0)}
+    ${kpi('⏰',odN,lb('متجاوزة الاستحقاق||Overdue'),'wos',odN>0)}
+    ${kpi('⏱',closedW.length?(mttrH>=10?Math.round(mttrH):mttrH.toFixed(1))+' '+lb('ساعة||h'):'—',lb('متوسط زمن الإصلاح MTTR||Avg Repair Time'),'wos')}
     ${isTech()?'':kpi('🗓',pmLateN,lb('صيانة دورية متأخرة||Overdue PM'),'pm',pmLateN>0)}
+    ${isTech()?'':kpi('✅',pmComp+'%',lb('التزام الصيانة الدورية||PM Compliance'),'pm',pmComp<80)}
     ${kpi('⚙️',down.length,lb('أصول متوقفة||Assets Down'),'assets',down.length>0)}
     ${kpi('📦',low.length,lb('أصناف تحت الحد||Low Stock'),'inv',low.length>0)}`;
 
@@ -1643,7 +1664,10 @@ function saveAsset(id){
   else db.assets.push(Object.assign({id:uid('A'),projectId:''},o));
   persist();closeModal();paintTab();toast(lb('✔ تم الحفظ||✔ Saved'),'ok');
 }
-function delAsset(id){if(!confirm(lb('حذف هذا الأصل؟||Delete this asset?')))return;
+function delAsset(id){
+  const linked=db.wos.some(w=>w.assetId===id)||db.pms.some(p=>p.assetId===id);
+  if(linked)return toast(lb('⚠ لا يمكن الحذف — توجد أوامر شغل أو خطط صيانة مرتبطة بهذا الأصل||⚠ Cannot delete — linked work orders or PM plans exist'),'err');
+  if(!confirm(lb('حذف هذا الأصل؟||Delete this asset?')))return;
   db.assets=db.assets.filter(a=>a.id!==id);persist();paintTab();}
 function assetPhotos(id){
   const a=db.assets.find(x=>x.id===id);if(!a)return;
@@ -1770,7 +1794,7 @@ function vUnits(){
     `<tr><td colspan="8"><div class="empty">${lb('لا مستأجرين بعد||No tenants yet')}</div></td></tr>`}</table></div></div>`;
 }
 function cmpTenants(){const ids=new Set(cmpUnits().map(u=>u.id));
-  return db.tenants.filter(t=>ids.has(t.unitId));}
+  return db.tenants.filter(t=>ids.has(t.unitId)||!t.unitId);}
 function unitForm(id){
   if(!isEng())return;
   const u=id?db.units.find(x=>x.id===id):{};
@@ -1808,8 +1832,10 @@ function saveUnit(idStr){
   }
   persist();closeModal();paintTab();toast(lb('✔ تم||Saved'),'ok');
 }
-function delUnit(id){if(!confirm(lb('حذف الوحدة؟ سيُفصل المستأجر المرتبط.||Delete unit? Its tenant will be detached.')))return;
-  const t=db.tenants.find(x=>x.unitId===id);if(t)t.unitId='';
+function delUnit(id){
+  const occ=db.tenants.find(x=>x.unitId===id);
+  if(occ)return toast(lb('⚠ الوحدة مشغولة بـ "'+occ.name+'" — انقل المستأجر أو احذفه أولاً||⚠ Unit is occupied by "'+occ.name+'" — relocate or delete the tenant first'),'err');
+  if(!confirm(lb('حذف الوحدة؟||Delete unit?')))return;
   db.units=db.units.filter(u=>u.id!==id);persist();paintTab();}
 function bulkUnitsForm(){
   if(!isEng())return;
@@ -1867,6 +1893,12 @@ function tenantForm(id,presetUnit){
 function saveTenant(idStr){
   const n=$('ftn_n').value.trim();if(!n)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
   const unitId=$('ftn_u').value;
+  if(unitId){const nu=db.units.find(u=>u.id===unitId);
+    if(nu&&nu.tenantId&&nu.tenantId!==idStr){
+      const prev=db.tenants.find(x=>x.id===nu.tenantId);
+      const pn=prev?prev.name:'؟';
+      if(!confirm(lb('⚠ الوحدة مشغولة بـ "'+pn+'" — سيتم إخلاؤها وإسنادها إلى "'+n+'". متابعة؟||⚠ Unit is occupied by "'+pn+'" — it will be vacated and assigned to "'+n+'". Continue?')))return;
+    }}
   let t;
   if(idStr)t=db.tenants.find(x=>x.id===idStr);
   else{t={id:uid('T')};db.tenants.push(t);}
@@ -1985,6 +2017,7 @@ function vWOs(){
   const chip=k=>`<button class="chip ${FILT.woStatus===k?'on':''}" onclick="FILT.woStatus='${k}';paintTab()">${
     {all:lb('الكل||All'),open:WSTAT.open[0],inprog:WSTAT.inprog[0],wait:WSTAT.wait[0],closed:WSTAT.closed[0]}[k]}</button>`;
   const ix=w=>db.wos.indexOf(w);
+  const portalBadge=` <span class="badge b-open" title="${lb('من بوابة المستأجرين||From tenant portal')}">🏠</span>`;
   return `<div class="toolbar"><button class="btn" onclick="woForm()">＋ ${lb('بلاغ عطل جديد||New Fault Report')}</button>
     <button class="btn ghost" onclick="window.print()">🖨 ${lb('طباعة||Print')}</button></div>
   <div class="chips">${chip('all')}${chip('open')}${chip('inprog')}${chip('wait')}${chip('closed')}</div>
@@ -2003,7 +2036,7 @@ function vWOs(){
     if(isEng()){acts+=`<button class="btn sm ghost" onclick="woForm('${ix(w)}')">✏</button>
       <button class="btn sm danger" onclick="woDel(${ix(w)})">🗑</button>`;}
     const wa=(w.status!=='closed'&&w.assigneeId)?`<button class="btn sm ghost" title="${lb('إرسال واتساب||Send WhatsApp')}" onclick="waBtn(${ix(w)})">💬</button>`:'';
-    return `<tr class="${od?'overdue':''}"><td>${w.no}${w.type==='pm'?' <span class="badge b-maint">🗓</span>':''}${w.projectId?' <span class="badge b-open">🧱</span>':''}${w.unitCode?' <span class="badge b-ok">🏘</span>':''}</td>
+    return `<tr class="${od?'overdue':''}"><td>${w.no}${w.type==='pm'?' <span class="badge b-maint">🗓</span>':''}${w.source==='portal'?portalBadge:''}${w.projectId?' <span class="badge b-open">🧱</span>':''}${w.unitCode?' <span class="badge b-ok">🏘</span>':''}</td>
     <td><b>${esc(w.title)}</b><br><span class="muted">${esc((w.desc||'').slice(0,55))}</span></td>
     <td>${esc(w.assetName||'—')}<br><span class="muted">${esc([w.bname,w.unitCode,w.tenantName].filter(Boolean).join(' · ')||'')}</span></td>
     <td><span class="badge b-${w.priority}">${PRIO[w.priority]}</span></td>
@@ -2136,6 +2169,9 @@ function addPartRow(){
 }
 function doCloseWO(i){
   const w=db.wos[i],used=[];
+  const notes=$('wc_n').value.trim();
+  if(!notes)return toast(lb('⚠ اكتب ما الذي تم عمله قبل الإغلاق||⚠ Describe what was done before closing'),'err');
+  if(!(window._woPhA||[]).length)return toast(lb('⚠ صورة "بعد الإصلاح" مطلوبة للتوثيق||⚠ An AFTER photo is required for documentation'),'err');
   for(const r of [...document.querySelectorAll('#prows .partrow')]){
     const it=db.inv.find(x=>x.id===r.querySelector('.pr_i').value);
     const q=+r.querySelector('.pr_q').value||0;
@@ -2156,7 +2192,7 @@ function doCloseWO(i){
   (window._woPhA||[]).forEach(p=>phs.push({id:uid('PH'),tag:'after',d:p.d,n:p.n||'',at:Date.now()}));
   if(phs.length)w.photos=phs;
   if(sigHasInk())w.sig=$('sigpad').toDataURL('image/png');
-  w.closeNotes=$('wc_n').value;w.cost=+$('wc_c').value||0;
+  w.closeNotes=notes;w.cost=+$('wc_c').value||0;
   w.status='closed';w.closedAt=Date.now();if(!w.startedAt)w.startedAt=w.closedAt;
   if(w.type==='pm'&&w.pmId){
     const p=db.pms.find(x=>x.id===w.pmId);
@@ -2172,7 +2208,8 @@ function vInv(){
   const val=db.inv.reduce((s,it)=>s+it.qty*it.unitCost,0),low=db.inv.filter(it=>it.qty<=it.minQty).length;
   return `${canInv()?`<div class="toolbar"><button class="btn" onclick="itemForm()">＋ ${lb('صنف جديد||New Item')}</button>
     <button class="btn ghost" onclick="moveForm('in')">📥 ${lb('وارد||Stock In')}</button>
-    <button class="btn ghost" onclick="moveForm('out')">📤 ${lb('صرف يدوي||Manual Issue')}</button></div>`:''}
+    <button class="btn ghost" onclick="moveForm('out')">📤 ${lb('صرف يدوي||Manual Issue')}</button>
+    <button class="btn ghost" onclick="prFromLow()">🛒 ${lb('طلب تعويض النواقص||Restock Request')}</button></div>`:''}
   <input class="searchbar" placeholder="🔍 ${lb('بحث…||Search…')}" value="${esc(FILT.inv)}" oninput="FILT.inv=this.value;paintTab();sbFocus()">
   <div class="stats" style="margin-top:10px">
     <div class="stat"><div class="num">${db.inv.length}</div><div class="lbl">${lb('عدد الأصناف||Items')}</div></div>
@@ -2322,6 +2359,16 @@ function savePr(iStr){
   }else{const pr=db.prs[iStr];pr.title=t;pr.notes=$('fpr_n').value.trim();
     pr.items=items.map((it,j)=>Object.assign({q:(pr.items[j]&&pr.items[j].q)||[]},it));}
   persist();closeModal();paintTab();toast(lb('✔ حُفظ الطلب||✔ Saved'),'ok');
+}
+/* طلب تعويض تلقائي: يفتح طلب شراء جاهز بالأصناف تحت الحد (الكمية المقترحة ترفع الرصيد لضعف الحد) */
+function prFromLow(){
+  const low=db.inv.filter(it=>Number(it.qty)<=Number(it.minQty));
+  if(!low.length)return toast(lb('👍 لا توجد أصناف تحت الحد||👍 Nothing below minimum'),'ok');
+  prForm();
+  $('fpr_t').value=lb('تعويض مخزون تحت الحد||Restock below-minimum items');
+  low.forEach(it=>addItRow({desc:it.name,invId:it.id,
+    qty:Math.max(1,Math.ceil(Number(it.minQty||1)*2-Number(it.qty||0))),price:Number(it.unitCost||0)}));
+  toast(lb('✔ أُضيفت الأصناف الناقصة — راجع الكميات ثم احفظ||✔ Low items added — review quantities then save'),'ok');
 }
 function prApprove(i){const pr=db.prs[i];pr.status='approved';pr.approver=me.name;pr.approverDate=todayISO();
   persist();paintTab();toast(lb('✔ اعتُمد الطلب — جاهز لأمر الشراء||✔ Approved — ready for PO'),'ok');}

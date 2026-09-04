@@ -93,6 +93,26 @@ function loginRateLimit(req, res, next) {
   next();
 }
 
+/* ---- Public portal rate-limit: 15 requests / hour per IP ---- */
+const pubHits = new Map();
+function pubLimit(req, res, next) {
+  const ip = req.ip || req.socket.remoteAddress || 'x';
+  const now = Date.now();
+  const arr = (pubHits.get(ip) || []).filter(t => now - t < 60 * 60 * 1000);
+  arr.push(now);
+  pubHits.set(ip, arr);
+  if (arr.length > 15) return res.status(429).json({ error: 'TOO_MANY' });
+  next();
+}
+/* Serialize state writes from the public portal (avoid lost updates) */
+let writeLock = Promise.resolve();
+function serialized(fn) {
+  const run = writeLock.then(fn, fn);
+  writeLock = run.catch(() => {});
+  return run;
+}
+function normPhone(s) { return String(s || '').replace(/\D/g, ''); }
+
 const sessions = new Map();                           /* رموز الجلسات */
 const SESSION_TTL = 1000 * 60 * 60 * 12;              /* 12 ساعة */
 setInterval(() => {
@@ -272,6 +292,71 @@ app.post('/api/state', async (req,res)=>{
     const ver = await setState(data);
     res.json({ok:true, ver});
   } catch (e) { console.error('DB error on save:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- بوابة المستأجرين العامة (بدون دخول): قائمة المجمعات ---- */
+app.get('/api/public/compounds', async (req, res) => {
+  let st;
+  try { st = await getState(); }
+  catch (e) { return res.status(500).json({ error: 'DB' }); }
+  res.json((st.data.compounds || []).map(c => ({ id: c.id, name: c.name })));
+});
+
+/* ---- بوابة المستأجرين: إرسال بلاغ جديد (يتحول لأمر شغل) ---- */
+app.post('/api/public/requests', pubLimit, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const compoundId = String(b.compoundId || '');
+    const name = String(b.name || '').trim().slice(0, 80);
+    const phone = normPhone(b.phone).slice(0, 20);
+    const title = String(b.title || '').trim().slice(0, 140);
+    const details = String(b.details || '').trim().slice(0, 2000);
+    const unitCode = String(b.unitCode || '').trim().slice(0, 30);
+    const cat = String(b.cat || '').trim().slice(0, 40);
+    if (!compoundId || !name || phone.length < 9 || !title)
+      return res.status(400).json({ error: 'MISSING' });
+    const out = await serialized(async () => {
+      const st = await getState();
+      if (!(st.data.compounds || []).some(c => c.id === compoundId))
+        return { err: 400 };
+      st.data.seq = (st.data.seq || 0) + 1;
+      const y = new Date().getFullYear();
+      const wo = {
+        id: 'W' + crypto.randomBytes(6).toString('hex'),
+        no: 'WO-' + y + '-' + String(st.data.seq).padStart(4, '0'),
+        type: 'fault', compoundId, status: 'open',
+        title: (cat ? '[' + cat + '] ' : '') + title, desc: details,
+        assetId: '', assetName: '', bname: '', priority: 'normal',
+        assigneeId: '', assigneeName: '',
+        dueDate: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10),
+        projectId: '', unitId: '', unitCode, tenantName: name,
+        source: 'portal', requester: { name, phone }, cat,
+        createdAt: Date.now(), startedAt: null, closedAt: null,
+        cost: 0, closeNotes: '', parts: [], photos: [], sig: '',
+      };
+      st.data.wos.unshift(wo);
+      const ver = await setState(st.data);
+      return { no: wo.no, ver };
+    });
+    if (out.err) return res.status(out.err).json({ error: 'BAD_COMPOUND' });
+    res.json({ ok: true, no: out.no });
+  } catch (e) { console.error('DB error on POST /api/public/requests:', e.message); return res.status(500).json({ error: 'DB' }); }
+});
+
+/* ---- بوابة المستأجرين: تتبع بلاغاتي برقم الجوال ---- */
+app.get('/api/public/requests', pubLimit, async (req, res) => {
+  const phone = normPhone(req.query.phone);
+  if (phone.length < 9) return res.status(400).json({ error: 'MISSING' });
+  let st;
+  try { st = await getState(); }
+  catch (e) { return res.status(500).json({ error: 'DB' }); }
+  const mine = (st.data.wos || []).filter(w =>
+    w.source === 'portal' && w.requester &&
+    (w.requester.phone === phone || phone.endsWith(w.requester.phone) || w.requester.phone.endsWith(phone)));
+  res.json(mine.slice(0, 30).map(w => ({
+    no: w.no, title: w.title, status: w.status,
+    createdAt: w.createdAt, closedAt: w.closedAt || null,
+  })));
 });
 
 /* ---- SPA fallback: أي مسار غير /api يرجع الواجهة ---- */
