@@ -178,6 +178,7 @@ async function getState() {
   }
 }
 async function setState(data) {
+  sanitizePasswords(data);   /* أي كلمة مرور بنص واضح تُشفَّر قبل التخزين */
   let ver;
   if (USE_PG) {
     const r = await pgPool.query('SELECT ver FROM appstate WHERE id=1');
@@ -189,6 +190,30 @@ async function setState(data) {
     liteSet(JSON.stringify(data), ver);
   }
   return ver;
+}
+/* ---- تشفير كلمات المرور (PBKDF2-SHA256 — مدمج في Node، بلا مكتبات) ----
+   التخزين بصيغة: pbkdf2$iterations$salt$hash — لا يمكن عكسها لكلمة المرور */
+const HASH_ITERS = 100000;
+function isHash(s){ return typeof s === 'string' && s.indexOf('pbkdf2$') === 0; }
+function hashPassword(pw){
+  const salt = crypto.randomBytes(16).toString('base64');
+  const key = crypto.pbkdf2Sync(String(pw), salt, HASH_ITERS, 32, 'sha256').toString('base64');
+  return 'pbkdf2$' + HASH_ITERS + '$' + salt + '$' + key;
+}
+function verifyPassword(pw, stored){
+  if(!isHash(stored)) return String(stored) === String(pw);   /* حساب قديم بنص واضح */
+  try{
+    const parts = String(stored).split('$');
+    const k2 = crypto.pbkdf2Sync(String(pw), parts[2], Number(parts[1]), 32, 'sha256');
+    const k1 = Buffer.from(parts[3], 'base64');
+    return k2.length === k1.length && crypto.timingSafeEqual(k2, k1);
+  }catch(e){ return false; }
+}
+function sanitizePasswords(data){
+  if(data && Array.isArray(data.users)) data.users.forEach(u=>{
+    if(u && typeof u.p === 'string' && u.p && !isHash(u.p)) u.p = hashPassword(u.p);
+  });
+  return data;
 }
 function auth(req,res){
   const h = req.headers.authorization || '';
@@ -211,7 +236,7 @@ app.post('/api/login', loginRateLimit, async (req,res)=>{
   const user = (st.data.users||[]).find(x => {
     const uu = String(x.u || '').toLowerCase();
     const em = String(x.email || '').toLowerCase();
-    return (uu === rawU || uu === uname || (em && em === rawU)) && x.p === String(p||'');
+    return (uu === rawU || uu === uname || (em && em === rawU)) && verifyPassword(String(p||''), x.p);
   });
   if(!user)  return res.status(401).json({error:'BAD_LOGIN'});
   const token = crypto.randomBytes(24).toString('hex');

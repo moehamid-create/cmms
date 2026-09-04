@@ -1083,6 +1083,20 @@ function notify(icon,text,tab,key){
   db.notifs.unshift({id:uid('N'),icon,text,tab:tab||'dash',key:key||'',at:Date.now(),read:false});
   if(db.notifs.length>200)db.notifs.length=200;
 }
+/* التحقق من كلمة المرور محلياً (وضع عدم الاتصال): يدعم المشفّرة pbkdf2$ والنص القديم */
+async function verifyLocalPw(pw, stored){
+  if(typeof stored !== 'string' || stored.indexOf('pbkdf2$') !== 0)
+    return String(stored) === String(pw);
+  try{
+    if(!window.crypto || !crypto.subtle) return false;
+    const parts = stored.split('$');
+    const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0)).buffer;
+    const mat = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(pw)), 'PBKDF2', false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits({name:'PBKDF2', hash:'SHA-256', salt:b64(parts[2]), iterations:Number(parts[1])}, mat, 256);
+    const got = btoa(String.fromCharCode.apply(null, new Uint8Array(bits)));
+    return got === parts[3];
+  }catch(e){ return false; }
+}
 async function doLogin(e){
   e.preventDefault();
   const rawU = ($('lu').value||'').trim();
@@ -1113,7 +1127,12 @@ async function doLogin(e){
     if(!serverOk){
     if(!db){ db = loadLocalDb(); db = migrate(db); }
     const rl = rawU.toLowerCase();
-    const localUser = (db.users || []).find(x => (String(x.u||'').toLowerCase() === rl || String(x.u||'').toLowerCase() === u || (x.email && String(x.email).toLowerCase() === rl)) && String(x.p) === String(p));
+    let localUser = null;
+    for(const x of (db.users||[])){
+      const xu = String(x.u||'').toLowerCase();
+      if(!(xu === rl || xu === u || (x.email && String(x.email).toLowerCase() === rl)))continue;
+      if(await verifyLocalPw(p, x.p)){ localUser = x; break; }
+    }
     if(!localUser){
       return toast(lb('⚠ اسم المستخدم أو كلمة المرور غير صحيحة||⚠ Wrong username or password'), 'err');
     }
@@ -2930,7 +2949,7 @@ function userForm(id){
     <div><label>${lb('الاسم الكامل *||Full Name *')}</label><input id="fu_n" value="${esc(u.name||'')}"></div>
     <div><label>${lb('اسم الدخول *||Username *')}</label><input id="fu_u" value="${esc(u.u||'')}"></div>
     <div><label>${lb('البريد الإلكتروني (للدخول أيضاً)||Email (also for login)')}</label><input id="fu_e" type="email" dir="ltr" placeholder="name@company.com" value="${esc(u.email||'')}"></div>
-    <div><label>${lb('كلمة المرور *||Password *')}</label><input id="fu_p" value="${esc(u.p||'')}"></div>
+    <div><label>${lb('كلمة المرور *||Password *')}</label><input id="fu_p" type="password" value="" placeholder="${id?lb('اتركها فارغة للإبقاء على الحالية||Leave blank to keep current'):lb('••••••••||••••••••')}"></div>
     <div><label>${lb('الدور||Role')}</label><select id="fu_r">${Object.keys(ROLES).map(k=>`<option value="${k}" ${u.role===k?'selected':''}>${ROLES[k]}</option>`).join('')}</select></div>
     <div><label>${lb('رقم الجوال (لواتساب)||Mobile (for WhatsApp)')}</label><input id="fu_ph" value="${esc(u.phone||'')}" placeholder="${lb('05xxxxxxxx||05xxxxxxxx')}"></div>
   </div>
@@ -2945,7 +2964,7 @@ function userForm(id){
 function saveUser(id){
   const n=$('fu_n').value.trim(),un=$('fu_u').value.trim(),p=$('fu_p').value;
   const email=$('fu_e').value.trim().toLowerCase();
-  if(!n||!un||!p)return toast(lb('⚠ أكمل الحقول||⚠ Fill all fields'),'err');
+  if(!n||!un||(!id&&!p))return toast(lb('⚠ أكمل الحقول||⚠ Fill all fields'),'err');
   if(email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return toast(lb('⚠ البريد الإلكتروني غير صحيح||⚠ Invalid email'),'err');
   if(db.users.some(x=>x.u.toLowerCase()===un.toLowerCase()&&x.id!==id))return toast(lb('⚠ اسم الدخول مستخدم||⚠ Username taken'),'err');
   if(email&&db.users.some(x=>String(x.email||'').toLowerCase()===email&&x.id!==id))return toast(lb('⚠ البريد مستخدم لحساب آخر||⚠ Email already used'),'err');
@@ -2954,7 +2973,9 @@ function saveUser(id){
   if(role!=='admin'&&!cmpIds.length)return toast(lb('⚠ اختر مجمعاً واحداً على الأقل لهذا المستخدم||⚠ Pick at least one compound for this user'),'err');
   const phone=$('fu_ph').value.trim();
   if(id){const x=db.users.find(y=>y.id===id);
-    Object.assign(x,{name:n,u:un,p,email,role,phone,cmpIds,activeCmp:(x.activeCmp&&(cmpIds.includes(x.activeCmp)||role==='admin'))?x.activeCmp:''});}
+    const upd={name:n,u:un,email,role,phone,cmpIds,activeCmp:(x.activeCmp&&(cmpIds.includes(x.activeCmp)||role==='admin'))?x.activeCmp:''};
+    if(p)upd.p=p; /* فارغة = إبقاء كلمة المرور القديمة كما هي (قد تكون مشفّرة) */
+    Object.assign(x,upd);}
   else db.users.push({id:uid('U'),name:n,u:un,p,email,role,phone,cmpIds,activeCmp:''});
   persist();closeModal();paintTab();toast(lb('✔ تم||Saved'),'ok');
 }
