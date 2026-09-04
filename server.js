@@ -71,7 +71,11 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json({ limit: '40mb' }));            /* الصور تُحفظ داخل البيانات */
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1h',
+  /* الصور والملفات تُحفَظ مؤقتاً، لكن صفحة HTML دائماً طازجة (عشان التحديثات تظهر فوراً) */
+  setHeaders: (res, fp) => { if (String(fp).endsWith('index.html')) res.setHeader('Cache-Control', 'no-store'); },
+}));
 
 /* ---- Health check (no auth — for Render/Fly/UpTimeRobot) ---- */
 app.get('/healthz', (req, res) => res.status(200).send('ok'));
