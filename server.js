@@ -1,11 +1,10 @@
 /* ============================================
-   CMMS Web Server — Express + Built-in SQLite
-   (uses node:sqlite — no compilation needed)
-   Production-ready: DATA_DIR persistent disk,
-   /healthz, security headers, login rate-limit
+   CMMS Web Server — Express + SQLite / Postgres
+   - Local / disk: built-in node:sqlite (no deps)
+   - Cloud (free): Postgres via DATABASE_URL (Neon/Supabase),
+     keeps data forever on Render's free plan (no disk needed)
    ============================================ */
 const express  = require('express');
-const { DatabaseSync } = require('node:sqlite');
 const crypto   = require('crypto');
 const fs       = require('fs');
 const path     = require('path');
@@ -13,19 +12,45 @@ const path     = require('path');
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 
-/* ---- Persistent storage: set DATA_DIR=/data on Render/Railway/Fly volume ---- */
-const DATA_DIR = process.env.DATA_DIR || __dirname;
-try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { /* ignore */ }
-const DB_PATH = path.join(DATA_DIR, 'cmms.db');
-const db   = new DatabaseSync(DB_PATH);
-db.exec('PRAGMA journal_mode = WAL;');
+const USE_PG = !!process.env.DATABASE_URL;
+let sqlite = null, pgPool = null, DB_LABEL = '';
 
-db.exec(`CREATE TABLE IF NOT EXISTS appstate(
-  id      INTEGER PRIMARY KEY CHECK(id=1),
-  data    TEXT NOT NULL,
-  ver     INTEGER NOT NULL DEFAULT 1,
-  updated TEXT
-)`);
+if (USE_PG) {
+  /* ---- Cloud Postgres (Neon / Supabase — free tier) ---- */
+  const { Pool } = require('pg');
+  pgPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },   /* required by Neon/Supabase */
+    max: 5,
+  });
+  pgPool.on('error', (e) => console.error('PG pool error:', e.message));
+  DB_LABEL = 'postgres';
+} else {
+  /* ---- Local SQLite file (DATA_DIR=/data on a persistent disk) ---- */
+  const { DatabaseSync } = require('node:sqlite');
+  const DATA_DIR = process.env.DATA_DIR || __dirname;
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { /* ignore */ }
+  const DB_PATH = path.join(DATA_DIR, 'cmms.db');
+  sqlite = new DatabaseSync(DB_PATH);
+  sqlite.exec('PRAGMA journal_mode = WAL;');
+  sqlite.exec(`CREATE TABLE IF NOT EXISTS appstate(
+    id      INTEGER PRIMARY KEY CHECK(id=1),
+    data    TEXT NOT NULL,
+    ver     INTEGER NOT NULL DEFAULT 1,
+    updated TEXT
+  )`);
+  DB_LABEL = 'sqlite:' + DB_PATH;
+}
+
+/* Ensure the Postgres table exists (runs once at startup) */
+async function pgInit() {
+  await pgPool.query(`CREATE TABLE IF NOT EXISTS appstate(
+    id      INTEGER PRIMARY KEY CHECK(id=1),
+    data    TEXT NOT NULL,
+    ver     INTEGER NOT NULL DEFAULT 1,
+    updated TIMESTAMPTZ DEFAULT now()
+  )`);
+}
 
 const app = express();
 app.set('trust proxy', 1);
@@ -50,7 +75,7 @@ app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 
 /* ---- Health check (no auth — for Render/Fly/UpTimeRobot) ---- */
 app.get('/healthz', (req, res) => res.status(200).send('ok'));
-app.get('/api/health', (req, res) => res.json({ ok: true, db: DB_PATH, time: new Date().toISOString() }));
+app.get('/api/health', (req, res) => res.json({ ok: true, db: DB_LABEL, time: new Date().toISOString() }));
 
 /* ---- Simple login rate-limit: 20 attempts / 10 min per IP ---- */
 const loginHits = new Map();
@@ -108,26 +133,63 @@ function seedState(){
   return d;
 }
 
-function getState(){
-  let row = null;
-  try{ row = db.prepare('SELECT data, ver FROM appstate WHERE id=1').get(); }catch(e){ row = null; }
-  if(!row){
+/* ---- Storage access: same API on SQLite and Postgres ---- */
+async function pgGet() {
+  const r = await pgPool.query('SELECT data, ver FROM appstate WHERE id=1');
+  return r.rows[0] || null;
+}
+async function pgSet(json, ver) {
+  await pgPool.query(
+    `INSERT INTO appstate(id,data,ver,updated) VALUES(1,$1,$2,now())
+     ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data, ver=EXCLUDED.ver, updated=now()`,
+    [json, ver]);
+}
+function liteGet() {
+  try { return sqlite.prepare('SELECT data, ver FROM appstate WHERE id=1').get() || null; }
+  catch (e) { return null; }
+}
+function liteSet(json, ver) {
+  sqlite.prepare(`INSERT INTO appstate(id,data,ver,updated) VALUES(1,?,?,datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET data=excluded.data, ver=excluded.ver, updated=excluded.updated`)
+    .run(json, ver);
+}
+
+async function readRow() {
+  if (USE_PG) { try { return await pgGet(); } catch (e) { return { _dberr: e }; } }
+  return liteGet();
+}
+async function writeRow(json, ver) {
+  if (USE_PG) await pgSet(json, ver);
+  else liteSet(json, ver);
+}
+
+async function getState() {
+  const row = await readRow();
+  if (row && row._dberr) throw row._dberr;   /* Postgres down → 500, never silent reset */
+  if (!row) {
     const s = seedState();
-    return { data:s, ver:setState(s) };
+    const ver = await setState(s);
+    return { data: s, ver };
   }
-  try{
+  try {
     return { data: JSON.parse(row.data), ver: row.ver };
-  }catch(e){                                   /* بيانات تالفة → إعادة تهيئة */
+  } catch (e) {                                   /* بيانات تالفة → إعادة تهيئة */
     const s = seedState();
-    return { data:s, ver:setState(s) };
+    const ver = await setState(s);
+    return { data: s, ver };
   }
 }
-function setState(data){
-  const cur = db.prepare('SELECT ver FROM appstate WHERE id=1').get();
-  const ver = (cur ? cur.ver : 0) + 1;
-  db.prepare(`INSERT INTO appstate(id,data,ver,updated) VALUES(1,?,?,datetime('now'))
-    ON CONFLICT(id) DO UPDATE SET data=excluded.data, ver=excluded.ver, updated=excluded.updated`)
-    .run(JSON.stringify(data), ver);
+async function setState(data) {
+  let ver;
+  if (USE_PG) {
+    const r = await pgPool.query('SELECT ver FROM appstate WHERE id=1');
+    ver = (r.rows[0] ? r.rows[0].ver : 0) + 1;
+    await pgSet(JSON.stringify(data), ver);
+  } else {
+    const cur = sqlite.prepare('SELECT ver FROM appstate WHERE id=1').get();
+    ver = (cur ? cur.ver : 0) + 1;
+    liteSet(JSON.stringify(data), ver);
+  }
   return ver;
 }
 function auth(req,res){
@@ -140,9 +202,11 @@ function auth(req,res){
 }
 
 /* ---- تسجيل الدخول ---- */
-app.post('/api/login', loginRateLimit, (req,res)=>{
+app.post('/api/login', loginRateLimit, async (req,res)=>{
+  let st;
+  try { st = await getState(); }
+  catch (e) { console.error('DB error on /api/login:', e.message); return res.status(500).json({error:'DB'}); }
   const {u,p} = req.body || {};
-  const st = getState();
   const rawU = String(u||'').trim().toLowerCase();
   const uname = rawU.includes('@') ? rawU.split('@')[0] : rawU;
   const user = (st.data.users||[]).find(x=>(x.u.toLowerCase()===rawU || x.u.toLowerCase()===uname) && x.p===String(p||''));
@@ -158,22 +222,28 @@ app.post('/api/logout',(req,res)=>{
 });
 
 /* ---- قراءة الحالة (يُسمح بلا توكن فقط إذا القاعدة فارغة لأول تهيئة) ---- */
-app.get('/api/state',(req,res)=>{
-  const cur = getState();
+app.get('/api/state', async (req,res)=>{
+  let cur;
+  try { cur = await getState(); }
+  catch (e) { console.error('DB error on GET /api/state:', e.message); return res.status(500).json({error:'DB'}); }
   if(cur.data && !auth(req,res)) return;
   res.json(cur);
 });
 
 /* ---- حفظ الحالة (مع كشف تعارض التعديل المتزامن) ---- */
-app.post('/api/state',(req,res)=>{
-  const cur = getState();
+app.post('/api/state', async (req,res)=>{
+  let cur;
+  try { cur = await getState(); }
+  catch (e) { console.error('DB error on POST /api/state:', e.message); return res.status(500).json({error:'DB'}); }
   if(cur.data && !auth(req,res)) return;
   const {baseVer,data} = req.body || {};
   if(!data) return res.status(400).json({error:'NO_DATA'});
   if(cur.data && Number(baseVer) !== cur.ver)
     return res.status(409).json({error:'CONFLICT', ver:cur.ver});
-  const ver = setState(data);
-  res.json({ok:true, ver});
+  try {
+    const ver = await setState(data);
+    res.json({ok:true, ver});
+  } catch (e) { console.error('DB error on save:', e.message); return res.status(500).json({error:'DB'}); }
 });
 
 /* ---- SPA fallback: أي مسار غير /api يرجع الواجهة ---- */
@@ -182,9 +252,13 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-const server = app.listen(PORT, HOST, ()=>{
+const server = app.listen(PORT, HOST, async ()=>{
+  if (USE_PG) {
+    try { await pgInit(); console.log('✅ Postgres connected'); }
+    catch (e) { console.error('⚠️ Postgres init failed (will retry per request):', e.message); }
+  }
   console.log('✅ CMMS server running:');
-  console.log('   DB:      ' + DB_PATH);
+  console.log('   DB:      ' + DB_LABEL);
   console.log('   Local:   http://localhost:' + PORT);
   const os=require('os'), ifs=os.networkInterfaces();
   Object.keys(ifs).forEach(k=>(ifs[k]||[]).forEach(i=>{
@@ -195,7 +269,11 @@ const server = app.listen(PORT, HOST, ()=>{
 /* ---- graceful shutdown (Docker / Render) ---- */
 function shutdown(sig){
   console.log('Received ' + sig + ', closing...');
-  server.close(() => { try { db.close(); } catch(e){} process.exit(0); });
+  server.close(() => {
+    try { if (sqlite) sqlite.close(); } catch(e){}
+    if (pgPool) pgPool.end().catch(()=>{}).finally(()=>process.exit(0));
+    else process.exit(0);
+  });
   setTimeout(() => process.exit(0), 8000).unref();
 }
 process.on('SIGTERM', () => shutdown('SIGTERM'));

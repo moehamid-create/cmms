@@ -1,8 +1,32 @@
 # CMMS — Go Live (domain + HTTPS + cloud storage)
 
 Your app is now production-ready. It runs anywhere Docker runs.
-Cloud storage = Render persistent disk at `/data` (`DATA_DIR=/data` → `cmms.db` survives restarts/deploys).
+Storage: **Postgres via `DATABASE_URL`** (free Neon/Supabase — survives restarts/deploys on Render's free plan),
+or SQLite file at `DATA_DIR` (needs a paid disk).
 Health check = `GET /healthz`.
+
+## Option A — Render free + Neon free = 100% free, permanent storage ✅
+
+**Step 1 — free cloud database (5 min, once):**
+
+1. Go to https://neon.tech → Sign up (free, no credit card)
+2. **Create a project** (name `cmms`, region closest to you) → it creates a database `neondb`
+3. Open the project → **Connect** → copy the connection string. It looks like:
+   `postgresql://user:password@ep-xxxx.region.aws.neon.tech/neondb?sslmode=require`
+4. Done with Neon. (Free tier: 3 GB — plenty for this app.)
+
+**Step 2 — plug it into Render:**
+
+1. https://dashboard.render.com → open your `cmms-pmar` service
+2. Left menu → **Environment** → **Add Environment Variable**
+   - Key: `DATABASE_URL` — Value: *(paste the Neon string)* → Save
+3. It redeploys automatically (~3 min) → **Live** 🟢
+4. Check `https://cmms-pmar.onrender.com/api/health` — `db` should now say `"postgres"`.
+   That means permanent cloud storage is active. Data now survives restarts and redeploys.
+5. Login with `admin / 1234` → **change the password immediately** (Users screen).
+
+> First deploy with `DATABASE_URL` seeds a fresh database (admin/1234 etc.).
+> Anything you saved while on the temporary disk is a separate copy — re-enter it once.
 
 ## Option A — Render (recommended, ~10 min, free HTTPS)
 
