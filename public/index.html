@@ -103,6 +103,11 @@ body::before{
   cursor:pointer;transition:.18s;text-align:start;white-space:nowrap;overflow:hidden}
 .nbtn .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .nbtn .ic{font-size:16px;width:22px;text-align:center;filter:saturate(.9)}
+.nbtn .ic svg{width:20px;height:20px;vertical-align:-4px}
+button.btn svg,.chip svg{width:14px;height:14px;vertical-align:-2px}
+button.btn.sm svg{width:13px;height:13px}
+.badge svg{width:11px;height:11px;vertical-align:-1px}
+.bell svg{width:16px;height:16px;vertical-align:-3px}
 .nbtn:hover{background:rgba(255,255,255,.55);border-color:rgba(255,255,255,.7)}
 .nbtn.active{background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff;border-color:transparent;
   box-shadow:0 10px 22px -8px rgba(14,116,144,.55)}
@@ -440,7 +445,14 @@ html[dir="ltr"] .feature-item:hover{transform:translateX(3px)}
   .auth-hero-side{padding:32px 18px}
   .hero-headline{font-size:23px}
 }
-.cmpgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.login-wrap{min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px 70px}
+.login-card{width:100%;max-width:880px;border-radius:20px;padding:26px 24px;
+  background:linear-gradient(160deg,var(--glass-hi),var(--glass-lo));
+  backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);
+  border:1px solid var(--line);box-shadow:var(--shadow)}
+.login-card h1{font-size:22px}
+.login-card .sub{color:var(--muted);font-size:13px;margin:6px 0 0}
+.cmpgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-top:6px}
 @media(max-width:600px){.cmpgrid{grid-template-columns:1fr}}
 .cmpcard{border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;transition:.18s;
   background:rgba(255,255,255,.6);text-align:start}
@@ -448,10 +460,10 @@ html[dir="ltr"] .feature-item:hover{transform:translateX(3px)}
 .cmpcard .cc-t{font-weight:800;font-size:14px;margin-bottom:2px}
 .cmpcard .cc-s{display:flex;gap:12px;margin:8px 0;font-size:12px;font-weight:700;color:var(--muted)}
 .cmpcard .cc-go{font-size:12px;font-weight:800;color:var(--brand)}
-.property-picker{width:min(920px,calc(100vw - 32px))!important}
-.property-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 14px}
-.property-actions .btn{min-height:42px}
-.property-actions .property-action{flex:1 1 220px}
+.property-picker{width:100%!important;max-width:880px}
+.property-actions{display:flex;gap:10px;margin:18px 0 14px}
+.property-actions .btn{min-height:46px}
+.property-actions .property-action{flex:1 1 0;min-width:0}
 .property-section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 10px;font-size:14px;font-weight:800}
 @media(max-width:600px){.property-actions{flex-direction:column}.property-actions .property-action{width:100%}}
 .vfade{animation:vfade .22s ease}
@@ -540,12 +552,43 @@ function daysUntil(iso){if(!iso)return 9999;return Math.round((new Date(iso)-new
 function addDays(iso,n){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 
+/* ===== Vector icons (inline SVG — no emoji) ===== */
+const ICONS={
+home:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+tool:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+layers:'<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>',
+bldg:'<rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01"/>',
+gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+homes:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+box:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7l8.7 5 8.7-5M12 22V12"/>',
+cart:'<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',
+file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/>',
+briefcase:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+chart:'<path d="M12 20V10M18 20V4M6 20v-4"/>',
+bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+edit:'<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+del:'<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>',
+view:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+play:'<path d="M5 3l14 9-14 9V3z"/>',
+check:'<path d="M20 6L9 17l-5-5"/>',
+x:'<path d="M18 6L6 18M6 6l12 12"/>',
+cam:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+tag:'<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5"/>',
+chat:'<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+alert:'<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',
+print:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>'
+};
+function ic(n,s){s=s||18;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]||''}</svg>`;}
+
 /* ===== WHATSAPP ===== */
 function normPhone(p){let d=String(p||'').replace(/\D/g,'');if(d.startsWith('00'))d=d.slice(2);if(d.startsWith('0'))d='966'+d.slice(1);return d;}
 function woMsg(w){
   const L=db.lang==='ar';
   const cmp=db.compounds.find(c=>c.id===w.compoundId)||{};
-  return (L?'🔧 *بلاغ صيانة جديد*\n':'🔧 *New Maintenance Report*\n')
+  return (L?' *بلاغ صيانة جديد*\n':' *New Maintenance Report*\n')
    +(L?'الرقم: ':'No.: ')+w.no+'\n'
    +(L?'المجمع: ':'Compound: ')+(cmp.name||'—')+'\n'
    +(L?'الموقع: ':'Location: ')+(w.bname||'—')+'\n'
@@ -558,13 +601,13 @@ function woMsg(w){
 function openWhatsApp(w){
   const u=db.users.find(x=>x.id===w.assigneeId);
   const ph=normPhone(u&&u.phone);
-  if(!ph||ph.length<10){toast(lb('⚠ لا يوجد رقم جوال صحيح للفني — أضفه من شاشة المستخدمين||⚠ No valid mobile for the technician — add it in Users'),'err');return;}
+  if(!ph||ph.length<10){toast(lb(' لا يوجد رقم جوال صحيح للفني — أضفه من شاشة المستخدمين|| No valid mobile for the technician — add it in Users'),'err');return;}
   const url='https://wa.me/'+ph+'?text='+encodeURIComponent(woMsg(w));
   window.open(url,'_blank');
-  toast(lb('✔ فُتح واتساب — الرسالة جاهزة، اضغط إرسال||✔ WhatsApp opened — message ready, press send'),'ok');
+  toast(lb(' فُتح واتساب — الرسالة جاهزة، اضغط إرسال|| WhatsApp opened — message ready, press send'),'ok');
 }
 function waBtn(i){const w=db.wos[i];
-  if(!w.assigneeId)return toast(lb('⚠ أسند البلاغ لفني أولاً||⚠ Assign a technician first'),'err');
+  if(!w.assigneeId)return toast(lb(' أسند البلاغ لفني أولاً|| Assign a technician first'),'err');
   openWhatsApp(w);}
 
 /* ===== PHOTOS & SIGNATURE ===== */
@@ -585,7 +628,7 @@ function compressImg(file){return new Promise(res=>{
   r.readAsDataURL(file);});}
 function pickImages(cb){
   const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
-  inp.onchange=async()=>{const out=[];toast(lb('⏳ جارٍ معالجة الصور…||⏳ Processing photos…'));
+  inp.onchange=async()=>{const out=[];toast(lb(' جارٍ معالجة الصور…|| Processing photos…'));
     for(const f of inp.files){const d=await compressImg(f);if(d)out.push({d,n:''});}
     if(out.length)cb(out);};
   inp.click();}
@@ -612,7 +655,7 @@ function sigHasInk(){const cv=$('sigpad');if(!cv)return false;
   return false;}
 function phTmpHTML(arr,key){return arr.map((p,i)=>
   `<span class="phwrap"><img class="pthumb" src="${p.d}" onclick="lbShow('${phReg(p.d)}')">
-  <button type="button" class="phdel" onclick="phTmpDel('${key}',${i})">✕</button></span>`).join('')
+  <button type="button" class="phdel" onclick="phTmpDel('${key}',${i})">${ic('x',12)}</button></span>`).join('')
   ||`<span class="muted">${lb('لا صور بعد||No photos yet')}</span>`;}
 function phTmpDel(key,i){const arr=key==='b'?window._woPhB:key==='a'?window._woPhA:window._faPh;
   if(arr){arr.splice(i,1);}
@@ -660,7 +703,7 @@ function persist(){
         const s=await(await api('/state')).json();
         AUTH.ver=s.ver;db=s.data;
         try{localStorage.setItem('cmms_data',JSON.stringify(db));}catch(e){}
-        toast(lb('⚠ حدّث مستخدم آخر البيانات — حُمّلت النسخة الأحدث||⚠ Data updated by another user — latest loaded'),'err');
+        toast(lb(' حدّث مستخدم آخر البيانات — حُمّلت النسخة الأحدث|| Data updated by another user — latest loaded'),'err');
         render();return;
       }
       const j=await r.json();AUTH.ver=j.ver;
@@ -671,7 +714,7 @@ function backupOnLaunch(){}
 /* نسخ رابط بوابة المستأجرين (مع مجمع محدد مسبقاً إن أمكن) */
 function copyPortal(){
   const url=location.origin+'/request.html'+(activeCmp()?('?c='+activeCmp()):'');
-  const done=()=>toast(lb('✔ نُسخ رابط البوابة — الصقه للمستأجرين||✔ Portal link copied — share it with tenants'),'ok');
+  const done=()=>toast(lb(' نُسخ رابط البوابة — الصقه للمستأجرين|| Portal link copied — share it with tenants'),'ok');
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(done,()=>{prompt(lb('انسخ الرابط:||Copy the link:'),url);});
   else prompt(lb('انسخ الرابط:||Copy the link:'),url);
 }
@@ -681,7 +724,7 @@ function bkNow(){
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='cmms-backup-'+todayISO()+'.json';a.click();
-  toast(lb('✔ تم تنزيل نسخة احتياطية||✔ Backup downloaded'),'ok');
+  toast(lb(' تم تنزيل نسخة احتياطية|| Backup downloaded'),'ok');
 }
 
 function loadLocalDb(){
@@ -755,6 +798,9 @@ function migrate(d){
   if(typeof d.lang!=='string')d.lang='ar';
   if(!d.compounds.length)
     d.compounds.push({id:uid('C'),name:'مجمع الخير السكني - حي الروضة',loc:'',notes:'',createdAt:Date.now()});
+  /* العقارات القديمة بلا مالك تُنسب لأول مدير (خصوصية الحسابات) */
+  const firstAdm=(d.users.find(u=>u.role==='admin')||{}).id||'';
+  d.compounds.forEach(c=>{if(!c.ownerId)c.ownerId=firstAdm;});
   const defC=d.compounds[0].id;
   d.users.forEach(u=>{
     if(u.phone==null)u.phone='';
@@ -914,7 +960,7 @@ function loadDemo(){
   db.users.filter(u=>u.role==='tech').forEach(u=>{
     if(!u.phone)u.phone='0555 000 00'+(1+(db.users.indexOf(u)%8));
     if(!(u.cmpIds||[]).includes(act))u.cmpIds=[...(u.cmpIds||[]),act];});
-  db.seeded=true;persist();render();toast(lb('تم تحميل البيانات التجريبية ✔||Demo data loaded ✔'),'ok');
+  db.seeded=true;persist();render();toast(lb('تم تحميل البيانات التجريبية ||Demo data loaded '),'ok');
 }
 
 const isAdmin=()=>me&&me.role==='admin';
@@ -927,7 +973,8 @@ const isTech=()=>me&&me.role==='tech';
 /* ===== COMPOUNDS ===== */
 function myCmps(){
   if(!me)return [];
-  if(isAdmin())return db.compounds;
+  /* خصوصية الحساب: المدير يرى عقاراته الخاصة + المشتركة معه فقط (وليس عقارات المدراء الآخرين) */
+  if(isAdmin())return db.compounds.filter(c=>!c.ownerId||c.ownerId===me.id||(me.cmpIds||[]).includes(c.id));
   return db.compounds.filter(c=>(me.cmpIds||[]).includes(c.id));
 }
 function activeCmp(){
@@ -946,19 +993,19 @@ function setCmp(id){
 
 function navItems(){
   return [
-    ['dash','🏠',lb('الرئيسية||Dashboard'),['admin','engineer','sitemgr','tech','store','proc']],
-    ['wos','🛠️',lb('أوامر الشغل||Work Orders'),['admin','engineer','sitemgr','tech']],
-    ['pm','🗓️',lb('الصيانة الدورية||Preventive'),['admin','engineer','sitemgr']],
-    ['proj','🧱',lb('المشاريع||Projects'),['admin','engineer','sitemgr']],
-    ['cmps','🏢',lb('المجمعات||Compounds'),['admin']],
-    ['assets','⚙️',lb('الأصول||Assets'),['admin','engineer','sitemgr']],
-    ['units','🏘️',lb('الوحدات والمستأجرون||Units & Tenants'),['admin','engineer','sitemgr']],
-    ['inv','📦',lb('المخزون||Inventory'),['admin','engineer','store']],
-    ['proc','🛒',lb('المشتريات||Procurement'),['admin','engineer','sitemgr','proc']],
-    ['contracts','📜',lb('العقود||Contracts'),['admin','engineer','sitemgr']],
-    ['hr','👷',lb('الموظفون||Workforce'),['admin','engineer']],
-    ['rep','📊',lb('التقارير||Reports'),['admin','engineer','sitemgr']],
-    ['users','👥',lb('المستخدمون||Users'),['admin']]
+    ['dash','home',lb('الرئيسية||Dashboard'),['admin','engineer','sitemgr','tech','store','proc']],
+    ['wos','tool',lb('أوامر الشغل||Work Orders'),['admin','engineer','sitemgr','tech']],
+    ['pm','cal',lb('الصيانة الدورية||Preventive'),['admin','engineer','sitemgr']],
+    ['proj','layers',lb('المشاريع||Projects'),['admin','engineer','sitemgr']],
+    ['cmps','bldg',lb('المجمعات||Compounds'),['admin']],
+    ['assets','gear',lb('الأصول||Assets'),['admin','engineer','sitemgr']],
+    ['units','homes',lb('الوحدات والمستأجرون||Units & Tenants'),['admin','engineer','sitemgr']],
+    ['inv','box',lb('المخزون||Inventory'),['admin','engineer','store']],
+    ['proc','cart',lb('المشتريات||Procurement'),['admin','engineer','sitemgr','proc']],
+    ['contracts','file',lb('العقود||Contracts'),['admin','engineer','sitemgr']],
+    ['hr','briefcase',lb('الموظفون||Workforce'),['admin','engineer']],
+    ['rep','chart',lb('التقارير||Reports'),['admin','engineer','sitemgr']],
+    ['users','users',lb('المستخدمون||Users'),['admin']]
   ].filter(n=>n[3].includes(me.role));
 }
 function tabAllowed(t){return navItems().some(n=>n[0]===t);}
@@ -1039,7 +1086,7 @@ function loginHtml(){
 
         <div class="lang-switch-wrap">
           <button type="button" class="btn-lang" onclick="toggleLang()">
-            🌐 ${db.lang==='ar'?'English':'العربية'}
+             ${db.lang==='ar'?'English':'العربية'}
           </button>
         </div>
       </div>
@@ -1156,7 +1203,7 @@ async function doLogin(e){
       me = db.users.find(x => x.id === j.userId) || null;
       serverOk = true;
     } else if(r.status === 401){
-      return toast(lb('⚠ اسم المستخدم أو كلمة المرور غير صحيحة||⚠ Wrong username or password'), 'err');
+      return toast(lb(' اسم المستخدم أو كلمة المرور غير صحيحة|| Wrong username or password'), 'err');
     }
   }catch(netErr){
     console.warn('Backend server not reachable, using local database mode.');
@@ -1172,17 +1219,17 @@ async function doLogin(e){
       if(await verifyLocalPw(p, x.p)){ localUser = x; break; }
     }
     if(!localUser){
-      return toast(lb('⚠ اسم المستخدم أو كلمة المرور غير صحيحة||⚠ Wrong username or password'), 'err');
+      return toast(lb(' اسم المستخدم أو كلمة المرور غير صحيحة|| Wrong username or password'), 'err');
     }
     me = localUser;
     AUTH.token = 'local_session_' + Date.now();
   }
 
-  if(!me){ AUTH.token = ''; return toast(lb('⚠ حساب غير موجود||⚠ Account not found'), 'err'); }
+  if(!me){ AUTH.token = ''; return toast(lb(' حساب غير موجود|| Account not found'), 'err'); }
   TAB = 'dash'; FILT = { assets: '', wos: '', inv: '', woStatus: 'all', procTab: 'pr', units: '' };
   const L = myCmps();
   if(!L.length){
-    toast(lb('⚠ لا توجد مجمعات مسندة لحسابك — راجع مدير النظام||⚠ No compounds assigned — contact admin'), 'err');
+    toast(lb(' لا توجد مجمعات مسندة لحسابك — راجع مدير النظام|| No compounds assigned — contact admin'), 'err');
     me = null; AUTH.token = ''; return;
   }
   /* ابدأ دائماً من شاشة العقارات، حتى لو كان للمستخدم عقار واحد فقط. */
@@ -1194,34 +1241,34 @@ async function doLogin(e){
 function genSysNotifs(){
   const act=activeCmp();
   db.wos.filter(w=>w.status!=='closed'&&w.priority==='urgent'&&w.compoundId===act&&(isTech()?w.assigneeId===me.id:true))
-    .forEach(w=>notify('🔴',lb('طارئ مفتوح: ||Open urgent: ')+w.title,'wos','urg-'+w.no));
+    .forEach(w=>notify('',lb('طارئ مفتوح: ||Open urgent: ')+w.title,'wos','urg-'+w.no));
   db.pms.filter(p=>p.compoundId===act).forEach(p=>{
     const d=daysUntil(nextDueOf(p));
-    if(d<=0)notify('🗓',lb('صيانة دورية متأخرة: ||Overdue PM: ')+p.name,'pm','pm-'+p.id+'-late');
-    else if(d<=3)notify('🗓',lb('صيانة قريبة: ||PM soon: ')+p.name+' ('+fmtD(nextDueOf(p))+')','pm','pm-'+p.id+'-soon');
+    if(d<=0)notify('',lb('صيانة دورية متأخرة: ||Overdue PM: ')+p.name,'pm','pm-'+p.id+'-late');
+    else if(d<=3)notify('',lb('صيانة قريبة: ||PM soon: ')+p.name+' ('+fmtD(nextDueOf(p))+')','pm','pm-'+p.id+'-soon');
   });
   db.inv.filter(it=>it.qty<=it.minQty).forEach(it=>
-    notify('📦',lb('مخزون تحت الحد: ||Low stock: ')+it.name+' ('+it.qty+' '+it.unit+')','inv','low-'+it.id));
+    notify('',lb('مخزون تحت الحد: ||Low stock: ')+it.name+' ('+it.qty+' '+it.unit+')','inv','low-'+it.id));
   if(canAppr())db.prs.filter(pr=>pr.status==='pending').forEach(pr=>
-    notify('🛒',lb('طلب شراء بانتظار الموافقة: ||PR awaiting approval: ')+pr.title+' ('+pr.no+')','proc','pr-'+pr.no));
+    notify('',lb('طلب شراء بانتظار الموافقة: ||PR awaiting approval: ')+pr.title+' ('+pr.no+')','proc','pr-'+pr.no));
   if(canAppr()){
     db.contracts.filter(c=>c.compoundId===act).forEach(c=>{const dd=daysUntil(c.end);
-      if(dd<=30)notify('📜',(dd<0?lb('عقد منتهٍ: ||Expired contract: '):lb('عقد ينتهي قريباً: ||Contract expiring: '))+c.vendor+' ('+fmtD(c.end)+')','contracts','ctre-'+c.id+'-'+c.end);});
+      if(dd<=30)notify('',(dd<0?lb('عقد منتهٍ: ||Expired contract: '):lb('عقد ينتهي قريباً: ||Contract expiring: '))+c.vendor+' ('+fmtD(c.end)+')','contracts','ctre-'+c.id+'-'+c.end);});
     db.tenants.forEach(x=>{const u=db.units.find(y=>y.id===x.unitId);
       const b=u?db.buildings.find(y=>y.id===u.buildingId):null;
       if(!b||b.compoundId!==act)return;
       const dd=daysUntil(x.leaseEnd);
-      if(dd<=45)notify('🔑',(dd<0?lb('عقد إيجار منتهٍ: ||Expired lease: '):lb('إيجار ينتهي قريباً: ||Lease expiring: '))+x.name+' ('+fmtD(x.leaseEnd)+')','units','lea-'+x.id+'-'+x.leaseEnd);});
+      if(dd<=45)notify('',(dd<0?lb('عقد إيجار منتهٍ: ||Expired lease: '):lb('إيجار ينتهي قريباً: ||Lease expiring: '))+x.name+' ('+fmtD(x.leaseEnd)+')','units','lea-'+x.id+'-'+x.leaseEnd);});
   }
   persist();
 }
 function unreadCount(){return db.notifs.filter(n=>!n.read).length;}
 function notifModal(){
   const list=db.notifs.slice(0,50);
-  modal(`<h3>🔔 ${lb('الإشعارات||Notifications')}</h3>
+  modal(`<h3> ${lb('الإشعارات||Notifications')}</h3>
   ${list.length?list.map(n=>`<div class="alert-li" style="cursor:pointer;${n.read?'opacity:.5':''}" onclick="notifGo('${n.id}')">${n.icon} ${esc(n.text)}<br><span class="muted">${fmtDT(n.at)}</span></div>`).join('')
    :`<div class="empty">${lb('لا إشعارات||No notifications')}</div>`}
-  <div class="ma"><button class="btn ghost sm" onclick="markAllRead()">✓ ${lb('تعليم الكل كمقروء||Mark all read')}</button>
+  <div class="ma"><button class="btn ghost sm" onclick="markAllRead()"> ${lb('تعليم الكل كمقروء||Mark all read')}</button>
   <button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button></div>`);
 }
 function notifGo(id){
@@ -1229,7 +1276,7 @@ function notifGo(id){
   n.read=true;persist();closeModal();
   goTab(n.tab);
 }
-function markAllRead(){db.notifs.forEach(n=>n.read=true);persist();closeModal();render();toast(lb('✔ تم||Done'),'ok');}
+function markAllRead(){db.notifs.forEach(n=>n.read=true);persist();closeModal();render();toast(lb(' تم||Done'),'ok');}
 
 /* ===== RENDER ROOT ===== */
 function render(){
@@ -1245,22 +1292,22 @@ function pickerHtml(){
     const as=db.assets.filter(a=>a.compoundId===c.id).length;
     const wo=db.wos.filter(w=>w.compoundId===c.id&&w.status!=='closed').length;
     return `<div class="cmpcard" onclick="setCmp('${c.id}')">
-      <div class="cc-t">🏢 ${esc(c.name)}</div>
-      ${c.loc?`<div class="muted">📍 ${esc(c.loc)}</div>`:''}
-      <div class="cc-s"><span>🏗 ${bl} ${lb('مبنى||bldgs')}</span><span>🛠 ${wo} ${lb('مفتوح||open')}</span><span>⚙️ ${as} ${lb('أصل||assets')}</span></div>
+      <div class="cc-t"> ${esc(c.name)}</div>
+      ${c.loc?`<div class="muted"> ${esc(c.loc)}</div>`:''}
+      <div class="cc-s"><span> ${bl} ${lb('مبنى||bldgs')}</span><span> ${wo} ${lb('مفتوح||open')}</span><span> ${as} ${lb('أصل||assets')}</span></div>
       <div class="cc-go">${lb('دخول المجمع ←||Enter compound →')}</div></div>`;};
   const canCreate=isAdmin();
   const addActions=canCreate?`<div class="property-actions">
-      <button class="btn property-action" onclick="cmpForm(null,'residentialBuilding')">🏢 ${lb('إضافة مبنى سكني||Add residential building')}</button>
+      <button class="btn property-action" onclick="cmpForm(null,'residentialBuilding')"> ${lb('إضافة مبنى سكني||Add residential building')}</button>
       <button class="btn ghost property-action" onclick="cmpForm(null,'property')">＋ ${lb('إضافة عقار||Add property')}</button>
     </div>`:'';
   return `<div class="login-wrap"><div class="login-card property-picker">
     <h1>${lb('العقارات||Properties')}</h1>
     <p class="sub">${esc(me.name)} — ${lb('اختر عقاراً لعرض لوحة الإدارة، أو أضف عقاراً جديداً.||Choose a property to open its dashboard, or add a new one.')}</p>
     ${addActions}
-    <div class="property-section-title"><span>🏘️ ${lb('العقارات الموجودة||Existing properties')}</span><span class="muted">${list.length}</span></div>
+    <div class="property-section-title"><span> ${lb('العقارات الموجودة||Existing properties')}</span><span class="muted">${list.length}</span></div>
     <div class="cmpgrid">${list.map(card).join('')}</div>
-    <div style="text-align:center;margin-top:14px"><button class="btn ghost sm" onclick="PICK=false;logout()">⏻ ${lb('خروج||Logout')}</button></div>
+    <div style="text-align:center;margin-top:14px"><button class="btn ghost sm" onclick="PICK=false;logout()"> ${lb('خروج||Logout')}</button></div>
   </div></div>`;
 }
 function logout(){try{localStorage.removeItem('cmms_auth');}catch(e){}
@@ -1287,9 +1334,9 @@ function shell(){
       ${cmpSel}
       <div class="sidediv"></div>
       <div class="slabel">${lb('التشغيل||Operations')}</div>
-      ${groups[0].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" title="${n[2]}" onclick="TAB='${n[0]}';render()"><span class="ic">${n[1]}</span><span class="nt">${n[2]}</span></button>`).join('')}
+      ${groups[0].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" title="${n[2]}" onclick="TAB='${n[0]}';render()"><span class="ic">${ic(n[1],20)}</span><span class="nt">${n[2]}</span></button>`).join('')}
       ${groups[1].length?`<div class="sidediv"></div><div class="slabel">${lb('الإدارة||Management')}</div>
-      ${groups[1].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" title="${n[2]}" onclick="TAB='${n[0]}';render()"><span class="ic">${n[1]}</span><span class="nt">${n[2]}</span></button>`).join('')}`:''}
+      ${groups[1].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" title="${n[2]}" onclick="TAB='${n[0]}';render()"><span class="ic">${ic(n[1],20)}</span><span class="nt">${n[2]}</span></button>`).join('')}`:''}
       <div class="sidefoot">
         <div class="ucard"><span class="av">${esc(initials)}</span>
           <span class="uinfo"><span class="nm">${esc(me.name)}</span><br><span class="rl">${ROLES[me.role]}</span></span>
@@ -1306,9 +1353,9 @@ function shell(){
       <div class="topbar">
         <span class="ttl">${(()=>{const c=nav.find(n=>n[0]===TAB);return c?c[2]:lb('الرئيسية||Dashboard')})()}</span>
         <span class="meta">
-          <span title="${lb('المجمع الحالي||Current compound')}">🏢 ${esc(cmpName(act))}</span>
-          <span>📅 ${fmtD(todayISO())}</span>
-          <button class="bell" title="${lb('الإشعارات||Notifications')}" onclick="notifModal()">🔔${uc?`<span class="bellb">${uc}</span>`:''}</button>
+          <span title="${lb('المجمع الحالي||Current compound')}"> ${esc(cmpName(act))}</span>
+          <span> ${fmtD(todayISO())}</span>
+          <button class="bell" title="${lb('الإشعارات||Notifications')}" onclick="notifModal()">${ic('bell',16)}${uc?`<span class="bellb">${uc}</span>`:''}</button>
         </span>
       </div>
       <div class="printhead">${lb('أملاكي||Amlaki')} — ${esc(cmpName(act))} — ${fmtD(todayISO())}</div>
@@ -1340,10 +1387,10 @@ function vCmps(){
   if(!isAdmin())return '';
   const act=activeCmp();
   return `<div class="toolbar"><button class="btn" onclick="cmpForm()">＋ ${lb('مجمع جديد||New Compound')}</button></div>
-  <p class="muted">💡 ${lb('سير العمل: أنشئ المجمع ← أضف مبانيه ووحداته ← أضف أصوله ← أضف الفنيين واربطهم به من شاشة المستخدمين.||Workflow: create compound → add buildings & units → add assets → add technicians and assign them in Users.')}</p>
-  <div class="card"><h2>🏢 ${lb('المجمعات||Compounds')} (${db.compounds.length})</h2><div class="tbl-wrap"><table>
+  <p class="muted"> ${lb('سير العمل: أنشئ المجمع ← أضف مبانيه ووحداته ← أضف أصوله ← أضف الفنيين واربطهم به من شاشة المستخدمين.||Workflow: create compound → add buildings & units → add assets → add technicians and assign them in Users.')}</p>
+  <div class="card"><h2> ${lb('المجمعات||Compounds')} (${myCmps().length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('المجمع||Compound')}</th><th>${lb('الموقع||Location')}</th><th>${lb('المباني||Bldgs')}</th><th>${lb('الأصول||Assets')}</th><th>${lb('أوامر مفتوحة||Open WOs')}</th><th>${lb('الفنيون||Techs')}</th><th></th></tr>
-  ${db.compounds.map(c=>{const i=db.compounds.indexOf(c);
+  ${myCmps().map(c=>{
     const bl=db.buildings.filter(b=>b.compoundId===c.id).length;
     const as=db.assets.filter(a=>a.compoundId===c.id).length;
     const wo=db.wos.filter(w=>w.compoundId===c.id&&w.status!=='closed').length;
@@ -1351,44 +1398,45 @@ function vCmps(){
     return `<tr><td><b>${esc(c.name)}</b>${act===c.id?` <span class="badge b-ok">${lb('الحالي||Active')}</span>`:''}</td>
     <td>${esc(c.loc||'—')}</td><td>${bl}</td><td>${as}</td>
     <td>${wo?`<span class="badge b-open">${wo}</span>`:'0'}</td><td>${tc}</td>
-    <td nowrap><button class="btn sm ghost" onclick="cmpForm(${i})">✏</button>
-    <button class="btn sm danger" onclick="delCmp(${i})">🗑</button></td></tr>`;}).join('')}
+    <td nowrap><button class="btn sm ghost" onclick="cmpForm('${c.id}')">${ic('edit',13)}</button>
+    <button class="btn sm danger" onclick="delCmp('${c.id}')">${ic('del',13)}</button></td></tr>`;}).join('')}
   </table></div></div>`;
 }
-function cmpForm(i,kind){
-  const c=i!=null?db.compounds[i]:{};
+function cmpForm(cid,kind){
+  let c={};
+  if(cid){const f=db.compounds.find(x=>x.id===cid);if(f)c=f;}
   const isResidential=kind==='residentialBuilding';
   const newTitle=isResidential?lb('إضافة مبنى سكني||Add residential building'):lb('إضافة عقار||Add property');
   const nameLabel=isResidential?lb('اسم المبنى السكني *||Residential building name *'):lb('اسم العقار *||Property name *');
   const nameHint=isResidential?lb('مثال: عمارة النخيل السكنية||e.g. Al-Nakheel Residential Building'):lb('مثال: مجمع الخير السكني - حي الروضة||e.g. Al-Khair Property');
-  modal(`<h3>${i!=null?lb('تعديل العقار||Edit property'):newTitle}</h3>
-  <label>${i!=null?lb('اسم العقار *||Property name *'):nameLabel}</label><input id="fcpx_n" value="${esc(c.name||'')}" placeholder="${nameHint}">
+  modal(`<h3>${cid?lb('تعديل العقار||Edit property'):newTitle}</h3>
+  <label>${cid?lb('اسم العقار *||Property name *'):nameLabel}</label><input id="fcpx_n" value="${esc(c.name||'')}" placeholder="${nameHint}">
   <div class="fg"><div><label>${lb('الموقع / الحي||Location / District')}</label><input id="fcpx_l" value="${esc(c.loc||'')}"></div></div>
   <label>${lb('ملاحظات||Notes')}</label><textarea id="fcpx_no" rows="2">${esc(c.notes||'')}</textarea>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
-  <button class="btn" onclick="saveCmp(${i??'null'},'${kind||''}')">${lb('حفظ||Save')}</button></div>`);
+  <button class="btn" onclick="saveCmp('${cid||''}','${kind||''}')">${lb('حفظ||Save')}</button></div>`);
 }
 function saveCmp(iStr,kind){
   const isNew=(iStr==null||iStr==='null'||iStr==='');
-  const n=$('fcpx_n').value.trim();if(!n)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
+  const n=$('fcpx_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const o={name:n,loc:$('fcpx_l').value.trim(),notes:$('fcpx_no').value.trim()};
-  if(isNew){const c=Object.assign({id:uid('C'),createdAt:Date.now(),kind:kind||'property'},o);db.compounds.push(c);
+  if(isNew){const c=Object.assign({id:uid('C'),createdAt:Date.now(),kind:kind||'property',ownerId:me.id},o);db.compounds.push(c);
     if(me.role!=='admin'){me.cmpIds=[...(me.cmpIds||[]),c.id];}
     me.activeCmp=c.id;}
-  else Object.assign(db.compounds[iStr],o);
-  persist();closeModal();paintTab();toast(lb('✔ تم حفظ المجمع||✔ Compound saved'),'ok');
+  else{const ex=db.compounds.find(x=>x.id===iStr);if(!ex)return toast(lb(' العقار غير موجود|| Property not found'),'err');Object.assign(ex,o);}
+  persist();closeModal();paintTab();toast(lb(' تم حفظ المجمع|| Compound saved'),'ok');
 }
-function delCmp(i){const c=db.compounds[i];
-  if(db.compounds.length<=1)return toast(lb('⚠ لا يمكن حذف آخر مجمع — أنشئ مجمعاً جديداً أولاً||⚠ Cannot delete the last compound — create another first'),'err');
+function delCmp(cid){const c=db.compounds.find(x=>x.id===cid);if(!c)return;
+  if(myCmps().length<=1)return toast(lb(' لا يمكن حذف آخر عقار لديك — أنشئ عقاراً جديداً أولاً|| Cannot delete your last property — create another first'),'err');
   const used=db.buildings.some(b=>b.compoundId===c.id)||db.assets.some(a=>a.compoundId===c.id)||db.wos.some(w=>w.compoundId===c.id)
     ||db.pms.some(p=>p.compoundId===c.id)||db.projects.some(p=>p.compoundId===c.id)||db.contracts.some(p=>p.compoundId===c.id)
     ||db.employees.some(p=>p.compoundId===c.id)||db.units.some(u=>{const b=db.buildings.find(x=>x.id===u.buildingId);return b&&b.compoundId===c.id;});
-  if(used)return toast(lb('⚠ لا يمكن الحذف — توجد بيانات مرتبطة بهذا المجمع||⚠ Cannot delete — data is linked to this compound'),'err');
+  if(used)return toast(lb(' لا يمكن الحذف — توجد بيانات مرتبطة بهذا المجمع|| Cannot delete — data is linked to this compound'),'err');
   if(!confirm(lb('حذف هذا المجمع؟||Delete this compound?')))return;
-  db.compounds.splice(i,1);
+  const di=db.compounds.findIndex(x=>x.id===c.id);if(di>=0)db.compounds.splice(di,1);
   db.users.forEach(u=>{u.cmpIds=(u.cmpIds||[]).filter(x=>x!==c.id);if(u.activeCmp===c.id)u.activeCmp='';});
   if(me.activeCmp===c.id)me.activeCmp='';
-  persist();paintTab();toast(lb('✔ حُذف||Deleted'),'ok');}
+  persist();paintTab();toast(lb(' حُذف||Deleted'),'ok');}
 
 /* ===== PREVENTIVE MAINTENANCE ===== */
 function intervalDays(p){const n=Math.max(1,+p.freqVal||1);return p.freqUnit==='days'?n:p.freqUnit==='weeks'?n*7:n*30;}
@@ -1413,7 +1461,7 @@ function pmGen(){
         const ast=db.assets.find(a=>a.id===p.assetId)||{};
         if(meterDue&&ast&&ast.meter!=null&&ast.meter!=='')p.lastMeter=Number(ast.meter);
         db.wos.unshift({no:'WO-'+y+'-'+String(db.seq).padStart(4,'0'),type:'pm',pmId:p.id,compoundId:p.compoundId||activeCmp(),
-          title:(db.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name+(meterDue?' ⏱':''),
+          title:(db.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name+(meterDue?' ':''),
           desc:p.tasks||'',assetId:p.assetId||'',assetName:ast?ast.name:'',
           bname:ast?bName(ast.building):'',
           priority:'normal',status:'open',createdAt:Date.now(),startedAt:null,closedAt:null,projectId:'',
@@ -1430,7 +1478,7 @@ function pmGen(){
   return created;
 }
 function runScheduler(){const c=pmGen();paintTab();
-  toast(c?(lb('✔ أُصدرت أوامر شغل دورية: ||PM work orders issued: ')+c):lb('لا صيانة مستحقة حالياً||Nothing due yet'),'ok');}
+  toast(c?(lb(' أُصدرت أوامر شغل دورية: ||PM work orders issued: ')+c):lb('لا صيانة مستحقة حالياً||Nothing due yet'),'ok');}
 function vPM(){
   const act=activeCmp();
   let rows='';
@@ -1439,18 +1487,18 @@ function vPM(){
     const mdi=meterDueIn(p);
     const ast=db.assets.find(a=>a.id===p.assetId)||null;
     rows+=`<tr class="${du<0?'overdue':''}"><td><b>${esc(p.name)}</b><br><span class="muted">${esc((p.tasks||'').split('\n')[0]||'')}…</span></td>
-    <td>${esc(ast?ast.name:'—')}</td><td>${p.freqVal} ${FREQUNIT[p.freqUnit]}${p.mEvery>0?`<br><span class="muted">⏱ ${lb('كل||every')} ${p.mEvery}</span>`:''}</td>
+    <td>${esc(ast?ast.name:'—')}</td><td>${p.freqVal} ${FREQUNIT[p.freqUnit]}${p.mEvery>0?`<br><span class="muted"> ${lb('كل||every')} ${p.mEvery}</span>`:''}</td>
     <td>${fmtD(p.lastDone)}</td>
-    <td>${du<0?`<span class="badge b-urgent">${lb('متأخرة||OVERDUE')} ${-du} ${lb('يوم||d')}</span> `:''}${fmtD(nd)}${mdi!=null?` <span class="badge ${mdi<=0?'b-urgent':'b-open'}">⏱ ${mdi<=0?lb('حان||DUE'):mdi}</span>`:''}</td>
+    <td>${du<0?`<span class="badge b-urgent">${lb('متأخرة||OVERDUE')} ${-du} ${lb('يوم||d')}</span> `:''}${fmtD(nd)}${mdi!=null?` <span class="badge ${mdi<=0?'b-urgent':'b-open'}"> ${mdi<=0?lb('حان||DUE'):mdi}</span>`:''}</td>
     <td>${esc(p.assigneeName||'—')}</td>
-    <td nowrap>${isEng()?`<button class="btn sm ghost" onclick="pmDone('${p.id}')">✅ ${lb('سجّل إنجاز||Log Done')}</button>
-    <button class="btn sm ghost" onclick="pmForm('${p.id}')">✏</button>
-    <button class="btn sm danger" onclick="delPm('${p.id}')">🗑</button>`:''}</td></tr>`;
+    <td nowrap>${isEng()?`<button class="btn sm ghost" onclick="pmDone('${p.id}')"> ${lb('سجّل إنجاز||Log Done')}</button>
+    <button class="btn sm ghost" onclick="pmForm('${p.id}')">${ic('edit',13)}</button>
+    <button class="btn sm danger" onclick="delPm('${p.id}')">${ic('del',13)}</button>`:''}</td></tr>`;
   });
   return `<div class="toolbar">
     ${isEng()?`<button class="btn" onclick="pmForm()">＋ ${lb('خطة صيانة جديدة||New PM Plan')}</button>
-    <button class="btn ghost" onclick="runScheduler()">⚡ ${lb('تشغيل الجدولة الآن||Run Scheduler Now')}</button>`:''}
-    <button class="btn ghost" onclick="window.print()">🖨 ${lb('طباعة||Print')}</button></div>
+    <button class="btn ghost" onclick="runScheduler()"> ${lb('تشغيل الجدولة الآن||Run Scheduler Now')}</button>`:''}
+    <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
   <p class="muted">${lb('عند استحقاق أي خطة، يُصدر النظام أمر شغل تلقائياً بقائمة الفحص للفني المسؤول.||When a plan is due, the system auto-issues a work order with its checklist.')}</p>
   <div class="card"><h2>${lb('خطط الصيانة الدورية||PM Plans')} (${db.pms.filter(p=>p.compoundId===act).length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الخطة||Plan')}</th><th>${lb('الأصل||Asset')}</th><th>${lb('التكرار||Frequency')}</th><th>${lb('آخر تنفيذ||Last Done')}</th><th>${lb('الاستحقاق القادم||Next Due')}</th><th>${lb('المسؤول||Assignee')}</th><th></th></tr>
@@ -1469,7 +1517,7 @@ function pmForm(pid){
       <div style="display:flex;gap:6px"><input type="number" min="1" id="fp_fv" value="${p.freqVal||2}" style="width:80px">
       <select id="fp_fu">${Object.keys(FREQUNIT).map(k=>`<option value="${k}" ${(p.freqUnit||'weeks')===k?'selected':''}>${FREQUNIT[k]}</option>`).join('')}</select></div></div>
     <div><label>${lb('آخر تنفيذ (فارغ = اليوم)||Last Done (blank = today)')}</label><input type="date" id="fp_l" value="${p.lastDone||''}"></div>
-    <div><label>⏱ ${lb('كل كم من العداد؟ (اختياري)||Every how many meter units? (optional)')}</label><input type="number" min="0" id="fp_me" value="${p.mEvery||''}" placeholder="مثال: 500"></div>
+    <div><label> ${lb('كل كم من العداد؟ (اختياري)||Every how many meter units? (optional)')}</label><input type="number" min="0" id="fp_me" value="${p.mEvery||''}" placeholder="مثال: 500"></div>
     <div><label>${lb('الفني المسؤول||Technician')}</label><select id="fp_as"><option value="">—</option>${techs.map(t=>`<option value="${t.id}" ${p.assigneeId===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
   </div>
   <label>${lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')}</label>
@@ -1478,19 +1526,19 @@ function pmForm(pid){
   <button class="btn" onclick="savePM('${pid||''}')">${lb('حفظ||Save')}</button></div>`);
 }
 function savePM(pid){
-  const n=$('fp_n').value.trim();if(!n)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
+  const n=$('fp_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const tech=db.users.find(u=>u.id===$('fp_as').value);
   const o={name:n,assetId:$('fp_a').value,compoundId:activeCmp(),freqVal:Math.max(1,+$('fp_fv').value||1),freqUnit:$('fp_fu').value,
     lastDone:$('fp_l').value||todayISO(),assigneeId:$('fp_as').value||'',assigneeName:tech?tech.name:'',tasks:$('fp_t').value,
     mEvery:+$('fp_me').value||0};
-  if(pid){const ex=db.pms.find(x=>x.id===pid);if(!ex)return toast(lb('⚠ الخطة غير موجودة||⚠ Plan not found'),'err');Object.assign(ex,o);delete ex.nextDue;}
+  if(pid){const ex=db.pms.find(x=>x.id===pid);if(!ex)return toast(lb(' الخطة غير موجودة|| Plan not found'),'err');Object.assign(ex,o);delete ex.nextDue;}
   else db.pms.push(Object.assign({id:uid('P')},o));
-  persist();closeModal();paintTab();toast(lb('✔ حُفظت الخطة||✔ Plan saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' حُفظت الخطة|| Plan saved'),'ok');
 }
 function pmDone(pid){const p=db.pms.find(x=>x.id===pid);if(!p)return;
   p.lastDone=todayISO();
   p.nextDue=addDays(todayISO(),intervalDays(p));
-  persist();paintTab();toast(lb('✔ سُجل الإنجاز. القادم: ||✔ Logged. Next: ')+fmtD(p.nextDue),'ok');}
+  persist();paintTab();toast(lb(' سُجل الإنجاز. القادم: || Logged. Next: ')+fmtD(p.nextDue),'ok');}
 function delPm(pid){if(!confirm(lb('حذف الخطة؟||Delete plan?')))return;
   const i=db.pms.findIndex(x=>x.id===pid);if(i<0)return;db.pms.splice(i,1);persist();paintTab();}
 
@@ -1498,15 +1546,15 @@ function delPm(pid){if(!confirm(lb('حذف الخطة؟||Delete plan?')))return;
 function monthKey(msOrIso){const d=(typeof msOrIso==='string'&&msOrIso.length===10)?new Date(msOrIso+'T00:00:00'):new Date(msOrIso);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
 function pmSoonCard(pmSoon){
-  if(!pmSoon.length)return `<div class="empty">👍 ${lb('لا صيانة مستحقة قريباً||Nothing due soon')}</div>`;
+  if(!pmSoon.length)return `<div class="empty"> ${lb('لا صيانة مستحقة قريباً||Nothing due soon')}</div>`;
   return pmSoon.slice(0,5).map(p=>{
     const du=daysUntil(nextDueOf(p)),i=db.pms.indexOf(p);
     return `<div class="pmrow ${du<0?'overdue':''}">
       <div style="flex:1;min-width:0"><b>${esc(p.name)}</b><br>
       <span class="muted">${du<0?`<span class="badge b-urgent">${lb('متأخرة||OVERDUE')} ${-du} ${lb('يوم||d')}</span>`
         :du<=3?`<span class="badge b-maint">${lb('بعد||in')} ${du} ${lb('يوم||d')}</span>`:fmtD(nextDueOf(p))}</span>
-      ${p.assigneeName?` <span class="muted">· 👤 ${esc(p.assigneeName)}</span>`:''}</div>
-      ${isEng()?`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" title="${lb('تسجيل إنجاز||Log done')}" onclick="pmDone(${i})">✅</button>`:''}
+      ${p.assigneeName?` <span class="muted">·  ${esc(p.assigneeName)}</span>`:''}</div>
+      ${isEng()?`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" title="${lb('تسجيل إنجاز||Log done')}" onclick="pmDone(${i})">${ic('check',14)}</button>`:''}
     </div>`;}).join('');
 }
 function kpi(ic,num,lbl,tab,warn,extra){
@@ -1550,56 +1598,56 @@ function vDash(){
   /* --- التنبيهات المهمة والطارئة فقط (كل تنبيه يقفز لسجله المصفّى) --- */
   const alerts=[];
   unclosed.filter(w=>w.priority==='urgent')
-   .forEach(w=>alerts.push({ic:'🔴',h:`<b>${PRIO[w.priority]}</b>: ${esc(w.title)} — ${esc(w.assetName||w.bname||'')}`,tab:'wos',q:w.no}));
+   .forEach(w=>alerts.push({ic:'',h:`<b>${PRIO[w.priority]}</b>: ${esc(w.title)} — ${esc(w.assetName||w.bname||'')}`,tab:'wos',q:w.no}));
   pmAll.filter(p=>pmIsLate(p))
-   .forEach(p=>alerts.push({ic:'🗓',h:`${lb('صيانة دورية متأخرة:||Overdue PM:')} <b>${esc(p.name)}</b>`,tab:'pm'}));
+   .forEach(p=>alerts.push({ic:'',h:`${lb('صيانة دورية متأخرة:||Overdue PM:')} <b>${esc(p.name)}</b>`,tab:'pm'}));
   pmAll.filter(p=>{const d=daysUntil(nextDueOf(p));return d>0&&d<=3;})
-   .forEach(p=>alerts.push({ic:'🗓',h:`${lb('صيانة قريبة:||PM soon:')} <b>${esc(p.name)}</b> (${fmtD(nextDueOf(p))})`,tab:'pm'}));
+   .forEach(p=>alerts.push({ic:'',h:`${lb('صيانة قريبة:||PM soon:')} <b>${esc(p.name)}</b> (${fmtD(nextDueOf(p))})`,tab:'pm'}));
   if(canAppr())db.prs.filter(pr=>pr.status==='pending'&&(!pr.compoundId||pr.compoundId===act))
-   .forEach(pr=>alerts.push({ic:'🛒',h:`${lb('طلب شراء بانتظار الموافقة:||PR awaiting approval:')} <b>${esc(pr.title)}</b> (${pr.no})`,tab:'proc'}));
+   .forEach(pr=>alerts.push({ic:'',h:`${lb('طلب شراء بانتظار الموافقة:||PR awaiting approval:')} <b>${esc(pr.title)}</b> (${pr.no})`,tab:'proc'}));
   if(!isTech()){
     db.contracts.filter(c=>c.compoundId===act).forEach(c=>{const dd=daysUntil(c.end);
-      if(dd<=30)alerts.push({ic:'📜',h:`${dd<0?lb('عقد منتهٍ:||Expired contract:'):lb('عقد ينتهي قريباً:||Contract ending:')} <b>${esc(c.vendor)}</b> (${fmtD(c.end)})`,tab:'contracts'});});
+      if(dd<=30)alerts.push({ic:'',h:`${dd<0?lb('عقد منتهٍ:||Expired contract:'):lb('عقد ينتهي قريباً:||Contract ending:')} <b>${esc(c.vendor)}</b> (${fmtD(c.end)})`,tab:'contracts'});});
     db.tenants.forEach(x=>{const u=db.units.find(y=>y.id===x.unitId);
       const b=u?db.buildings.find(y=>y.id===u.buildingId):null;
       if(!b||b.compoundId!==act)return;
       const dd=daysUntil(x.leaseEnd);
-      if(dd<=45)alerts.push({ic:'🔑',h:`${dd<0?lb('إيجار منتهٍ:||Expired lease:'):lb('إيجار ينتهي قريباً:||Lease ending:')} <b>${esc(x.name)}</b> (${fmtD(x.leaseEnd)})`,tab:'units'});});
+      if(dd<=45)alerts.push({ic:'',h:`${dd<0?lb('إيجار منتهٍ:||Expired lease:'):lb('إيجار ينتهي قريباً:||Lease ending:')} <b>${esc(x.name)}</b> (${fmtD(x.leaseEnd)})`,tab:'units'});});
   }
-  low.forEach(i=>alerts.push({ic:'📦',h:`${lb('مخزون تحت الحد:||Low stock:')} <b>${esc(i.name)}</b> (${i.qty} ${esc(i.unit)})`,tab:'inv',q:i.name}));
-  down.forEach(a=>alerts.push({ic:'⚙️',h:`${esc(a.name)} — ${lb('متوقف||Down')}`,tab:'assets',q:a.name}));
+  low.forEach(i=>alerts.push({ic:'',h:`${lb('مخزون تحت الحد:||Low stock:')} <b>${esc(i.name)}</b> (${i.qty} ${esc(i.unit)})`,tab:'inv',q:i.name}));
+  down.forEach(a=>alerts.push({ic:'',h:`${esc(a.name)} — ${lb('متوقف||Down')}`,tab:'assets',q:a.name}));
   window._alerts=alerts;
   const showAll=!!window._alx;
   const visA=showAll?alerts:alerts.slice(0,8);
 
   const qa=[];
   qa.push(`<button class="btn" onclick="woForm()">＋ ${lb('بلاغ عطل جديد||New Fault Report')}</button>`);
-  if(isEng())qa.push(`<button class="btn ghost" onclick="runScheduler()">⚡ ${lb('تشغيل الجدولة||Run Scheduler')}</button>`);
-  if(canInv())qa.push(`<button class="btn ghost" onclick="TAB='inv';render();moveForm('in')">📥 ${lb('وارد مخزون||Stock In')}</button>`);
-  if(canProc())qa.push(`<button class="btn ghost" onclick="TAB='proc';FILT.procTab='pr';render();prForm()">🛒 ${lb('طلب شراء||New PR')}</button>`);
-  if(isEng())qa.push(`<button class="btn ghost" onclick="copyPortal()">🏠 ${lb('رابط بوابة المستأجرين||Tenant Portal Link')}</button>`);
-  if(isEng()&&!db.seeded&&!db.assets.length&&!db.wos.length)qa.push(`<button class="btn ghost" onclick="loadDemo()">🧪 ${lb('بيانات تجريبية||Demo Data')}</button>`);
+  if(isEng())qa.push(`<button class="btn ghost" onclick="runScheduler()"> ${lb('تشغيل الجدولة||Run Scheduler')}</button>`);
+  if(canInv())qa.push(`<button class="btn ghost" onclick="TAB='inv';render();moveForm('in')"> ${lb('وارد مخزون||Stock In')}</button>`);
+  if(canProc())qa.push(`<button class="btn ghost" onclick="TAB='proc';FILT.procTab='pr';render();prForm()"> ${lb('طلب شراء||New PR')}</button>`);
+  if(isEng())qa.push(`<button class="btn ghost" onclick="copyPortal()"> ${lb('رابط بوابة المستأجرين||Tenant Portal Link')}</button>`);
+  if(isEng()&&!db.seeded&&!db.assets.length&&!db.wos.length)qa.push(`<button class="btn ghost" onclick="loadDemo()"> ${lb('بيانات تجريبية||Demo Data')}</button>`);
 
-  const alertsCard=`<div class="card ${isTech()?'dg-6':'dg-7'}"><h2>🔔 ${lb('يحتاج انتباهك (اضغط للمعالجة)||Needs Attention (click to act)')}</h2>
+  const alertsCard=`<div class="card ${isTech()?'dg-6':'dg-7'}"><h2> ${lb('يحتاج انتباهك (اضغط للمعالجة)||Needs Attention (click to act)')}</h2>
     ${alerts.length?visA.map(a=>{const gi=alerts.indexOf(a);return `<div class="alert-li alrow" onclick="goAlert(${gi})">${a.ic} ${a.h}</div>`;}).join('')
       +(alerts.length>8?`<div style="text-align:center;margin-top:8px"><button class="btn ghost sm" onclick="window._alx=${showAll?'false':'true'};paintTab()">${showAll?lb('عرض أقل||Show less'):lb('عرض الكل||Show all')+' ('+alerts.length+')'}</button></div>`:'')
-      :`<div class="empty">👍 ${lb('كل شيء تحت السيطرة||All clear')}</div>`}</div>`;
+      :`<div class="empty"> ${lb('كل شيء تحت السيطرة||All clear')}</div>`}</div>`;
 
   const stats=`
-    ${kpi('🧾',openN,lb('بلاغات مفتوحة||Open Reports'),'wos')}
-    ${kpi('🔴',urgN,lb('طوارئ غير مغلقاة||Open Urgent'),'wos',urgN>0)}
-    ${kpi('⏰',odN,lb('متجاوزة الاستحقاق||Overdue'),'wos',odN>0)}
-    ${kpi('⏱',closedW.length?(mttrH>=10?Math.round(mttrH):mttrH.toFixed(1))+' '+lb('ساعة||h'):'—',lb('متوسط زمن الإصلاح MTTR||Avg Repair Time'),'wos')}
-    ${isTech()?'':kpi('🗓',pmLateN,lb('صيانة دورية متأخرة||Overdue PM'),'pm',pmLateN>0)}
-    ${isTech()?'':kpi('✅',pmComp+'%',lb('التزام الصيانة الدورية||PM Compliance'),'pm',pmComp<80)}
-    ${kpi('⚙️',down.length,lb('أصول متوقفة||Assets Down'),'assets',down.length>0)}
-    ${kpi('📦',low.length,lb('أصناف تحت الحد||Low Stock'),'inv',low.length>0)}`;
+    ${kpi(ic('file',19),openN,lb('بلاغات مفتوحة||Open Reports'),'wos')}
+    ${kpi(ic('alert',19),urgN,lb('طوارئ غير مغلقاة||Open Urgent'),'wos',urgN>0)}
+    ${kpi(ic('clock',19),odN,lb('متجاوزة الاستحقاق||Overdue'),'wos',odN>0)}
+    ${kpi(ic('clock',19),closedW.length?(mttrH>=10?Math.round(mttrH):mttrH.toFixed(1))+' '+lb('ساعة||h'):'—',lb('متوسط زمن الإصلاح MTTR||Avg Repair Time'),'wos')}
+    ${isTech()?'':kpi(ic('cal',19),pmLateN,lb('صيانة دورية متأخرة||Overdue PM'),'pm',pmLateN>0)}
+    ${isTech()?'':kpi(ic('check',19),pmComp+'%',lb('التزام الصيانة الدورية||PM Compliance'),'pm',pmComp<80)}
+    ${kpi(ic('gear',19),down.length,lb('أصول متوقفة||Assets Down'),'assets',down.length>0)}
+    ${kpi(ic('box',19),low.length,lb('أصناف تحت الحد||Low Stock'),'inv',low.length>0)}`;
 
   if(isTech()){
     return `<div class="stats">${stats}</div>
     <div class="qa">${qa.join('')}</div>
     <div class="dash-grid">
-      <div class="card dg-6"><h2>🛠 ${lb('مهامي المفتوحة||My Open Tasks')}</h2>
+      <div class="card dg-6"><h2> ${lb('مهامي المفتوحة||My Open Tasks')}</h2>
         ${miniWoTable(scope.filter(w=>w.assigneeId===me.id&&w.status!=='closed'))}</div>
       ${alertsCard}
     </div>`;
@@ -1608,7 +1656,7 @@ function vDash(){
   <div class="qa">${qa.join('')}</div>
   <div class="dash-grid">
     ${alertsCard}
-    <div class="card dg-5"><h2>🗓 ${lb('صيانة قادمة خلال أسبوعين||Upcoming PM (≤2 weeks)')}</h2>${pmSoonCard(pmSoonList)}</div>
+    <div class="card dg-5"><h2> ${lb('صيانة قادمة خلال أسبوعين||Upcoming PM (≤2 weeks)')}</h2>${pmSoonCard(pmSoonList)}</div>
   </div>`;
 }
 
@@ -1636,10 +1684,10 @@ function vAssets(){
   return `<div class="toolbar">
     ${isEng()?`<button class="btn" onclick="assetForm()">＋ ${lb('إضافة أصل||Add Asset')}</button>
     <button class="btn ghost" onclick="buildingForm()">＋ ${lb('مبنى/منطقة||Building/Area')}</button>
-    <button class="btn ghost" onclick="villaBulk()">🏘 ${lb('فلل بالجملة||Bulk Villas')}</button>
-    <button class="btn ghost" onclick="catForm()">🏷 ${lb('تصنيف||Category')}</button>`:''}
-    <button class="btn ghost" onclick="window.print()">🖨 ${lb('طباعة||Print')}</button></div>
-  <input class="searchbar" placeholder="🔍 ${lb('بحث…||Search…')}" value="${esc(FILT.assets)}" oninput="FILT.assets=this.value;drawAssetsTable()">
+    <button class="btn ghost" onclick="villaBulk()"> ${lb('فلل بالجملة||Bulk Villas')}</button>
+    <button class="btn ghost" onclick="catForm()"> ${lb('تصنيف||Category')}</button>`:''}
+    <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
+  <input class="searchbar" placeholder=" ${lb('بحث…||Search…')}" value="${esc(FILT.assets)}" oninput="FILT.assets=this.value;drawAssetsTable()">
   <div class="card"><h2>${lb('سجل الأصول||Asset Registry')} (${db.assets.filter(a=>a.compoundId===act).length})</h2>
   <div class="tbl-wrap"><table><thead id="atbl_head"></thead><tbody id="atbl"></tbody></table></div></div>`;
 }
@@ -1656,22 +1704,22 @@ function drawAssetsTable(){
     list.forEach(a=>{
       const st=ASTAT[a.status]||ASTAT.ok;
       const wr=a.warrantyend&&daysUntil(a.warrantyend)>=0&&daysUntil(a.warrantyend)<90;
-      rows+=`<tr><td><b>${esc(a.name)}</b>${(a.photos&&a.photos.length)?' 🖼':''}${a.meter!=null&&a.meter!==''?`<br><span class="muted">⏱ ${a.meter} ${esc(a.meterUnit||'')}</span>`:''}</td><td>${esc(a.category||'—')}</td>
+      rows+=`<tr><td><b>${esc(a.name)}</b>${(a.photos&&a.photos.length)?' ':''}${a.meter!=null&&a.meter!==''?`<br><span class="muted"> ${a.meter} ${esc(a.meterUnit||'')}</span>`:''}</td><td>${esc(a.category||'—')}</td>
       <td>${esc(bName(a.building))}</td><td>${esc(a.floor||'—')}</td>
       <td><span class="badge ${st[1]}">${st[0]}</span></td>
       <td>${wr?`<span class="badge b-prog">${fmtD(a.warrantyend)}</span>`:fmtD(a.warrantyend)}</td>
-      ${isEng()?`<td nowrap><button class="btn sm ghost" title="${lb('صور ومستندات||Photos')}" onclick="assetPhotos('${a.id}')">🖼</button>
-        <button class="btn sm ghost" title="⏱ ${lb('تسجيل قراءة عداد||Log meter')}" onclick="meterLog('${a.id}')">⏱</button>
-        <button class="btn sm ghost" title="${lb('ملصق QR للطباعة||Printable QR tag')}" onclick="assetTag('${a.id}')">🏷</button>
-        <button class="btn sm ghost" onclick="woForm(null,'${a.id}')">🛠</button>
-        <button class="btn sm ghost" onclick="assetForm('${a.id}')">✏</button>
-        <button class="btn sm danger" onclick="delAsset('${a.id}')">🗑</button></td>`:''}</tr>`;
+      ${isEng()?`<td nowrap><button class="btn sm ghost" title="${lb('صور ومستندات||Photos')}" onclick="assetPhotos('${a.id}')">${ic('cam',13)}</button>
+        <button class="btn sm ghost" title=" ${lb('تسجيل قراءة عداد||Log meter')}" onclick="meterLog('${a.id}')">${ic('clock',13)}</button>
+        <button class="btn sm ghost" title="${lb('ملصق QR للطباعة||Printable QR tag')}" onclick="assetTag('${a.id}')">${ic('tag',13)}</button>
+        <button class="btn sm ghost" title="${lb('بلاغ جديد||New report')}" onclick="woForm(null,'${a.id}')">${ic('tool',13)}</button>
+        <button class="btn sm ghost" onclick="assetForm('${a.id}')">${ic('edit',13)}</button>
+        <button class="btn sm danger" onclick="delAsset('${a.id}')">${ic('del',13)}</button></td>`:''}</tr>`;
     });
     const h=$('atbl_head'),b=$('atbl');
     if(h)h.innerHTML=head;if(b)b.innerHTML=rows;
   }catch(e){
     const b=$('atbl');
-    if(b)b.innerHTML=`<tr><td colspan="7"><div class="empty">⚠️ ${lb('خطأ في عرض الجدول: ||Table error: ')}${esc(e.message)}</div></td></tr>`;
+    if(b)b.innerHTML=`<tr><td colspan="7"><div class="empty"> ${lb('خطأ في عرض الجدول: ||Table error: ')}${esc(e.message)}</div></td></tr>`;
   }
 }
 function modal(html){
@@ -1702,12 +1750,12 @@ function assetForm(id){
     <div><label>${lb('تاريخ التركيب||Installed')}</label><input type="date" id="fa_i" value="${a.installdate||''}"></div>
     <div><label>${lb('انتهاء الضمان||Warranty End')}</label><input type="date" id="fa_w" value="${a.warrantyend||''}"></div>
     <div><label>${lb('الحالة||Status')}</label><select id="fa_st">${Object.keys(ASTAT).map(k=>`<option value="${k}" ${(a.status||'ok')===k?'selected':''}>${ASTAT[k][0]}</option>`).join('')}</select></div>
-    <div><label>⏱ ${lb('قراءة العداد الحالية||Current Meter Reading')}</label><input type="number" step="any" min="0" id="fa_mr" value="${a.meter??''}" placeholder="مثال: 1250"></div>
+    <div><label> ${lb('قراءة العداد الحالية||Current Meter Reading')}</label><input type="number" step="any" min="0" id="fa_mr" value="${a.meter??''}" placeholder="مثال: 1250"></div>
     <div><label>${lb('وحدة العداد||Meter Unit')}</label><select id="fa_mu"><option value="">—</option>${['ساعة','كم','دورة'].map(u=>`<option ${a.meterUnit===u?'selected':''}>${u}</option>`).join('')}</select></div>
   </div>
-  <label>📷 ${lb('صور ومستندات الأصل||Asset Photos & Documents')}</label>
+  <label> ${lb('صور ومستندات الأصل||Asset Photos & Documents')}</label>
   <div id="fa_photos" class="pgrid"></div>
-  <button class="btn ghost sm" onclick="faAddPhotos()">📷 ${lb('إضافة صور||Add Photos')}</button>
+  <button class="btn ghost sm" onclick="faAddPhotos()"> ${lb('إضافة صور||Add Photos')}</button>
   <label>${lb('ملاحظات||Notes')}</label><textarea id="fa_no" rows="2">${esc(a.notes||'')}</textarea>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="saveAsset('${id||''}')">${lb('حفظ||Save')}</button></div>`);
@@ -1721,7 +1769,7 @@ function fillFloors(sel){
     .map(f=>`<option ${sel===f?'selected':''}>${esc(f)}</option>`).join('');
 }
 function saveAsset(id){
-  const name=$('fa_n').value.trim();if(!name)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
+  const name=$('fa_n').value.trim();if(!name)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const o={name,category:$('fa_c').value,building:$('fa_b').value,floor:$('fa_f').value,detail:$('fa_d').value,
     model:$('fa_m').value,serial:$('fa_s').value,installdate:$('fa_i').value,warrantyend:$('fa_w').value,
     status:$('fa_st').value,notes:$('fa_no').value,
@@ -1730,35 +1778,35 @@ function saveAsset(id){
   o.photos=(window._faPh||[]).slice();
   if(id)Object.assign(db.assets.find(x=>x.id===id),o);
   else db.assets.push(Object.assign({id:uid('A'),projectId:''},o));
-  persist();closeModal();paintTab();toast(lb('✔ تم الحفظ||✔ Saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' تم الحفظ|| Saved'),'ok');
 }
 function delAsset(id){
   const linked=db.wos.some(w=>w.assetId===id)||db.pms.some(p=>p.assetId===id);
-  if(linked)return toast(lb('⚠ لا يمكن الحذف — توجد أوامر شغل أو خطط صيانة مرتبطة بهذا الأصل||⚠ Cannot delete — linked work orders or PM plans exist'),'err');
+  if(linked)return toast(lb(' لا يمكن الحذف — توجد أوامر شغل أو خطط صيانة مرتبطة بهذا الأصل|| Cannot delete — linked work orders or PM plans exist'),'err');
   if(!confirm(lb('حذف هذا الأصل؟||Delete this asset?')))return;
   db.assets=db.assets.filter(a=>a.id!==id);persist();paintTab();}
 function assetPhotos(id){
   const a=db.assets.find(x=>x.id===id);if(!a)return;
   if(!a.photos)a.photos=[];
-  modal(`<h3>🖼 ${lb('صور ومستندات||Photos & Documents')} — ${esc(a.name)}</h3>
+  modal(`<h3> ${lb('صور ومستندات||Photos & Documents')} — ${esc(a.name)}</h3>
   <div class="pgrid">${a.photos.length?a.photos.map((p,j)=>
     `<span class="phwrap"><img class="pthumb" src="${p.d}" onclick="lbShow('${phReg(p.d)}')">
-    ${isEng()?`<button class="phdel" onclick="assetPhotoDel('${id}',${j})">✕</button>`:''}</span>`).join('')
+    ${isEng()?`<button class="phdel" onclick="assetPhotoDel('${id}',${j})">${ic('x',12)}</button>`:''}</span>`).join('')
     :`<span class="muted">${lb('لا صور بعد||No photos yet')}</span>`}</div>
-  ${isEng()?`<button class="btn ghost sm" onclick="assetPhotoAdd('${id}')">📷 ${lb('إضافة صور||Add Photos')}</button>`:''}
+  ${isEng()?`<button class="btn ghost sm" onclick="assetPhotoAdd('${id}')"> ${lb('إضافة صور||Add Photos')}</button>`:''}
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button></div>`);
 }
 function assetPhotoAdd(id){pickImages(imgs=>{
   const a=db.assets.find(x=>x.id===id);if(!a)return;
   if(!a.photos)a.photos=[];
   imgs.forEach(p=>a.photos.push({id:uid('PH'),d:p.d,n:'',at:Date.now()}));
-  persist();assetPhotos(id);toast(lb('✔ أُضيفت الصور||✔ Photos added'),'ok');});}
+  persist();assetPhotos(id);toast(lb(' أُضيفت الصور|| Photos added'),'ok');});}
 function assetPhotoDel(id,j){const a=db.assets.find(x=>x.id===id);if(!a)return;
   a.photos.splice(j,1);persist();assetPhotos(id);}
 /* تسجيل قراءة عداد (تسجيل القراءة ليس صيانة — لا يصفّر عدّاد الخطة) */
 function meterLog(id){
   const a=db.assets.find(x=>x.id===id);if(!a||!isEng())return;
-  modal(`<h3>⏱ ${lb('تسجيل قراءة عداد||Log Meter Reading')} — ${esc(a.name)}</h3>
+  modal(`<h3> ${lb('تسجيل قراءة عداد||Log Meter Reading')} — ${esc(a.name)}</h3>
   <p class="muted">${lb('القراءة الحالية:||Current:')} <b>${a.meter??'—'}</b> ${esc(a.meterUnit||'')}</p>
   <label>${lb('القراءة الجديدة *||New Reading *')}</label><input type="number" step="any" min="0" id="fm_v" value="${a.meter??''}">
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
@@ -1767,9 +1815,9 @@ function meterLog(id){
 function meterSave(id){
   const a=db.assets.find(x=>x.id===id);if(!a)return;
   const v=$('fm_v').value;
-  if(v===''||v==null||+v<0)return toast(lb('⚠ أدخل قراءة صحيحة||⚠ Enter a valid reading'),'err');
-  if(a.meter!=null&&a.meter!==''&&+v<+a.meter&&!confirm(lb('⚠ القراءة الجديدة أقل من الحالية — متابعة؟||⚠ New reading is lower than current — continue?')))return;
-  a.meter=+v;persist();closeModal();drawAssetsTable();toast(lb('✔ سُجلت القراءة||✔ Reading saved'),'ok');
+  if(v===''||v==null||+v<0)return toast(lb(' أدخل قراءة صحيحة|| Enter a valid reading'),'err');
+  if(a.meter!=null&&a.meter!==''&&+v<+a.meter&&!confirm(lb(' القراءة الجديدة أقل من الحالية — متابعة؟|| New reading is lower than current — continue?')))return;
+  a.meter=+v;persist();closeModal();drawAssetsTable();toast(lb(' سُجلت القراءة|| Reading saved'),'ok');
 }
 /* ملصق QR للطباعة: المسح يفتح بوابة البلاغات على هذا الأصل (خدمة QR مجانية، والنص بديل عند انقطاعها) */
 function assetTag(id){
@@ -1777,10 +1825,10 @@ function assetTag(id){
   const url=location.origin+'/request.html?c='+a.compoundId+'&asset='+encodeURIComponent(a.name);
   const qr='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(url);
   const w=window.open('','_blank','width=440,height=620');
-  if(!w)return toast(lb('⚠ اسمح بالنوافذ المنبثقة للطباعة||⚠ Allow popups to print'),'err');
+  if(!w)return toast(lb(' اسمح بالنوافذ المنبثقة للطباعة|| Allow popups to print'),'err');
   w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+esc(a.name)+'</title>'
   +'<style>body{font-family:Tahoma,Arial;text-align:center;padding:24px;color:#111}.tag{border:2px dashed #0e7490;border-radius:16px;padding:22px;max-width:340px;margin:0 auto}h2{font-size:19px;margin:10px 0 2px}.sub{font-size:13px;color:#555;margin-bottom:10px}img{width:200px;height:200px}.url{font-size:11px;direction:ltr;word-break:break-all;color:#333;margin-top:10px}.hint{font-size:12px;color:#666;margin-top:12px}</style></head>'
-  +'<body onload="setTimeout(function(){window.print()},700)"><div class="tag"><div style="font-size:30px">⚙️</div>'
+  +'<body onload="setTimeout(function(){window.print()},700)"><div class="tag"><div style="font-size:30px"></div>'
   +'<h2>'+esc(a.name)+'</h2><div class="sub">'+esc(bName(a.building))+(a.floor?' · '+esc(a.floor):'')+'</div>'
   +'<img src="'+qr+'" onerror="this.style.display=\'none\'"><div class="url">'+esc(url)+'</div>'
   +'<div class="hint">امسح الرمز لإرسال بلاغ صيانة لهذا الأصل</div></div></body></html>');
@@ -1806,10 +1854,10 @@ function defFloors(){
   $('fb_f').value=(map[t]||[]).join('\n');
 }
 function saveBuilding(){
-  const n=$('fb_n').value.trim();if(!n)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
+  const n=$('fb_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   db.buildings.push({id:uid('B'),name:n,type:$('fb_t').value,compoundId:activeCmp(),
     floors:$('fb_f').value.split('\n').map(s=>s.trim()).filter(Boolean)});
-  persist();closeModal();paintTab();toast(lb('✔ أُضيف||Added'),'ok');
+  persist();closeModal();paintTab();toast(lb(' أُضيف||Added'),'ok');
 }
 function villaBulk(){
   modal(`<h3>${lb('إضافة فلل بالجملة||Bulk Add Villas')}</h3>
@@ -1824,7 +1872,7 @@ function doVillaBulk(){
     const nm=(db.lang==='ar'?'فيلا ':'Villa ')+i;
     if(!db.buildings.some(x=>x.name===nm)){db.buildings.push({id:uid('B'),name:nm,type:'villa',compoundId:activeCmp(),floors:VILLA_FLOORS.slice()});c++;}
   }
-  persist();closeModal();paintTab();toast(c+' ✔','ok');
+  persist();closeModal();paintTab();toast(c+' ','ok');
 }
 function catForm(){
   modal(`<h3>${lb('إضافة تصنيف||Add Category')}</h3>
@@ -1852,19 +1900,19 @@ function vUnits(){
     .sort((a,b)=>a.b.localeCompare(b.b,'ar')||a.u.code.localeCompare(b.u.code));
   return `<div class="toolbar">
     ${isEng()?`<button class="btn" onclick="unitForm()">＋ ${lb('وحدة جديدة||New Unit')}</button>
-    <button class="btn ghost" onclick="bulkUnitsForm()">⚙ ${lb('توليد وحدات بالجملة||Bulk Generate Units')}</button>
-    <button class="btn ghost" onclick="tenantForm()">👤 ${lb('مستأجر جديد||New Tenant')}</button>`:''}
-    <button class="btn ghost" onclick="unitsCsv()">⬇ ${lb('Excel الوحدات||Units Excel')}</button>
-    <button class="btn ghost" onclick="tenantsCsv()">⬇ ${lb('Excel المستأجرين||Tenants Excel')}</button>
-    <button class="btn ghost" onclick="window.print()">🖨 ${lb('طباعة||Print')}</button></div>
-  <input class="searchbar" placeholder="🔍 ${lb('بحث بالكود أو المستأجر…||Search code or tenant…')}" value="${esc(FILT.units)}" oninput="FILT.units=this.value;paintTab();sbFocus()">
+    <button class="btn ghost" onclick="bulkUnitsForm()"> ${lb('توليد وحدات بالجملة||Bulk Generate Units')}</button>
+    <button class="btn ghost" onclick="tenantForm()"> ${lb('مستأجر جديد||New Tenant')}</button>`:''}
+    <button class="btn ghost" onclick="unitsCsv()"> ${lb('Excel الوحدات||Units Excel')}</button>
+    <button class="btn ghost" onclick="tenantsCsv()"> ${lb('Excel المستأجرين||Tenants Excel')}</button>
+    <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
+  <input class="searchbar" placeholder=" ${lb('بحث بالكود أو المستأجر…||Search code or tenant…')}" value="${esc(FILT.units)}" oninput="FILT.units=this.value;paintTab();sbFocus()">
   <div class="stats">
     <div class="stat"><div class="num">${tot}</div><div class="lbl">${lb('إجمالي الوحدات||Total Units')}</div></div>
     <div class="stat ok"><div class="num">${tot?Math.round(occ/tot*100)+'%':'—'}</div><div class="lbl">${lb('نسبة الإشغال||Occupancy')}</div></div>
     <div class="stat"><div class="num">${vac}</div><div class="lbl">${lb('شاغرة||Vacant')}</div></div>
     <div class="stat ${leaseSoon?'warn':''}"><div class="num">${leaseSoon}</div><div class="lbl">${lb('عقود إيجار تنتهي ≤45 يوم||Leases ≤45d')}</div></div>
   </div>
-  <div class="card"><h2>🏘 ${lb('الوحدات||Units')} (${tot})</h2><div class="tbl-wrap"><table>
+  <div class="card"><h2> ${lb('الوحدات||Units')} (${tot})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الكود||Code')}</th><th>${lb('المبنى||Building')}</th><th>${lb('الدور||Floor')}</th><th>${lb('النوع||Kind')}</th><th>${lb('المساحة م²||Area')}</th><th>${lb('الحالة||Status')}</th><th>${lb('المستأجر||Tenant')}</th><th>${lb('نهاية العقد||Lease End')}</th>${isEng()?`<th></th>`:''}</tr>
   ${rows.length?rows.map(({u,b,t})=>{
     const cls=uBadge(unitState(u));
@@ -1875,12 +1923,12 @@ function vUnits(){
     <td>${t?`<b>${esc(t.name)}</b><br><span class="muted">${esc(t.phone||'')}</span>`:'—'}</td>
     <td>${t?`${le<0?`<span class="badge b-low">${fmtD(t.leaseEnd)}</span>`:le<=60?`<span class="badge b-maint">${fmtD(t.leaseEnd)}</span>`:fmtD(t.leaseEnd)}`:'—'}</td>
     ${isEng()?`<td nowrap>
-      <button class="btn sm ghost" title="${lb('مستأجر||Tenant')}" onclick="tenantForm(null,'${u.id}')">👤</button>
-      <button class="btn sm ghost" onclick="unitForm('${u.id}')">✏</button>
-      <button class="btn sm danger" onclick="delUnit('${u.id}')">🗑</button></td>`:''}</tr>`}).join('')
+      <button class="btn sm ghost" title="${lb('مستأجر||Tenant')}" onclick="tenantForm(null,'${u.id}')">${ic('users',13)}</button>
+      <button class="btn sm ghost" onclick="unitForm('${u.id}')">${ic('edit',13)}</button>
+      <button class="btn sm danger" onclick="delUnit('${u.id}')">${ic('del',13)}</button></td>`:''}</tr>`}).join('')
     :`<tr><td colspan="9"><div class="empty">${lb('لا وحدات بعد — أنشئ مبنى ثم ولّد الوحدات||No units yet — create a building then generate units')}</div></td></tr>`}
   </table></div></div>
-  <div class="card"><h2>🔑 ${lb('سجل المستأجرين||Tenant Registry')} (${cmpTenants().length})</h2><div class="tbl-wrap"><table>
+  <div class="card"><h2> ${lb('سجل المستأجرين||Tenant Registry')} (${cmpTenants().length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الاسم||Name')}</th><th>${lb('الهاتف||Phone')}</th><th>${lb('البريد||Email')}</th><th>${lb('الوحدة||Unit')}</th><th>${lb('بدء العقد||Start')}</th><th>${lb('نهاية العقد||End')}</th><th>${lb('الإيجار||Rent')}</th>${isEng()?`<th></th>`:''}</tr>
   ${cmpTenants().map(t=>{const u=db.units.find(x=>x.id===t.unitId);const dd=daysUntil(t.leaseEnd);
     return `<tr><td><b>${esc(t.name)}</b></td><td>${t.phone?`<a href="tel:${esc(t.phone)}">${esc(t.phone)}</a>`:'—'}</td>
@@ -1888,8 +1936,8 @@ function vUnits(){
     <td>${fmtD(t.leaseStart)}</td>
     <td>${dd<0?`<span class="badge b-low">${fmtD(t.leaseEnd)}</span>`:dd<=45?`<span class="badge b-maint">${fmtD(t.leaseEnd)}</span>`:fmtD(t.leaseEnd)}</td>
     <td>${money(t.rent)}</td>
-    ${isEng()?`<td nowrap><button class="btn sm ghost" onclick="tenantForm('${t.id}')">✏</button>
-    <button class="btn sm danger" onclick="delTenant('${t.id}')">🗑</button></td>`:''}</tr>`}).join('')||
+    ${isEng()?`<td nowrap><button class="btn sm ghost" onclick="tenantForm('${t.id}')">${ic('edit',13)}</button>
+    <button class="btn sm danger" onclick="delTenant('${t.id}')">${ic('del',13)}</button></td>`:''}</tr>`}).join('')||
     `<tr><td colspan="8"><div class="empty">${lb('لا مستأجرين بعد||No tenants yet')}</div></td></tr>`}</table></div></div>`;
 }
 function cmpTenants(){const ids=new Set(cmpUnits().map(u=>u.id));
@@ -1909,7 +1957,7 @@ function unitForm(id){
       <option value="vacant" ${(u.st||'vacant')==='vacant'?'selected':''}>${lb('شاغرة||Vacant')}</option>
       <option value="maint" ${u.st==='maint'?'selected':''}>${lb('خارج الخدمة||Out of Service')}</option></select></div>
   </div>
-  ${u.tenantId?`<p class="muted">👤 ${lb('هذه الوحدة مشغولة — الحالة «مشغولة» تلقائية.||Unit is occupied — status is automatic.')}</p>`:''}
+  ${u.tenantId?`<p class="muted"> ${lb('هذه الوحدة مشغولة — الحالة «مشغولة» تلقائية.||Unit is occupied — status is automatic.')}</p>`:''}
   <label>${lb('ملاحظات||Notes')}</label><textarea id="fun_no" rows="2">${esc(u.notes||'')}</textarea>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="saveUnit('${id||''}')">${lb('حفظ||Save')}</button></div>`);
@@ -1921,24 +1969,24 @@ function uFloorsFill(sel){
     .map(f=>`<option ${sel===f?'selected':''}>${esc(f)}</option>`).join('');
 }
 function saveUnit(idStr){
-  const c=$('fun_c').value.trim();if(!c)return toast(lb('⚠ الكود مطلوب||⚠ Code required'),'err');
+  const c=$('fun_c').value.trim();if(!c)return toast(lb(' الكود مطلوب|| Code required'),'err');
   const o={code:c,buildingId:$('fun_b').value,floor:$('fun_f').value,kind:$('fun_k').value,
     area:+$('fun_a').value||0,st:$('fun_st')?$('fun_st').value:'vacant',notes:$('fun_no').value.trim()};
   if(idStr){Object.assign(db.units.find(x=>x.id===idStr),o);}
   else{
-    if(db.units.some(x=>x.buildingId===o.buildingId&&x.code===c))return toast(lb('⚠ الكود مستخدم في نفس المبنى||⚠ Code already used in this building'),'err');
+    if(db.units.some(x=>x.buildingId===o.buildingId&&x.code===c))return toast(lb(' الكود مستخدم في نفس المبنى|| Code already used in this building'),'err');
     db.units.push(Object.assign({id:uid('UN'),tenantId:''},o));
   }
-  persist();closeModal();paintTab();toast(lb('✔ تم||Saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
 function delUnit(id){
   const occ=db.tenants.find(x=>x.unitId===id);
-  if(occ)return toast(lb('⚠ الوحدة مشغولة بـ "'+occ.name+'" — انقل المستأجر أو احذفه أولاً||⚠ Unit is occupied by "'+occ.name+'" — relocate or delete the tenant first'),'err');
+  if(occ)return toast(lb(' الوحدة مشغولة بـ "'+occ.name+'" — انقل المستأجر أو احذفه أولاً|| Unit is occupied by "'+occ.name+'" — relocate or delete the tenant first'),'err');
   if(!confirm(lb('حذف الوحدة؟||Delete unit?')))return;
   db.units=db.units.filter(u=>u.id!==id);persist();paintTab();}
 function bulkUnitsForm(){
   if(!isEng())return;
-  modal(`<h3>⚙ ${lb('توليد وحدات بالجملة||Bulk Generate Units')}</h3>
+  modal(`<h3> ${lb('توليد وحدات بالجملة||Bulk Generate Units')}</h3>
   <div class="fg">
     <div><label>${lb('المبنى *||Building *')}</label><select id="fbk_b" onchange="bfkFloors()"><option value="">—</option>${bOpts('')}</select></div>
     <div><label>${lb('الدور||Floor')}</label><select id="fbk_f"></select></div>
@@ -1957,7 +2005,7 @@ function bfkFloors(sel){
     .map(f=>`<option ${sel===f?'selected':''}>${esc(f)}</option>`).join('');
 }
 function doBulkUnits(){
-  const bid=$('fbk_b').value;if(!bid)return toast(lb('⚠ اختر المبنى||⚠ Pick a building'),'err');
+  const bid=$('fbk_b').value;if(!bid)return toast(lb(' اختر المبنى|| Pick a building'),'err');
   const fl=$('fbk_f').value,p=$('fbk_p').value.trim(),k=$('fbk_k').value;
   const a=Math.max(1,+$('fbk_a').value||1),b=Math.max(1,+$('fbk_t2').value||1);let c=0;
   for(let i=Math.min(a,b);i<=Math.max(a,b);i++){
@@ -1990,13 +2038,13 @@ function tenantForm(id,presetUnit){
   <button class="btn" onclick="saveTenant('${id||''}')">${lb('حفظ||Save')}</button></div>`);
 }
 function saveTenant(idStr){
-  const n=$('ftn_n').value.trim();if(!n)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
+  const n=$('ftn_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const unitId=$('ftn_u').value;
   if(unitId){const nu=db.units.find(u=>u.id===unitId);
     if(nu&&nu.tenantId&&nu.tenantId!==idStr){
       const prev=db.tenants.find(x=>x.id===nu.tenantId);
       const pn=prev?prev.name:'؟';
-      if(!confirm(lb('⚠ الوحدة مشغولة بـ "'+pn+'" — سيتم إخلاؤها وإسنادها إلى "'+n+'". متابعة؟||⚠ Unit is occupied by "'+pn+'" — it will be vacated and assigned to "'+n+'". Continue?')))return;
+      if(!confirm(lb(' الوحدة مشغولة بـ "'+pn+'" — سيتم إخلاؤها وإسنادها إلى "'+n+'". متابعة؟|| Unit is occupied by "'+pn+'" — it will be vacated and assigned to "'+n+'". Continue?')))return;
     }}
   let t;
   if(idStr)t=db.tenants.find(x=>x.id===idStr);
@@ -2009,7 +2057,7 @@ function saveTenant(idStr){
   Object.assign(t,{name:n,phone:$('ftn_p').value.trim(),email:$('ftn_e').value.trim(),idNo:$('ftn_i').value.trim(),
     leaseStart:$('ftn_ls').value||todayISO(),leaseEnd:$('ftn_le').value||'',rent:+$('ftn_r').value||0,
     notes:$('ftn_no').value.trim()});
-  persist();closeModal();paintTab();toast(lb('✔ تم الحفظ||✔ Saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' تم الحفظ|| Saved'),'ok');
 }
 function delTenant(id){if(!confirm(lb('حذف المستأجر؟ ستشغر وحدته.||Delete tenant? Unit becomes vacant.')))return;
   const u=db.units.find(x=>x.tenantId===id);if(u)u.tenantId='';
@@ -2046,21 +2094,21 @@ function vContracts(){
     <td>${fmtD(c.start)} ← ${fmtD(c.end)}</td>
     <td>${money(c.cost)}<br><span class="muted">${CYCLEK[c.cycle]||''}</span></td>
     <td><span class="badge ${cls[0]}">${cls[1]}</span></td>
-    <td>${isEng()?`<button class="btn sm ghost" onclick="contractForm('${c.id}')">✏</button>`:''}
-    ${isAdmin()?`<button class="btn sm danger" onclick="delContract('${c.id}')">🗑</button>`:''}</td></tr>`;
+    <td>${isEng()?`<button class="btn sm ghost" onclick="contractForm('${c.id}')">${ic('edit',13)}</button>`:''}
+    ${isAdmin()?`<button class="btn sm danger" onclick="delContract('${c.id}')">${ic('del',13)}</button>`:''}</td></tr>`;
   });
   return `<div class="toolbar">${isEng()?`<button class="btn" onclick="contractForm()">＋ ${lb('عقد جديد||New Contract')}</button>`:''}
-  <button class="btn ghost" onclick="ctrCsv()">⬇ Excel</button>
-  <button class="btn ghost" onclick="window.print()">🖨 ${lb('طباعة||Print')}</button></div>
+  <button class="btn ghost" onclick="ctrCsv()"> Excel</button>
+  <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
   <div class="stats">
     <div class="stat ok"><div class="num">${actN}</div><div class="lbl">${lb('عقود سارية||Active')}</div></div>
     <div class="stat ${exp?'warn':''}"><div class="num">${exp}</div><div class="lbl">${lb('تنتهي خلال 30 يوم||Expiring ≤30d')}</div></div>
     <div class="stat ${dead?'warn':''}"><div class="num">${dead}</div><div class="lbl">${lb('منتهية||Expired')}</div></div>
   </div>
-  <div class="card"><h2>📜 ${lb('عقود الخدمات والموردون||Service & Vendor Contracts')} (${list.length})</h2><div class="tbl-wrap"><table>
+  <div class="card"><h2> ${lb('عقود الخدمات والموردون||Service & Vendor Contracts')} (${list.length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الرقم||No.')}</th><th>${lb('المورد||Vendor')}</th><th>${lb('النطاق||Scope')}</th><th>${lb('المدة||Term')}</th><th>${lb('القيمة||Value')}</th><th>${lb('الحالة||Status')}</th><th></th></tr>
   ${rows||`<tr><td colspan="7"><div class="empty">${lb('لا عقود بعد||No contracts yet')}</div></td></tr>`}</table></div></div>
-  <p class="muted">🔔 ${lb('سيصلك تنبيه قبل 30 يوماً من انتهاء أي عقد.||You get an alert 30 days before any contract ends.')}</p>`;
+  <p class="muted"> ${lb('سيصلك تنبيه قبل 30 يوماً من انتهاء أي عقد.||You get an alert 30 days before any contract ends.')}</p>`;
 }
 function contractForm(id){
   if(!isEng())return;
@@ -2082,13 +2130,13 @@ function contractForm(id){
   <button class="btn" onclick="saveContract('${id||''}')">${lb('حفظ||Save')}</button></div>`);
 }
 function saveContract(idStr){
-  const v=$('fct_v').value.trim();if(!v)return toast(lb('⚠ اسم المورد مطلوب||⚠ Vendor required'),'err');
+  const v=$('fct_v').value.trim();if(!v)return toast(lb(' اسم المورد مطلوب|| Vendor required'),'err');
   const o={vendor:v,scope:$('fct_s').value,compoundId:activeCmp(),start:$('fct_st').value||todayISO(),end:$('fct_en').value||'',
     cost:+$('fct_c').value||0,cycle:$('fct_cy').value,manager:$('fct_m').value.trim(),notes:$('fct_nt').value.trim()};
   if(idStr){const c=db.contracts.find(x=>x.id===idStr);o.no=c.no||$('fct_no').value.trim();Object.assign(c,o);}
   else{o.no=$('fct_no').value.trim()||('CT-'+new Date().getFullYear()+'-'+String((db.ctSeq=(db.ctSeq||0)+1)).padStart(3,'0'));
     db.contracts.push(Object.assign({id:uid('C')},o));}
-  persist();closeModal();paintTab();toast(lb('✔ تم حفظ العقد||✔ Contract saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' تم حفظ العقد|| Contract saved'),'ok');
 }
 function delContract(id){if(!confirm(lb('حذف العقد؟||Delete contract?')))return;
   db.contracts=db.contracts.filter(c=>c.id!==id);persist();paintTab();}
@@ -2116,26 +2164,26 @@ function vWOs(){
   const chip=k=>`<button class="chip ${FILT.woStatus===k?'on':''}" onclick="FILT.woStatus='${k}';paintTab()">${
     {all:lb('الكل||All'),open:WSTAT.open[0],inprog:WSTAT.inprog[0],wait:WSTAT.wait[0],closed:WSTAT.closed[0]}[k]}</button>`;
   const ix=w=>db.wos.indexOf(w);
-  const portalBadge=` <span class="badge b-open" title="${lb('من بوابة المستأجرين||From tenant portal')}">🏠</span>`;
+  const portalBadge=` <span class="badge b-open" title="${lb('من بوابة المستأجرين||From tenant portal')}">بوابة</span>`;
   return `<div class="toolbar"><button class="btn" onclick="woForm()">＋ ${lb('بلاغ عطل جديد||New Fault Report')}</button>
-    <button class="btn ghost" onclick="window.print()">🖨 ${lb('طباعة||Print')}</button></div>
+    <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
   <div class="chips">${chip('all')}${chip('open')}${chip('inprog')}${chip('wait')}${chip('closed')}</div>
-  <input class="searchbar" placeholder="🔍 ${lb('بحث…||Search…')}" value="${esc(FILT.wos)}" oninput="FILT.wos=this.value;paintTab();sbFocus()">
+  <input class="searchbar" placeholder=" ${lb('بحث…||Search…')}" value="${esc(FILT.wos)}" oninput="FILT.wos=this.value;paintTab();sbFocus()">
   <div class="card"><h2>${lb('أوامر الشغل||Work Orders')} — ${list.length} ${lb('نتيجة||results')}</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الرقم||No.')}</th><th>${lb('البلاغ||Report')}</th><th>${lb('الأصل/الموقع||Asset/Loc')}</th><th>${lb('الأولوية||Priority')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الفني||Tech')}</th><th>${lb('واتساب||WhatsApp')}</th><th>${lb('فُتح||Opened')}</th><th>${lb('أُغلق||Closed')}</th><th></th></tr>
   ${list.length?list.map(w=>{
     const od=w.status!=='closed'&&w.dueDate&&daysUntil(w.dueDate)<0;
     const mine=w.assigneeId===me.id,open=w.status!=='closed';
-    let acts=`<button class="btn sm ghost" onclick="woView(${ix(w)})">👁</button>`;
+    let acts=`<button class="btn sm ghost" onclick="woView(${ix(w)})">${ic('view',13)}</button>`;
     if(open&&(mine||isEng())){
-      if(w.status==='open')acts+=`<button class="btn sm" onclick="woSet(${ix(w)},'inprog')">▶</button>`;
-      if(w.status==='inprog')acts+=`<button class="btn sm ghost" title="${lb('انتظار قطعة||Wait parts')}" onclick="woSet(${ix(w)},'wait')">⏳</button>`;
-      acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="woCloseForm(${ix(w)})">✅ ${lb('إغلاق||Close')}</button>`;
+      if(w.status==='open')acts+=`<button class="btn sm" onclick="woSet(${ix(w)},'inprog')">${ic('play',13)}</button>`;
+      if(w.status==='inprog')acts+=`<button class="btn sm ghost" title="${lb('انتظار قطعة||Wait parts')}" onclick="woSet(${ix(w)},'wait')">${ic('clock',13)}</button>`;
+      acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="woCloseForm(${ix(w)})"> ${lb('إغلاق||Close')}</button>`;
     }
-    if(isEng()){acts+=`<button class="btn sm ghost" onclick="woForm('${ix(w)}')">✏</button>
-      <button class="btn sm danger" onclick="woDel(${ix(w)})">🗑</button>`;}
-    const wa=(w.status!=='closed'&&w.assigneeId)?`<button class="btn sm ghost" title="${lb('إرسال واتساب||Send WhatsApp')}" onclick="waBtn(${ix(w)})">💬</button>`:'';
-    return `<tr class="${od?'overdue':''}"><td>${w.no}${w.type==='pm'?' <span class="badge b-maint">🗓</span>':''}${w.source==='portal'?portalBadge:''}${w.projectId?' <span class="badge b-open">🧱</span>':''}${w.unitCode?' <span class="badge b-ok">🏘</span>':''}</td>
+    if(isEng()){acts+=`<button class="btn sm ghost" onclick="woForm('${ix(w)}')">${ic('edit',13)}</button>
+      <button class="btn sm danger" onclick="woDel(${ix(w)})">${ic('del',13)}</button>`;}
+    const wa=(w.status!=='closed'&&w.assigneeId)?`<button class="btn sm ghost" title="${lb('إرسال واتساب||Send WhatsApp')}" onclick="waBtn(${ix(w)})">${ic('chat',13)}</button>`:'';
+    return `<tr class="${od?'overdue':''}"><td>${w.no}${w.type==='pm'?' <span class="badge b-maint">PM</span>':''}${w.source==='portal'?portalBadge:''}${w.projectId?' <span class="badge b-open">مشروع</span>':''}${w.unitCode?' <span class="badge b-ok">وحدة</span>':''}</td>
     <td><b>${esc(w.title)}</b><br><span class="muted">${esc((w.desc||'').slice(0,55))}</span></td>
     <td>${esc(w.assetName||'—')}<br><span class="muted">${esc([w.bname,w.unitCode,w.tenantName].filter(Boolean).join(' · ')||'')}</span></td>
     <td><span class="badge b-${w.priority}">${PRIO[w.priority]}</span></td>
@@ -2181,7 +2229,7 @@ function syncLoc(keep){
 }
 function saveWO(idxStr){
   const isNew=(idxStr===''||idxStr==null);
-  const t=$('fw_t').value.trim();if(!t)return toast(lb('⚠ العنوان مطلوب||⚠ Title required'),'err');
+  const t=$('fw_t').value.trim();if(!t)return toast(lb(' العنوان مطلوب|| Title required'),'err');
   const aid=$('fw_a').value,a=db.assets.find(x=>x.id===aid);
   const tech=db.users.find(u=>u.id===$('fw_as').value);
   const unSel=$('fw_u'),un=unSel?db.units.find(x=>x.id===unSel.value):null;
@@ -2195,15 +2243,15 @@ function saveWO(idxStr){
     db.wos.unshift(Object.assign({no:'WO-'+y+'-'+String(db.seq).padStart(4,'0'),type:'fault',compoundId:activeCmp(),
       status:'open',createdAt:Date.now(),startedAt:null,closedAt:null,cost:0,closeNotes:'',parts:[],photos:[],sig:'',
       reportedBy:me.name},o));
-    notify('🛠',lb('بلاغ جديد: ||New fault: ')+t,'wos','');
+    notify('',lb('بلاغ جديد: ||New fault: ')+t,'wos','');
   }
-  persist();closeModal();paintTab();toast(lb('✔ تم حفظ البلاغ||✔ Saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' تم حفظ البلاغ|| Saved'),'ok');
   const w=db.wos[0];
-  if(isNew&&o.assigneeId&&confirm(lb('💬 إرسال البلاغ للفني عبر واتساب الآن؟||💬 Send this report to the technician via WhatsApp now?')))openWhatsApp(w);
+  if(isNew&&o.assigneeId&&confirm(lb(' إرسال البلاغ للفني عبر واتساب الآن؟|| Send this report to the technician via WhatsApp now?')))openWhatsApp(w);
 }
 function woSet(i,st){const w=db.wos[i];w.status=st;
   if(st==='inprog'&&!w.startedAt)w.startedAt=Date.now();
-  persist();paintTab();toast(st==='wait'?lb('⏳ بانتظار قطعة||Waiting parts'):lb('▶ بدأ التنفيذ||Started'));}
+  persist();paintTab();toast(st==='wait'?lb(' بانتظار قطعة||Waiting parts'):lb(' بدأ التنفيذ||Started'));}
 function woDel(i){if(!confirm(lb('حذف البلاغ؟||Delete report?')))return;db.wos.splice(i,1);persist();paintTab();}
 function woView(i){
   const w=db.wos[i];
@@ -2211,23 +2259,23 @@ function woView(i){
   modal(`<h3>${w.no} — ${esc(w.title)}</h3>
   <p class="muted">${esc(w.desc||'')}</p>
   <ul class="tl">
-    <li>🕐 ${lb('فُتح||Opened')}: ${fmtDT(w.createdAt)} — ${esc(w.reportedBy||'')}</li>
-    ${w.startedAt?`<li>▶ ${lb('بدأ التنفيذ||Started')}: ${fmtDT(w.startedAt)} (${lb('زمن الاستجابة||Response')}: ${durTxt(w.startedAt,w.createdAt)})</li>`:''}
-    ${w.closedAt?`<li>✅ ${lb('أُغلق||Closed')}: ${fmtDT(w.closedAt)} (${lb('مدة التنفيذ||Repair time')}: ${durTxt(w.closedAt,w.startedAt||w.createdAt)})</li>`:''}
-    ${pj?`<li>🧱 ${lb('المشروع||Project')}: ${esc(pj.no)} — ${esc(pj.name)}</li>`:''}
-    ${w.unitCode?`<li>🏘 ${lb('الوحدة||Unit')}: ${esc(w.unitCode)}${w.tenantName?' — 👤 '+esc(w.tenantName):''}</li>`:''}
+    <li> ${lb('فُتح||Opened')}: ${fmtDT(w.createdAt)} — ${esc(w.reportedBy||'')}</li>
+    ${w.startedAt?`<li> ${lb('بدأ التنفيذ||Started')}: ${fmtDT(w.startedAt)} (${lb('زمن الاستجابة||Response')}: ${durTxt(w.startedAt,w.createdAt)})</li>`:''}
+    ${w.closedAt?`<li> ${lb('أُغلق||Closed')}: ${fmtDT(w.closedAt)} (${lb('مدة التنفيذ||Repair time')}: ${durTxt(w.closedAt,w.startedAt||w.createdAt)})</li>`:''}
+    ${pj?`<li> ${lb('المشروع||Project')}: ${esc(pj.no)} — ${esc(pj.name)}</li>`:''}
+    ${w.unitCode?`<li> ${lb('الوحدة||Unit')}: ${esc(w.unitCode)}${w.tenantName?' —  '+esc(w.tenantName):''}</li>`:''}
   </ul>
   <table><tr><th>${lb('الأولوية||Priority')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الفني||Tech')}</th><th>${lb('التكلفة||Cost')}</th></tr>
   <tr><td><span class="badge b-${w.priority}">${PRIO[w.priority]}</span></td>
   <td><span class="badge ${WSTAT[w.status][1]}">${WSTAT[w.status][0]}</span></td>
   <td>${esc(w.assigneeName||'—')}</td><td>${money(w.cost)}</td></tr></table>
-  ${(w.photos&&w.photos.length)?`<label>📷 ${lb('صور التوثيق||Documentation Photos')}</label><div class="pgrid">${w.photos.map(p=>`<span class="phwrap"><img class="pthumb" src="${p.d}" onclick="lbShow('${phReg(p.d)}')"><span class="phtag">${p.tag==='before'?lb('قبل||BEFORE'):lb('بعد||AFTER')}</span></span>`).join('')}</div>`:''}
-  ${w.sig?`<label>✍️ ${lb('توقيع المنفّذ||Technician Signature')}</label><br><img class="sigimg" src="${w.sig}">`:''}
+  ${(w.photos&&w.photos.length)?`<label> ${lb('صور التوثيق||Documentation Photos')}</label><div class="pgrid">${w.photos.map(p=>`<span class="phwrap"><img class="pthumb" src="${p.d}" onclick="lbShow('${phReg(p.d)}')"><span class="phtag">${p.tag==='before'?lb('قبل||BEFORE'):lb('بعد||AFTER')}</span></span>`).join('')}</div>`:''}
+  ${w.sig?`<label> ${lb('توقيع المنفّذ||Technician Signature')}</label><br><img class="sigimg" src="${w.sig}">`:''}
   ${(w.parts&&w.parts.length)?`<label>${lb('قطع الغيار المستخدمة||Parts Used')}</label><ul style="padding-inline-start:18px">${w.parts.map(p=>`<li>${esc(p.name)} × ${p.qty}</li>`).join('')}</ul>`:''}
-  ${(w.checklist&&w.checklist.length)?`<label>${lb('قائمة الفحص||Checklist')}</label><ul class="tl">${w.checklist.map(c=>`<li>${c.done?'✅':'⬜'} ${esc(c.t)}${c.v?' — <b>'+esc(c.v)+'</b>':''}</li>`).join('')}</ul>`:''}
+  ${(w.checklist&&w.checklist.length)?`<label>${lb('قائمة الفحص||Checklist')}</label><ul class="tl">${w.checklist.map(c=>`<li>${c.done?ic('check',12):'<span class="muted">–</span>'} ${esc(c.t)}${c.v?' — <b>'+esc(c.v)+'</b>':''}</li>`).join('')}</ul>`:''}
   ${w.closeNotes?`<label>${lb('ملاحظات الإغلاق||Closing Notes')}</label><p>${esc(w.closeNotes)}</p>`:''}
   <div class="ma">
-  ${(w.status!=='closed'&&w.assigneeId)?`<button class="btn ghost" onclick="waBtn(${i})">💬 ${lb('واتساب||WhatsApp')}</button>`:''}
+  ${(w.status!=='closed'&&w.assigneeId)?`<button class="btn ghost" onclick="waBtn(${i})"> ${lb('واتساب||WhatsApp')}</button>`:''}
   <button class="btn ghost" onclick="closeModal()">${lb('إغلاق النافذة||Close Window')}</button></div>`);
 }
 function woCloseForm(i){
@@ -2238,20 +2286,20 @@ function woCloseForm(i){
       w.checklist.map((c,j)=>`<div class="ckrow"><input type="checkbox" class="ck_c" id="ck_${j}" ${c.done?'checked':''}>
       <span>${esc(c.t)}</span><input type="text" class="ck_v" id="ckv_${j}" placeholder="${lb('قياس/ملاحظة||Value/note')}" value="${esc(c.v||'')}"></div>`).join('');
   }
-  modal(`<h3>✅ ${lb('إغلاق أمر الشغل||Close Work Order')} ${w.no}</h3>
+  modal(`<h3> ${lb('إغلاق أمر الشغل||Close Work Order')} ${w.no}</h3>
   <p class="muted">${esc(w.title)}</p>
   ${ck}
   <label>${lb('ما الذي تم عمله؟||What was done?')}</label><textarea id="wc_n" rows="2"></textarea>
   <div class="fg"><div><label>${lb('تكلفة العمالة (ريال)||Labor Cost (SAR)')}</label><input type="number" step="any" id="wc_c" value="0"></div></div>
   <div class="fg">
-    <div><label>📷 ${lb('صور قبل الإصلاح||Photos BEFORE')}</label><div id="wpg_b" class="pgrid"></div>
+    <div><label> ${lb('صور قبل الإصلاح||Photos BEFORE')}</label><div id="wpg_b" class="pgrid"></div>
       <button class="btn ghost sm" onclick="woAddPhotos('b')">＋ ${lb('إضافة صور||Add Photos')}</button></div>
-    <div><label>📷 ${lb('صور بعد الإصلاح||Photos AFTER')}</label><div id="wpg_a" class="pgrid"></div>
+    <div><label> ${lb('صور بعد الإصلاح||Photos AFTER')}</label><div id="wpg_a" class="pgrid"></div>
       <button class="btn ghost sm" onclick="woAddPhotos('a')">＋ ${lb('إضافة صور||Add Photos')}</button></div>
   </div>
-  <label>✍️ ${lb('توقيع المنفّذ (بالماوس أو باللمس)||Technician Signature (mouse or touch)')}</label>
+  <label> ${lb('توقيع المنفّذ (بالماوس أو باللمس)||Technician Signature (mouse or touch)')}</label>
   <canvas id="sigpad" class="sigbox" width="560" height="150"></canvas>
-  <button class="btn ghost sm" onclick="sigClear()">🧹 ${lb('مسح التوقيع||Clear Signature')}</button>
+  <button class="btn ghost sm" onclick="sigClear()"> ${lb('مسح التوقيع||Clear Signature')}</button>
   <label>${lb('قطع الغيار المستخدمة (تُخصم من المخزون)||Parts Used (deducted from stock)')}</label>
   <div id="prows"></div><button class="btn ghost sm" onclick="addPartRow()">＋ ${lb('إضافة قطعة||Add Part')}</button>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
@@ -2264,18 +2312,18 @@ function woCloseForm(i){
 function addPartRow(){
   const opts=db.inv.map(it=>`<option value="${it.id}">${esc(it.name)} (${it.qty} ${esc(it.unit)})</option>`).join('');
   $('prows').insertAdjacentHTML('beforeend',
-   `<div class="partrow"><select class="pr_i">${opts}</select><input type="number" class="pr_q" min="1" value="1"><button class="btn sm danger" onclick="this.parentNode.remove()">✕</button></div>`);
+   `<div class="partrow"><select class="pr_i">${opts}</select><input type="number" class="pr_q" min="1" value="1"><button class="btn sm danger" onclick="this.parentNode.remove()">${ic('x',12)}</button></div>`);
 }
 function doCloseWO(i){
   const w=db.wos[i],used=[];
   const notes=$('wc_n').value.trim();
-  if(!notes)return toast(lb('⚠ اكتب ما الذي تم عمله قبل الإغلاق||⚠ Describe what was done before closing'),'err');
-  if(!(window._woPhA||[]).length)return toast(lb('⚠ صورة "بعد الإصلاح" مطلوبة للتوثيق||⚠ An AFTER photo is required for documentation'),'err');
+  if(!notes)return toast(lb(' اكتب ما الذي تم عمله قبل الإغلاق|| Describe what was done before closing'),'err');
+  if(!(window._woPhA||[]).length)return toast(lb(' صورة "بعد الإصلاح" مطلوبة للتوثيق|| An AFTER photo is required for documentation'),'err');
   for(const r of [...document.querySelectorAll('#prows .partrow')]){
     const it=db.inv.find(x=>x.id===r.querySelector('.pr_i').value);
     const q=+r.querySelector('.pr_q').value||0;
     if(it&&q>0){
-      if(q>it.qty){toast(lb('⚠ الكمية غير متوفرة من: ||⚠ Not enough stock: ')+it.name,'err');return;}
+      if(q>it.qty){toast(lb(' الكمية غير متوفرة من: || Not enough stock: ')+it.name,'err');return;}
       used.push({it,q});
     }
   }
@@ -2299,7 +2347,7 @@ function doCloseWO(i){
       const wa=db.assets.find(a=>a.id===w.assetId);
       if(wa&&wa.meter!=null&&wa.meter!=='')p.lastMeter=Number(wa.meter);}
   }
-  persist();closeModal();paintTab();toast(lb('✔ أُغلق الأمر||✔ Closed'),'ok');
+  persist();closeModal();paintTab();toast(lb(' أُغلق الأمر|| Closed'),'ok');
 }
 
 /* ===== INVENTORY ===== */
@@ -2308,10 +2356,10 @@ function vInv(){
   const list=db.inv.filter(it=>!q||(it.name+' '+(it.loc||'')).toLowerCase().includes(q)).slice().sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   const val=db.inv.reduce((s,it)=>s+it.qty*it.unitCost,0),low=db.inv.filter(it=>it.qty<=it.minQty).length;
   return `${canInv()?`<div class="toolbar"><button class="btn" onclick="itemForm()">＋ ${lb('صنف جديد||New Item')}</button>
-    <button class="btn ghost" onclick="moveForm('in')">📥 ${lb('وارد||Stock In')}</button>
-    <button class="btn ghost" onclick="moveForm('out')">📤 ${lb('صرف يدوي||Manual Issue')}</button>
-    <button class="btn ghost" onclick="prFromLow()">🛒 ${lb('طلب تعويض النواقص||Restock Request')}</button></div>`:''}
-  <input class="searchbar" placeholder="🔍 ${lb('بحث…||Search…')}" value="${esc(FILT.inv)}" oninput="FILT.inv=this.value;paintTab();sbFocus()">
+    <button class="btn ghost" onclick="moveForm('in')"> ${lb('وارد||Stock In')}</button>
+    <button class="btn ghost" onclick="moveForm('out')"> ${lb('صرف يدوي||Manual Issue')}</button>
+    <button class="btn ghost" onclick="prFromLow()"> ${lb('طلب تعويض النواقص||Restock Request')}</button></div>`:''}
+  <input class="searchbar" placeholder=" ${lb('بحث…||Search…')}" value="${esc(FILT.inv)}" oninput="FILT.inv=this.value;paintTab();sbFocus()">
   <div class="stats" style="margin-top:10px">
     <div class="stat"><div class="num">${db.inv.length}</div><div class="lbl">${lb('عدد الأصناف||Items')}</div></div>
     <div class="stat"><div class="num" style="font-size:19px">${money(val)}</div><div class="lbl">${lb('قيمة المخزون||Stock Value')}</div></div>
@@ -2323,10 +2371,10 @@ function vInv(){
     <td><b>${esc(it.name)}</b></td>
     <td><span class="badge ${it.qty<=it.minQty?'b-low':'b-ok'}">${it.qty} ${esc(it.unit)}</span></td>
     <td>${it.minQty}</td><td>${money(it.unitCost)}</td><td>${esc(it.loc||'—')}</td>
-    ${canInv()?`<td nowrap><button class="btn sm ghost" onclick="moveForm('in','${it.id}')">📥</button>
-      <button class="btn sm ghost" onclick="moveForm('out','${it.id}')">📤</button>
-      <button class="btn sm ghost" onclick="itemForm('${it.id}')">✏</button>
-      <button class="btn sm danger" onclick="delItem('${it.id}')">🗑</button></td>`:''}</tr>`).join('')
+    ${canInv()?`<td nowrap><button class="btn sm ghost" title="${lb('وارد||Stock in')}" onclick="moveForm('in','${it.id}')">↓</button>
+    <button class="btn sm ghost" title="${lb('صرف||Issue')}" onclick="moveForm('out','${it.id}')">↑</button>
+      <button class="btn sm ghost" onclick="itemForm('${it.id}')">${ic('edit',13)}</button>
+      <button class="btn sm danger" onclick="delItem('${it.id}')">${ic('del',13)}</button></td>`:''}</tr>`).join('')
     :`<tr><td colspan="6"><div class="empty">${lb('لا أصناف بعد||No items yet')}</div></td></tr>`}</table></div></div>
   <div class="card"><h2>${lb('آخر الحركات||Recent Movements')}</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('التاريخ||Date')}</th><th>${lb('الصنف||Item')}</th><th>${lb('النوع||Type')}</th><th>${lb('الكمية||Qty')}</th><th>${lb('المرجع||Ref')}</th><th>${lb('بواسطة||By')}</th></tr>
@@ -2351,17 +2399,17 @@ function itemForm(id){
   <button class="btn" onclick="saveItem('${id||''}')">${lb('حفظ||Save')}</button></div>`);
 }
 function saveItem(id){
-  const n=$('fi_n').value.trim();if(!n)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
+  const n=$('fi_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const o={name:n,unit:$('fi_u').value,qty:+$('fi_q').value||0,minQty:+$('fi_m').value||0,
     unitCost:+$('fi_c').value||0,loc:$('fi_l').value.trim()};
   if(id)Object.assign(db.inv.find(x=>x.id===id),o);else db.inv.push({id:uid('I'),...o});
-  persist();closeModal();paintTab();toast(lb('✔ تم||Saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
 function delItem(id){if(!confirm(lb('حذف الصنف؟||Delete item?')))return;
   db.inv=db.inv.filter(it=>it.id!==id);persist();paintTab();}
 function moveForm(type,itemId){
   const t=type==='in';
-  modal(`<h3>${t?'📥 '+lb('حركة وارد||Stock In'):'📤 '+lb('صرف||Issue Out')}</h3>
+  modal(`<h3>${t?' '+lb('حركة وارد||Stock In'):' '+lb('صرف||Issue Out')}</h3>
   <label>${lb('الصنف||Item')}</label><select id="fm_i">${db.inv.map(it=>`<option value="${it.id}" ${itemId===it.id?'selected':''}>${esc(it.name)} (${it.qty})</option>`).join('')}</select>
   <div class="fg">
     <div><label>${lb('الكمية||Quantity')}</label><input type="number" id="fm_q" value="1" min="1"></div>
@@ -2372,11 +2420,11 @@ function moveForm(type,itemId){
 }
 function doMove(type){
   const it=db.inv.find(x=>x.id===$('fm_i').value);if(!it)return;
-  const q=+$('fm_q').value||0;if(q<=0)return toast(lb('⚠ أدخل كمية||⚠ Enter quantity'),'err');
-  if(type==='out'){if(q>it.qty)return toast(lb('⚠ الكمية أكبر من المتوفر||⚠ Not enough stock'),'err');it.qty-=q;}
+  const q=+$('fm_q').value||0;if(q<=0)return toast(lb(' أدخل كمية|| Enter quantity'),'err');
+  if(type==='out'){if(q>it.qty)return toast(lb(' الكمية أكبر من المتوفر|| Not enough stock'),'err');it.qty-=q;}
   else it.qty+=q;
   db.moves.unshift({date:todayISO(),item:it.name,type,qty:q,ref:$('fm_r').value.trim(),by:me.name});
-  persist();closeModal();paintTab();toast(lb('✔ سُجلت الحركة||✔ Recorded'),'ok');
+  persist();closeModal();paintTab();toast(lb(' سُجلت الحركة|| Recorded'),'ok');
 }
 
 /* ===== PROCUREMENT ===== */
@@ -2401,14 +2449,14 @@ function vPrList(){
   [...db.prs].sort((a,b)=>b.date.localeCompare(a.date)).forEach(pr=>{
     const i=db.prs.indexOf(pr);
     const tot=pr.items.reduce((s,it)=>s+it.qty*it.price,0);
-    let acts=`<button class="btn sm ghost" onclick="prView(${i})">👁</button>`;
+    let acts=`<button class="btn sm ghost" onclick="prView(${i})">${ic('view',13)}</button>`;
     if(pr.status==='pending'){
-      if(canAppr())acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="prApprove(${i})">✔ ${lb('اعتماد||Approve')}</button>
-      <button class="btn sm danger" onclick="prReject(${i})">✕</button>`;
-      if(isAdmin())acts+=`<button class="btn sm ghost" onclick="prForm(${i})">✏</button><button class="btn sm danger" onclick="prDel(${i})">🗑</button>`;
+      if(canAppr())acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="prApprove(${i})"> ${lb('اعتماد||Approve')}</button>
+      <button class="btn sm danger" onclick="prReject(${i})">${ic('x',12)}</button>`;
+      if(isAdmin())acts+=`<button class="btn sm ghost" onclick="prForm(${i})">${ic('edit',13)}</button><button class="btn sm danger" onclick="prDel(${i})">${ic('del',13)}</button>`;
     }
     if(pr.status==='approved'&&canProc())
-      acts+=`<button class="btn sm" onclick="poFromPr(${i})">🧾 ${lb('أمر شراء||PO')}</button>`;
+      acts+=`<button class="btn sm" onclick="poFromPr(${i})"> ${lb('أمر شراء||PO')}</button>`;
     rows+=`<tr><td>${pr.no}</td><td><b>${esc(pr.title)}</b><br><span class="muted">${lb('طلب||by')} ${esc(pr.by)} · ${fmtD(pr.date)}</span></td>
     <td>${money(tot)}</td><td>${pr.poNo?`<span class="muted">${pr.poNo}</span>`:''}</td>
     <td><span class="badge ${PRSTAT[pr.status][1]}">${PRSTAT[pr.status][0]}</span></td>
@@ -2440,39 +2488,39 @@ function addItRow(it){
    <select class="it_i">${selOpts}</select>
    <input type="number" class="it_q" min="1" value="${it.qty||1}" title="${lb('الكمية||Qty')}">
    <input type="number" step="any" class="it_p" min="0" value="${it.price??''}" placeholder="${lb('سعر||Price')}">
-   <button class="btn sm danger" onclick="this.parentNode.remove()">✕</button></div>`);
+   <button class="btn sm danger" onclick="this.parentNode.remove()">${ic('x',12)}</button></div>`);
 }
 function savePr(iStr){
   const isNew=(iStr==null||iStr==='null'||iStr==='');
-  const t=$('fpr_t').value.trim();if(!t)return toast(lb('⚠ العنوان مطلوب||⚠ Title required'),'err');
+  const t=$('fpr_t').value.trim();if(!t)return toast(lb(' العنوان مطلوب|| Title required'),'err');
   const items=[...document.querySelectorAll('#itrows .itrow')].map(r=>({
     desc:r.querySelector('.it_d').value.trim(),
     invId:r.querySelector('.it_i').value||'',
     qty:+r.querySelector('.it_q').value||1,
     price:+r.querySelector('.it_p').value||0
   })).filter(it=>it.desc);
-  if(!items.length)return toast(lb('⚠ أضف صنفاً واحداً على الأقل||⚠ Add at least one item'),'err');
+  if(!items.length)return toast(lb(' أضف صنفاً واحداً على الأقل|| Add at least one item'),'err');
   if(isNew){db.prSeq++;const y=new Date().getFullYear();
     const no='PR-'+y+'-'+String(db.prSeq).padStart(4,'0');
     db.prs.push({no,title:t,by:me.name,date:todayISO(),status:'pending',approver:'',approverDate:'',
       notes:$('fpr_n').value.trim(),poNo:'',items:items.map(it=>Object.assign({q:[]},it))});
-    if(canAppr())notify('🛒',lb('طلب شراء جديد بانتظار الموافقة: ||New PR awaiting approval: ')+t,'proc','pr-'+no);
+    if(canAppr())notify('',lb('طلب شراء جديد بانتظار الموافقة: ||New PR awaiting approval: ')+t,'proc','pr-'+no);
   }else{const pr=db.prs[iStr];pr.title=t;pr.notes=$('fpr_n').value.trim();
     pr.items=items.map((it,j)=>Object.assign({q:(pr.items[j]&&pr.items[j].q)||[]},it));}
-  persist();closeModal();paintTab();toast(lb('✔ حُفظ الطلب||✔ Saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' حُفظ الطلب|| Saved'),'ok');
 }
 /* طلب تعويض تلقائي: يفتح طلب شراء جاهز بالأصناف تحت الحد (الكمية المقترحة ترفع الرصيد لضعف الحد) */
 function prFromLow(){
   const low=db.inv.filter(it=>Number(it.qty)<=Number(it.minQty));
-  if(!low.length)return toast(lb('👍 لا توجد أصناف تحت الحد||👍 Nothing below minimum'),'ok');
+  if(!low.length)return toast(lb(' لا توجد أصناف تحت الحد|| Nothing below minimum'),'ok');
   prForm();
   $('fpr_t').value=lb('تعويض مخزون تحت الحد||Restock below-minimum items');
   low.forEach(it=>addItRow({desc:it.name,invId:it.id,
     qty:Math.max(1,Math.ceil(Number(it.minQty||1)*2-Number(it.qty||0))),price:Number(it.unitCost||0)}));
-  toast(lb('✔ أُضيفت الأصناف الناقصة — راجع الكميات ثم احفظ||✔ Low items added — review quantities then save'),'ok');
+  toast(lb(' أُضيفت الأصناف الناقصة — راجع الكميات ثم احفظ|| Low items added — review quantities then save'),'ok');
 }
 function prApprove(i){const pr=db.prs[i];pr.status='approved';pr.approver=me.name;pr.approverDate=todayISO();
-  persist();paintTab();toast(lb('✔ اعتُمد الطلب — جاهز لأمر الشراء||✔ Approved — ready for PO'),'ok');}
+  persist();paintTab();toast(lb(' اعتُمد الطلب — جاهز لأمر الشراء|| Approved — ready for PO'),'ok');}
 function prReject(i){const pr=db.prs[i];pr.status='rejected';pr.approver=me.name;pr.approverDate=todayISO();
   persist();paintTab();}
 function prDel(i){if(!confirm(lb('حذف الطلب؟||Delete request?')))return;db.prs.splice(i,1);persist();paintTab();}
@@ -2482,8 +2530,8 @@ function prView(i){
   pr.items.forEach((it,j)=>{
     const inv=it.invId?db.inv.find(x=>x.id===it.invId):null;
     const qmin=it.q&&it.q.length?Math.min(...it.q.map(x=>x.p)):null;
-    body+=`<tr><td><b>${esc(it.desc)}</b>${inv?`<br><span class="muted">📦 ${esc(inv.name)}</span>`:''}
-    ${(it.q&&it.q.length)?`<div class="qline">🏷 ${lb('العروض||Quotes')}: ${it.q.map(x=>`${esc(x.s)}: ${x.p}${x.p===qmin?' ⭐':''}`).join(' | ')}
+    body+=`<tr><td><b>${esc(it.desc)}</b>${inv?`<br><span class="muted"> ${esc(inv.name)}</span>`:''}
+    ${(it.q&&it.q.length)?`<div class="qline"> ${lb('العروض||Quotes')}: ${it.q.map(x=>`${esc(x.s)}: ${x.p}${x.p===qmin?' ':''}`).join(' | ')}
       ${(canProc()&&pr.status==='pending')?`<button class="btn sm ghost" onclick="quoteForm(${i},${j})">＋</button>`:''}</div>`:
       ((canProc()&&pr.status==='pending')?`<div class="qline"><button class="btn sm ghost" onclick="quoteForm(${i},${j})">＋ ${lb('عرض سعر||Add Quote')}</button></div>`:'')}
     </td>
@@ -2498,7 +2546,7 @@ function prView(i){
   <table><tr><th>${lb('الصنف||Item')}</th><th>${lb('الكمية||Qty')}</th><th>${lb('السعر||Price')}</th><th>${lb('الإجمالي||Total')}</th></tr>
   ${body}<tr><td colspan="3" style="text-align:end"><b>${lb('الإجمالي||Total')}</b></td><td><b>${money(tot)}</b></td></tr></table>
   ${pr.notes?`<label>${lb('ملاحظات||Notes')}</label><p>${esc(pr.notes)}</p>`:''}
-  ${canQ?`<button class="btn ghost sm" onclick="qApplyMinAll(${i})">⚡ ${lb('اعتماد الأرخص لكل الأصناف||Apply Cheapest Everywhere')}</button>`:''}
+  ${canQ?`<button class="btn ghost sm" onclick="qApplyMinAll(${i})"> ${lb('اعتماد الأرخص لكل الأصناف||Apply Cheapest Everywhere')}</button>`:''}
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('رجوع||Back')}</button></div>`);
 }
 function quoteForm(pi,ii){
@@ -2512,7 +2560,7 @@ function quoteForm(pi,ii){
 }
 function saveQuote(pi,ii){
   const s=$('fq_s').value.trim(),p=+$('fq_p').value||0;
-  if(!s||p<=0)return toast(lb('⚠ أكمل اسم المورد والسعر||⚠ Fill supplier and price'),'err');
+  if(!s||p<=0)return toast(lb(' أكمل اسم المورد والسعر|| Fill supplier and price'),'err');
   const it=db.prs[pi].items[ii];
   if(!it.q)it.q=[];
   it.q.push({s,p});
@@ -2523,7 +2571,7 @@ function qApplyMinAll(pi){
   db.prs[pi].items.forEach(it=>{
     if(it.q&&it.q.length){it.price=Math.min(...it.q.map(x=>x.p));c++;}
   });
-  persist();prView(pi);toast(c+' ✔','ok');
+  persist();prView(pi);toast(c+' ','ok');
 }
 function vPoList(){
   let rows='';
@@ -2531,14 +2579,14 @@ function vPoList(){
     const i=db.pos.indexOf(po);
     const tot=po.lines.reduce((s,l)=>s+l.qty*l.price,0);
     const recv=po.lines.reduce((s,l)=>s+(l.rq||0),0);
-    let acts=`<button class="btn sm ghost" onclick="poView(${i})">👁</button>`;
+    let acts=`<button class="btn sm ghost" onclick="poView(${i})">${ic('view',13)}</button>`;
     if(canInv()&&po.status==='ordered')
-      acts+=`<button class="btn sm" onclick="poReceiveForm(${i})">📥 ${lb('استلام||Receive')}</button>`;
+      acts+=`<button class="btn sm" onclick="poReceiveForm(${i})"> ${lb('استلام||Receive')}</button>`;
     if(canProc()&&po.status==='received')
-      acts+=`<button class="btn sm" onclick="poInvoiceForm(${i})">🧾 ${lb('فاتورة||Invoice')}</button>`;
+      acts+=`<button class="btn sm" onclick="poInvoiceForm(${i})"> ${lb('فاتورة||Invoice')}</button>`;
     if(canAppr()&&po.status==='received'&&po.invoice&&!po.invApproved)
-      acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="poApproveInvoice(${i})">✔ ${lb('مطابقة واعتماد||Match Approve')}</button>`;
-    if(isAdmin()&&po.status!=='closed')acts+=`<button class="btn sm danger" onclick="poDel(${i})">🗑</button>`;
+      acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="poApproveInvoice(${i})"> ${lb('مطابقة واعتماد||Match Approve')}</button>`;
+    if(isAdmin()&&po.status!=='closed')acts+=`<button class="btn sm danger" onclick="poDel(${i})">${ic('del',13)}</button>`;
     rows+=`<tr><td>${po.no}</td><td><b>${esc(po.supplier)}</b><br><span class="muted">${fmtD(po.date)}${po.prId&&db.prs.find(p=>p.id===po.prId)?' · '+db.prs.find(p=>p.id===po.prId).no:''}</span></td>
     <td>${money(tot)}</td><td>${recv?recv+' / '+po.lines.reduce((s,l)=>s+l.qty,0):'—'}</td>
     <td>${po.rn?`<span class="muted">${po.rn}</span><br>`:''}<span class="badge ${POSTAT[po.status][1]}">${POSTAT[po.status][0]}</span></td>
@@ -2551,9 +2599,9 @@ function vPoList(){
 function poFromPr(pi){
   const pr=db.prs[pi];
   window._poTmp=pr;
-  modal(`<h3>🧾 ${lb('أمر شراء من||PO from')} ${pr.no}</h3>
+  modal(`<h3> ${lb('أمر شراء من||PO from')} ${pr.no}</h3>
   <label>${lb('المورد||Supplier *')}</label>
-  <select id="fpo_s">${db.suppliers.map(s=>`<option>${esc(s.name)}</option>`).join('')||('<option value="">'+lb('⚠ لا يوجد موردون — أضف مورداً أولاً من تبويب الموردين||⚠ No suppliers — add one from Suppliers tab')+'</option>')}</select>
+  <select id="fpo_s">${db.suppliers.map(s=>`<option>${esc(s.name)}</option>`).join('')||('<option value="">'+lb(' لا يوجد موردون — أضف مورداً أولاً من تبويب الموردين|| No suppliers — add one from Suppliers tab')+'</option>')}</select>
   <label>${lb('الأصناف (قابلة للتعديل)||Lines (editable)')}</label>
   <div id="polines"></div>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
@@ -2561,14 +2609,14 @@ function poFromPr(pi){
   pr.items.forEach(it=>{
     $('polines').insertAdjacentHTML('beforeend',
     `<div class="itrow"><input class="pl_d" value="${esc(it.desc)}" readonly>
-    <span class="muted">${it.invId?'📦':''}</span>
+    <span class="muted">${it.invId?'':''}</span>
     <input type="number" class="pl_q" value="${it.qty}" min="1">
     <input type="number" step="any" class="pl_p" value="${it.price}" min="0">
     <span></span></div>`);
   });
 }
 function poCreate(pi){
-  const s=$('fpo_s').value.trim();if(!s)return toast(lb('⚠ اختر المورد||⚠ Pick supplier'),'err');
+  const s=$('fpo_s').value.trim();if(!s)return toast(lb(' اختر المورد|| Pick supplier'),'err');
   const pr=window._poTmp;
   const lines=[...document.querySelectorAll('#polines .itrow')].map((r,j)=>({
     desc:r.querySelector('.pl_d').value,invId:pr.items[j]?pr.items[j].invId:'',
@@ -2578,7 +2626,7 @@ function poCreate(pi){
   db.pos.push({no,supplier:s,date:todayISO(),status:'ordered',rn:'',prId:pr.id,
     invoice:null,invApproved:false,notes:'',lines,projectId:''});
   pr.status='ordered';pr.poNo=no;
-  persist();closeModal();paintTab();toast(lb('✔ صدر أمر الشراء||✔ PO issued')+': '+no,'ok');
+  persist();closeModal();paintTab();toast(lb(' صدر أمر الشراء|| PO issued')+': '+no,'ok');
 }
 function poView(i){
   const po=db.pos[i];
@@ -2588,7 +2636,7 @@ function poView(i){
   <p class="muted">${fmtD(po.date)} · <span class="badge ${POSTAT[po.status][1]}">${POSTAT[po.status][0]}</span>
   ${po.rn?' · '+lb('سند استلام||Receipt')+': '+po.rn:''}
   ${po.invoice?' · '+lb('فاتورة||Invoice')+': '+esc(po.invoice.no)+' ('+money(po.invoice.total)+')':''}
-  ${pj?' · 🧱 '+esc(pj.name):''}</p>
+  ${pj?' ·  '+esc(pj.name):''}</p>
   <table><tr><th>${lb('الصنف||Line')}</th><th>${lb('مطلوب||Ordered')}</th><th>${lb('مستلم||Received')}</th><th>${lb('السعر||Price')}</th></tr>
   ${po.lines.map(l=>`<tr><td>${esc(l.desc)}</td><td>${l.qty}</td><td>${l.rq||0}</td><td>${money(l.price)}</td></tr>`).join('')}
   <tr><td colspan="3" style="text-align:end"><b>${lb('إجمالي الأمر||PO Total')}</b></td><td><b>${money(tot)}</b></td></tr></table>
@@ -2596,7 +2644,7 @@ function poView(i){
 }
 function poReceiveForm(i){
   const po=db.pos[i];
-  modal(`<h3>📥 ${lb('سند استلام||Goods Receipt')} ${po.no}</h3>
+  modal(`<h3> ${lb('سند استلام||Goods Receipt')} ${po.no}</h3>
   <p class="muted">${lb('أدخل الكميات المستلمة فعلاً من||Enter actually received quantities from')} ${esc(po.supplier)}</p>
   ${po.lines.map((l,j)=>`<div class="partrow"><span>${esc(l.desc)} <span class="muted">(${lb('مطلوب||ord.')}: ${l.qty})</span></span>
   <input type="number" min="0" class="rc_q" id="rq_${j}" value="${l.qty}"><span></span></div>`).join('')}
@@ -2606,11 +2654,11 @@ function poReceiveForm(i){
 function poDoReceive(i){
   const po=db.pos[i];let any=0;
   po.lines.forEach((l,j)=>{l.rq=Math.max(0,+($('rq_'+j)||{}).value||0);any+=l.rq;});
-  if(!any)return toast(lb('⚠ لا كميات مستلمة||⚠ Nothing received'),'err');
+  if(!any)return toast(lb(' لا كميات مستلمة|| Nothing received'),'err');
   db.rnSeq++;const y=new Date().getFullYear();
   po.rn='RN-'+y+'-'+String(db.rnSeq).padStart(4,'0');
   po.status='received';
-  persist();closeModal();paintTab();toast(lb('✔ سُجل الاستلام — بانتظار الفاتورة||✔ Received — awaiting invoice'),'ok');
+  persist();closeModal();paintTab();toast(lb(' سُجل الاستلام — بانتظار الفاتورة|| Received — awaiting invoice'),'ok');
 }
 function poExpected(po){return po.lines.reduce((s,l)=>s+(l.rq||0)*l.price,0);}
 function poMatch(po){
@@ -2625,32 +2673,32 @@ function poMatch(po){
 function poInvoiceForm(i){
   const po=db.pos[i];
   const exp=poExpected(po);
-  modal(`<h3>🧾 ${lb('تسجيل فاتورة المورد||Supplier Invoice')} ${po.no}</h3>
+  modal(`<h3> ${lb('تسجيل فاتورة المورد||Supplier Invoice')} ${po.no}</h3>
   <div class="fg">
     <div><label>${lb('رقم الفاتورة *||Invoice No. *')}</label><input id="fin_no"></div>
     <div><label>${lb('تاريخ الفاتورة||Invoice Date')}</label><input type="date" id="fin_d" value="${todayISO()}"></div>
     <div><label>${lb('إجمالي الفاتورة (ريال)||Invoice Total (SAR)')}</label><input type="number" step="any" id="fin_t" value="${exp.toFixed(2)}"></div>
   </div>
-  <p class="muted">⚖️ ${lb('القيمة المتوقعة حسب الاستلام: ||Expected from receipt: ')}<b>${money(exp)}</b>
+  <p class="muted"> ${lb('القيمة المتوقعة حسب الاستلام: ||Expected from receipt: ')}<b>${money(exp)}</b>
   — ${lb('يجري النظام المطابقة الثلاثية قبل الاعتماد.||3-way match runs before approval.')}</p>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="poInvoiceSave(${i})">${lb('حفظ الفاتورة||Save Invoice')}</button></div>`);
 }
 function poInvoiceSave(i){
   const po=db.pos[i];
-  const no=$('fin_no').value.trim();if(!no)return toast(lb('⚠ رقم الفاتورة مطلوب||⚠ Invoice No. required'),'err');
+  const no=$('fin_no').value.trim();if(!no)return toast(lb(' رقم الفاتورة مطلوب|| Invoice No. required'),'err');
   po.invoice={no,date:$('fin_d').value||todayISO(),total:+$('fin_t').value||0};
-  persist();closeModal();paintTab();toast(lb('✔ حُفظت الفاتورة — جاهزة للمطابقة||✔ Invoice saved — ready to match'),'ok');
+  persist();closeModal();paintTab();toast(lb(' حُفظت الفاتورة — جاهزة للمطابقة|| Invoice saved — ready to match'),'ok');
 }
 function poApproveInvoice(i){
   const po=db.pos[i];
-  if(!po.invoice)return toast(lb('⚠ سجل الفاتورة أولاً||⚠ Enter invoice first'),'err');
+  if(!po.invoice)return toast(lb(' سجل الفاتورة أولاً|| Enter invoice first'),'err');
   const m=poMatch(po);
   if(!m.ok){
-    modal(`<h3>❌ ${lb('المطابقة لم تنجح||Match Failed')}</h3>
+    modal(`<h3> ${lb('المطابقة لم تنجح||Match Failed')}</h3>
     <p class="muted">${lb('صحّح ما يلي ثم أعد المحاولة:||Fix these then retry:')}</p>
-    <ul style="padding-inline-start:18px;line-height:2">${m.reasons.map(r=>`<li>⚠️ ${esc(r)}</li>`).join('')}</ul>
-    <div class="ma"><button class="btn" onclick="closeModal();poInvoiceForm(${i})">🧾 ${lb('تعديل الفاتورة||Edit Invoice')}</button>
+    <ul style="padding-inline-start:18px;line-height:2">${m.reasons.map(r=>`<li> ${esc(r)}</li>`).join('')}</ul>
+    <div class="ma"><button class="btn" onclick="closeModal();poInvoiceForm(${i})"> ${lb('تعديل الفاتورة||Edit Invoice')}</button>
     <button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button></div>`);
     return;
   }
@@ -2663,7 +2711,7 @@ function poApproveInvoice(i){
   });
   po.status='closed';po.invApproved=true;
   persist();closeModal();paintTab();
-  toast(lb('✔ مطابقة ناجحة — دخل المستلم المخزون||✔ Matched — stock updated'),'ok');
+  toast(lb(' مطابقة ناجحة — دخل المستلم المخزون|| Matched — stock updated'),'ok');
 }
 function poDel(i){if(!confirm(lb('حذف أمر الشراء؟||Delete PO?')))return;db.pos.splice(i,1);persist();paintTab();}
 function vSup(){
@@ -2672,8 +2720,8 @@ function vSup(){
   ${db.suppliers.map(s=>{const i=db.suppliers.indexOf(s);
     return `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.service||'—')}</td>
     <td>${s.phone?`<a href="tel:${esc(s.phone)}">${esc(s.phone)}</a>`:'—'}</td><td>${esc(s.email||'—')}</td>
-    ${canProc()?`<td nowrap><button class="btn sm ghost" onclick="supForm(${i})">✏</button>
-    <button class="btn sm danger" onclick="delSup(${i})">🗑</button></td>`:''}</tr>`}).join('')||
+    ${canProc()?`<td nowrap><button class="btn sm ghost" onclick="supForm(${i})">${ic('edit',13)}</button>
+    <button class="btn sm danger" onclick="delSup(${i})">${ic('del',13)}</button></td>`:''}</tr>`}).join('')||
     `<tr><td colspan="5"><div class="empty">${lb('لا موردين||None')}</div></td></tr>`}</table></div></div>`;
 }
 function supForm(i){
@@ -2690,11 +2738,11 @@ function supForm(i){
   <button class="btn" onclick="saveSup(${i??'null'})">${lb('حفظ||Save')}</button></div>`);
 }
 function saveSup(iStr){
-  const n=$('fv_n').value.trim();if(!n)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
+  const n=$('fv_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const o={name:n,service:$('fv_s').value,phone:$('fv_p').value,email:$('fv_e').value,notes:$('fv_no').value};
   if(iStr!=null&&iStr!=='null')Object.assign(db.suppliers[iStr],o);
   else db.suppliers.push(Object.assign({id:uid('V')},o));
-  persist();closeModal();paintTab();toast(lb('✔ تم||Saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
 function delSup(i){if(!confirm(lb('حذف المورد؟||Delete supplier?')))return;db.suppliers.splice(i,1);persist();paintTab();}
 
@@ -2727,12 +2775,12 @@ function vProj(){
     <span class="muted">${money(c.total)} / ${money(p.budget)}</span></td>
     <td>${pc}%</td>
     <td><span class="badge ${PRJSTAT[p.status][1]}">${PRJSTAT[p.status][0]}</span></td>
-    <td nowrap><button class="btn sm ghost" onclick="prjView(${i})">👁 ${lb('فتح||Open')}</button>
-    ${isEng()?`<button class="btn sm ghost" onclick="prjForm(${i})">✏</button>`:''}
-    ${isAdmin()?`<button class="btn sm danger" onclick="prjDel(${i})">🗑</button>`:''}</td></tr>`;
+    <td nowrap><button class="btn sm ghost" onclick="prjView(${i})"> ${lb('فتح||Open')}</button>
+    ${isEng()?`<button class="btn sm ghost" onclick="prjForm(${i})">${ic('edit',13)}</button>`:''}
+    ${isAdmin()?`<button class="btn sm danger" onclick="prjDel(${i})">${ic('del',13)}</button>`:''}</td></tr>`;
   });
   return `<div class="toolbar">${isEng()?`<button class="btn" onclick="prjForm()">＋ ${lb('مشروع جديد||New Project')}</button>`:''}
-  <button class="btn ghost" onclick="window.print()">🖨 ${lb('طباعة||Print')}</button></div>
+  <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
   <div class="stats">
     <div class="stat"><div class="num">${actN}</div><div class="lbl">${lb('مشاريع نشطة||Active')}</div></div>
     <div class="stat"><div class="num" style="font-size:19px">${money(totB)}</div><div class="lbl">${lb('إجمالي الميزانيات||Total Budgets')}</div></div>
@@ -2762,14 +2810,14 @@ function prjForm(i){
 }
 function savePrj(iStr){
   const isNew=(iStr==null||iStr==='null'||iStr==='');
-  const n=$('fj_n').value.trim();if(!n)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
+  const n=$('fj_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const o={name:n,type:$('fj_ty').value,compoundId:activeCmp(),budget:+$('fj_b').value||0,start:$('fj_s').value||todayISO(),
     end:$('fj_e').value||'',manager:$('fj_m').value.trim(),notes:$('fj_no').value.trim()};
   if(isNew){db.prjSeq++;const y=new Date().getFullYear();
     db.projects.push(Object.assign({id:uid('J'),no:'PRJ-'+y+'-'+String(db.prjSeq).padStart(4,'0'),
       status:'planned',tasks:[],expenses:[],poIds:[]},o));}
   else Object.assign(db.projects[iStr],o);
-  persist();closeModal();paintTab();toast(lb('✔ تم||Saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
 function prjDel(i){if(!confirm(lb('حذف المشروع؟ ستبقى أوامر الشغل وأوامر الشراء لكن دون ارتباط.||Delete project? Links will be cleared.')))return;
   const p=db.projects[i];
@@ -2783,56 +2831,56 @@ function prjView(i){
   const over=p.budget>0&&c.total>p.budget;
   const techNames=db.users.filter(u=>u.role==='tech').map(u=>esc(u.name)).concat(db.employees.map(e=>esc(e.name)));
   const freePOs=db.pos.filter(x=>!x.projectId);
-  modal(`<h3>🧱 ${p.no} — ${esc(p.name)}
+  modal(`<h3> ${p.no} — ${esc(p.name)}
   <span class="badge ${PRJSTAT[p.status][1]}">${PRJSTAT[p.status][0]}</span></h3>
   <p class="muted">${esc(p.manager||'')} · ${fmtD(p.start)} ← ${fmtD(p.end)} · ${money(p.budget)}</p>
   ${isEng()?`<div class="chips">${Object.keys(PRJSTAT).map(k=>`<button class="chip mini ${p.status===k?'on':''}" onclick="prjStatus(${i},'${k}')">${PRJSTAT[k][0]}</button>`).join('')}</div>`:''}
   <label>${lb('الإنجاز||Progress')}: <b>${pc}%</b></label>
   <div class="bar grn" style="width:${pc}%"></div>
-  <label>${lb('المصروف مقابل الميزانية||Spent vs Budget')} ${over?'⚠️':''}</label>
+  <label>${lb('المصروف مقابل الميزانية||Spent vs Budget')} ${over?'':''}</label>
   <div class="bar ${over?'red':''}" style="width:${p.budget?Math.min(100,Math.round(c.total/p.budget*100)):0}%"></div>
   <span class="muted">${money(c.total)} / ${money(p.budget)} — ${lb('عمالة||Labor')}: ${money(c.labor)} · ${lb('مشتريات||Purch')}: ${money(c.purch)} · ${lb('يدوي||Manual')}: ${money(c.manual)}</span>
-  <label>📋 ${lb('المهام||Tasks')}</label>
+  <label> ${lb('المهام||Tasks')}</label>
   ${(p.tasks||[]).map((t,j)=>`<div class="taskrow"><input type="checkbox" ${t.done?'checked':''} onchange="taskToggle(${i},${j})">
     <span style="${t.done?'text-decoration:line-through;opacity:.6':''}">${esc(t.d)}${t.a?` <span class="muted">— ${esc(t.a)}</span>`:''}</span>
     <span class="muted">${fmtD(t.due)}</span><span></span>
-    <button class="btn sm danger" onclick="taskDel(${i},${j})">✕</button></div>`).join('')||`<div class="muted">${lb('لا مهام بعد||No tasks yet')}</div>`}
+    <button class="btn sm danger" onclick="taskDel(${i},${j})">${ic('x',12)}</button></div>`).join('')||`<div class="muted">${lb('لا مهام بعد||No tasks yet')}</div>`}
   ${isEng()?`<div class="taskrow" style="background:rgba(255,255,255,.7)">
     <span></span><input id="ft_d" placeholder="${lb('مهمة جديدة||New task')}">
     <input id="ft_a" list="techdl" placeholder="${lb('المسؤول||Assignee')}">
     <input type="date" id="ft_due"><button class="btn sm" onclick="taskAdd(${i})">＋</button></div>
   <datalist id="techdl">${techNames.map(n=>`<option value="${n}">`).join('')}</datalist>`:''}
-  <label>🔗 ${lb('أوامر الشراء المرتبطة||Linked POs')}</label>
+  <label> ${lb('أوامر الشراء المرتبطة||Linked POs')}</label>
   ${db.pos.filter(x=>x.projectId===p.id).map(x=>`<div class="alert-li">${x.no} — ${esc(x.supplier)}
-    ${x.invoice?' · 🧾 '+money(x.invoice.total):''}
+    ${x.invoice?' ·  '+money(x.invoice.total):''}
     ${isEng()?`<button class="btn sm ghost" onclick="poUnlink(${i},'${x.id}')">${lb('فصل||Unlink')}</button>`:''}</div>`).join('')||`<div class="muted">${lb('لا أوامر مرتبطة||None linked')}</div>`}
   ${isEng()&&freePOs.length?`<select id="pj_po"><option value="">— ${lb('اربط أمر شراء||Link a PO')} —</option>${freePOs.map(x=>`<option value="${x.id}">${x.no} — ${esc(x.supplier)}</option>`).join('')}</select>
-  <button class="btn ghost sm" onclick="poLink(${i})">🔗＋</button>`:''}
-  <label>💵 ${lb('مصروفات يدوية||Manual Expenses')}</label>
+  <button class="btn ghost sm" onclick="poLink(${i})">＋</button>`:''}
+  <label> ${lb('مصروفات يدوية||Manual Expenses')}</label>
   ${(p.expenses||[]).map((e,j)=>`<div class="partrow"><span>${fmtD(e.date)} — ${esc(e.desc)}</span><span style="text-align:end">${money(e.amt)}</span>
-    ${isEng()?`<button class="btn sm danger" onclick="expDel(${i},${j})">✕</button>`:'<span></span>'}</div>`).join('')||`<div class="muted">${lb('لا مصروفات||None')}</div>`}
+    ${isEng()?`<button class="btn sm danger" onclick="expDel(${i},${j})">${ic('x',12)}</button>`:'<span></span>'}</div>`).join('')||`<div class="muted">${lb('لا مصروفات||None')}</div>`}
   ${isEng()?`<div class="fg"><div><input type="date" id="fe_d" value="${todayISO()}"></div>
   <div><input id="fe_de" placeholder="${lb('الوصف||Description')}"></div>
   <div><input type="number" step="any" id="fe_a" placeholder="${lb('المبلغ||Amount')}"></div></div>
   <button class="btn ghost sm" onclick="expAdd(${i})">＋ ${lb('إضافة مصروف||Add Expense')}</button>`:''}
-  <div class="ma"><button class="btn ghost sm" onclick="prjCsv(${i})">⬇ Excel</button>
+  <div class="ma"><button class="btn ghost sm" onclick="prjCsv(${i})"> Excel</button>
   <button class="btn ghost" onclick="closeModal()">${lb('رجوع||Back')}</button></div>`);
 }
 function taskToggle(i,j){const p=db.projects[i];p.tasks[j].done=!p.tasks[j].done;persist();prjView(i);}
 function taskAdd(i){
-  const d=$('ft_d').value.trim();if(!d)return toast(lb('⚠ اكتب المهمة||⚠ Write task'),'err');
+  const d=$('ft_d').value.trim();if(!d)return toast(lb(' اكتب المهمة|| Write task'),'err');
   db.projects[i].tasks.push({d,a:$('ft_a').value.trim(),due:$('ft_due').value||'',done:false});
   persist();prjView(i);
 }
 function taskDel(i,j){db.projects[i].tasks.splice(j,1);persist();prjView(i);}
 function poLink(i){
-  const pid=$('pj_po').value;if(!pid)return toast(lb('⚠ اختر أمر شراء||⚠ Pick a PO'),'err');
+  const pid=$('pj_po').value;if(!pid)return toast(lb(' اختر أمر شراء|| Pick a PO'),'err');
   const po=db.pos.find(x=>x.id===pid);po.projectId=db.projects[i].id;persist();prjView(i);
 }
 function poUnlink(i,poid){const po=db.pos.find(x=>x.id===poid);if(po)po.projectId='';persist();prjView(i);}
 function expAdd(i){
   const amt=+$('fe_a').value||0,de=$('fe_de').value.trim();
-  if(!de||amt<=0)return toast(lb('⚠ أدخل الوصف والمبلغ||⚠ Enter description and amount'),'err');
+  if(!de||amt<=0)return toast(lb(' أدخل الوصف والمبلغ|| Enter description and amount'),'err');
   const p=db.projects[i];
   if(!p.expenses)p.expenses=[];
   p.expenses.push({date:$('fe_d').value||todayISO(),desc:de,amt});
@@ -2866,14 +2914,14 @@ function vHr(){
   const perf=perfByTech((isTech()?db.wos.filter(w=>w.assigneeId===me.id):db.wos).filter(w=>w.compoundId===act));
   const certWarn=list.reduce((s,e)=>s+(e.certs||[]).filter(c=>daysUntil(c.e)<60).length,0);
   return `<div class="toolbar">${isEng()?`<button class="btn" onclick="empForm()">＋ ${lb('موظف جديد||New Employee')}</button>
-  <button class="btn ghost" onclick="shiftForm()">📅 ${lb('مناوبة جديدة||New Shift')}</button>`:''}
-  <button class="btn ghost" onclick="hrEmpCsv()">⬇ ${lb('Excel الموظفين||Employees Excel')}</button></div>
+  <button class="btn ghost" onclick="shiftForm()"> ${lb('مناوبة جديدة||New Shift')}</button>`:''}
+  <button class="btn ghost" onclick="hrEmpCsv()"> ${lb('Excel الموظفين||Employees Excel')}</button></div>
   <div class="stats">
     <div class="stat"><div class="num">${list.length}</div><div class="lbl">${lb('عدد الموظفين||Employees')}</div></div>
     <div class="stat"><div class="num">${list.filter(e=>e.active).length}</div><div class="lbl">${lb('على رأس العمل||Active')}</div></div>
     <div class="stat ${certWarn?'warn':''}"><div class="num">${certWarn}</div><div class="lbl">${lb('شهادات تنتهي خلال 60 يوم||Certs expiring ≤60d')}</div></div>
   </div>
-  <div class="card"><h2>👷 ${lb('سجل الموظفين||Employee Registry')}</h2><div class="tbl-wrap"><table>
+  <div class="card"><h2> ${lb('سجل الموظفين||Employee Registry')}</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الاسم||Name')}</th><th>${lb('التخصص||Specialty')}</th><th>${lb('الهاتف||Phone')}</th><th>${lb('الانضمام||Joined')}</th><th>${lb('الشهادات||Certificates')}</th><th>${lb('الحالة||Active')}</th>${isEng()?`<th></th>`:''}</tr>
   ${list.map(e=>{const i=db.employees.indexOf(e);
     return `<tr><td><b>${esc(e.name)}</b><br><span class="muted">${esc(e.quals||'')}</span></td>
@@ -2883,17 +2931,17 @@ function vHr(){
     <td>${(e.certs||[]).map(c=>{const d=daysUntil(c.e);
       return `<span class="badge ${d<0?'b-low':d<60?'b-maint':'b-ok'}">${esc(c.n)} · ${fmtD(c.e)}</span>`}).join('<br>')||'—'}</td>
     <td><span class="badge ${e.active?'b-ok':'b-normal'}">${e.active?lb('نعم||Yes'):lb('لا||No')}</span></td>
-    ${isEng()?`<td nowrap><button class="btn sm ghost" onclick="empToggle(${i})">🔄</button>
-    <button class="btn sm ghost" onclick="empForm(${i})">✏</button>
-    <button class="btn sm danger" onclick="empDel(${i})">🗑</button></td>`:''}</tr>`}).join('')||
+    ${isEng()?`<td nowrap><button class="btn sm ghost" onclick="empToggle(${i})">${e.active?lb('إيقاف||Off'):lb('تفعيل||On')}</button>
+    <button class="btn sm ghost" onclick="empForm(${i})">${ic('edit',13)}</button>
+    <button class="btn sm danger" onclick="empDel(${i})">${ic('del',13)}</button></td>`:''}</tr>`}).join('')||
     `<tr><td colspan="7"><div class="empty">${lb('لا موظفين بعد||No employees yet')}</div></td></tr>`}</table></div></div>
-  <div class="card"><h2>📈 ${lb('أداء مبسط (من أوامر الشغل المغلقة)||Simple Performance (from closed WOs)')}</h2><div class="tbl-wrap"><table>
+  <div class="card"><h2> ${lb('أداء مبسط (من أوامر الشغل المغلقة)||Simple Performance (from closed WOs)')}</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الاسم||Name')}</th><th>${lb('أعمال منجزة||Jobs Done')}</th><th>${lb('متوسط مدة التنفيذ||Avg Repair Time')}</th><th>${lb('تكلفة عمالة||Labor Cost')}</th></tr>
   ${perf.map(([k,v])=>`<tr><td><b>${esc(k)}</b></td><td>${v.c}</td>
   <td>${(v.hrs/v.c).toFixed(1)} ${lb('ساعة||hr')}</td><td>${money(v.cost)}</td></tr>`).join('')||
   `<tr><td colspan="4"><div class="empty">${lb('لا بيانات بعد||No data yet')}</div></td></tr>`}</table></div></div>
   ${shiftsHtml()}
-  <p class="muted">💡 ${lb('لتقييم الفنيين تلقائياً، استخدم نفس الاسم في المستخدمين وفي سجل الموظفين.||Use the same name in Users and Employee registry for automatic matching.')}</p>`;
+  <p class="muted"> ${lb('لتقييم الفنيين تلقائياً، استخدم نفس الاسم في المستخدمين وفي سجل الموظفين.||Use the same name in Users and Employee registry for automatic matching.')}</p>`;
 }
 function shiftsHtml(){
   const days=[];
@@ -2902,15 +2950,15 @@ function shiftsHtml(){
     const wd=new Date(iso+'T00:00:00').toLocaleDateString(db.lang==='ar'?'ar-EG':'en-GB',{weekday:'long',day:'numeric',month:'short'});
     days.push([iso,wd]);
   }
-  let html=`<div class="card"><h2>📅 ${lb('مناوبات الأسبوع القادم||Upcoming Week Shifts')}</h2>`;
+  let html=`<div class="card"><h2> ${lb('مناوبات الأسبوع القادم||Upcoming Week Shifts')}</h2>`;
   days.forEach(([iso,wd])=>{
     const list=db.shifts.filter(s=>s.date===iso);
     html+=`<div class="dayhdr">${wd}${iso===todayISO()?' — '+lb('اليوم||Today'):''}</div>`;
     html+=list.length?list.map(s=>{
       const e=db.employees.find(x=>x.id===s.empId)||{name:'?'};
-      return `<div class="alert-li">👤 <b>${esc(e.name)}</b> — <span class="badge b-open">${SHIFTK[s.shift]||s.shift}</span>
+      return `<div class="alert-li"> <b>${esc(e.name)}</b> — <span class="badge b-open">${SHIFTK[s.shift]||s.shift}</span>
       ${s.note?' · '+esc(s.note):''}
-      ${isEng()?`<button class="btn sm danger" onclick="shiftDel('${s.id}')">✕</button>`:''}</div>`}).join(''):
+      ${isEng()?`<button class="btn sm danger" onclick="shiftDel('${s.id}')">${ic('x',12)}</button>`:''}</div>`}).join(''):
       `<div class="muted">${lb('لا مناوبات||No shifts')}</div>`;
   });
   html+='</div>';
@@ -2941,11 +2989,11 @@ function addCertRow(c){
   $('certrows').insertAdjacentHTML('beforeend',
    `<div class="certrow"><input class="cr_n" placeholder="${lb('اسم الشهادة||Cert name')}" value="${esc(c.n||'')}">
    <input type="date" class="cr_e" value="${c.e||''}">
-   <button class="btn sm danger" onclick="this.parentNode.remove()">✕</button></div>`);
+   <button class="btn sm danger" onclick="this.parentNode.remove()">${ic('x',12)}</button></div>`);
 }
 function saveEmp(iStr){
   const isNew=(iStr==null||iStr==='null'||iStr==='');
-  const n=$('fe_n').value.trim();if(!n)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
+  const n=$('fe_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const certs=[...document.querySelectorAll('#certrows .certrow')]
     .map(r=>({n:r.querySelector('.cr_n').value.trim(),e:r.querySelector('.cr_e').value}))
     .filter(c=>c.n);
@@ -2953,14 +3001,14 @@ function saveEmp(iStr){
     quals:$('fe_q').value.trim(),joinDate:$('fe_j').value||todayISO(),certs,compoundId:activeCmp()};
   if(isNew)db.employees.push(Object.assign({id:uid('E'),active:true},o));
   else Object.assign(db.employees[iStr],o);
-  persist();closeModal();paintTab();toast(lb('✔ تم||Saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
 function empToggle(i){const e=db.employees[i];e.active=!e.active;persist();paintTab();}
 function empDel(i){if(!confirm(lb('حذف الموظف؟||Delete employee?')))return;
   db.employees.splice(i,1);persist();paintTab();}
 function shiftForm(){
-  if(!db.employees.length)return toast(lb('⚠ أضف موظفين أولاً||⚠ Add employees first'),'err');
-  modal(`<h3>📅 ${lb('مناوبة جديدة||New Shift')}</h3>
+  if(!db.employees.length)return toast(lb(' أضف موظفين أولاً|| Add employees first'),'err');
+  modal(`<h3> ${lb('مناوبة جديدة||New Shift')}</h3>
   <div class="fg">
     <div><label>${lb('التاريخ||Date')}</label><input type="date" id="fs_d" value="${todayISO()}"></div>
     <div><label>${lb('الموظف||Employee')}</label><select id="fs_e">${db.employees.filter(e=>e.active).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}</select></div>
@@ -2972,7 +3020,7 @@ function shiftForm(){
 }
 function saveShift(){
   db.shifts.push({id:uid('S'),date:$('fs_d').value||todayISO(),empId:$('fs_e').value,shift:$('fs_s').value,note:$('fs_n').value.trim()});
-  persist();closeModal();paintTab();toast(lb('✔ تم||Saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
 function shiftDel(id){db.shifts=db.shifts.filter(s=>s.id!==id);persist();paintTab();}
 function hrEmpCsv(){
@@ -2990,7 +3038,7 @@ function csvExport(fname,headers,rows){
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);
     a.download=fname.replace(/[^\w\u0600-\u06FF-]+/g,'_')+'-'+Date.now()+'.csv';
     document.body.appendChild(a);a.click();a.remove();
-    toast(lb('✔ تم تنزيل ملف Excel||✔ Excel downloaded'),'ok');
+    toast(lb(' تم تنزيل ملف Excel|| Excel downloaded'),'ok');
   }catch(e){alert(e.message);}
 }
 function vRep(){
@@ -3016,29 +3064,29 @@ function vRep(){
   db.pos.forEach(po=>{if(po.invApproved&&po.invoice){const k=monthKey(po.invoice.date);if(k in mPurch)mPurch[k]+=Number(po.invoice.total||0);}});
   const maxM=Math.max(1,...months.map(m=>mLabor[m]+mPurch[m]));
   const mName=k=>{const parts=k.split('-');return new Date(+parts[0],+parts[1]-1,1).toLocaleDateString(db.lang==='ar'?'ar-EG':'en-GB',{month:'short',year:'numeric'});};
-  return `<div class="toolbar"><button class="btn ghost" onclick="window.print()">🖨 ${lb('طباعة / PDF||Print / PDF')}</button></div>
-  <div class="card"><h2>💰 ${lb('تكلفة الصيانة حسب الموقع||Maintenance Cost by Location')}
-    <button class="btn sm ghost" onclick="repBldgCsv()">⬇ Excel</button></h2>
+  return `<div class="toolbar"><button class="btn ghost" onclick="window.print()"> ${lb('طباعة / PDF||Print / PDF')}</button></div>
+  <div class="card"><h2> ${lb('تكلفة الصيانة حسب الموقع||Maintenance Cost by Location')}
+    <button class="btn sm ghost" onclick="repBldgCsv()"> Excel</button></h2>
   <div class="tbl-wrap"><table><tr><th>${lb('الموقع||Location')}</th><th>${lb('عدد الأعمال||Jobs')}</th><th>${lb('التكلفة||Cost')}</th><th style="width:30%"></th></tr>
   ${bld.length?bld.map(kv=>`<tr><td><b>${esc(kv[0])}</b></td><td>${kv[1].c}</td><td>${money(kv[1].cost)}</td>
   <td><div class="bar" style="width:${Math.round(kv[1].cost/maxC*100)}%"></div></td></tr>`).join(''):
   `<tr><td colspan="4"><div class="empty">${lb('لا بيانات بعد||No data yet')}</div></td></tr>`}</table></div></div>
-  <div class="card"><h2>👷 ${lb('أداء الفنيين||Technician Performance')}
-    <button class="btn sm ghost" onclick="repTechCsv()">⬇ Excel</button></h2>
+  <div class="card"><h2> ${lb('أداء الفنيين||Technician Performance')}
+    <button class="btn sm ghost" onclick="repTechCsv()"> Excel</button></h2>
   <div class="tbl-wrap"><table><tr><th>${lb('الفني||Technician')}</th><th>${lb('أعمال منجزة||Jobs Done')}</th><th>${lb('متوسط مدة التنفيذ||Avg Time')}</th><th>${lb('تكلفة عمالة||Labor Cost')}</th></tr>
   ${techs.length?techs.map(tv=>`<tr><td><b>${esc(tv[0])}</b></td><td>${tv[1].c}</td>
   <td>${(tv[1].hrs/tv[1].c).toFixed(1)} ${lb('ساعة||hr')}</td><td>${money(tv[1].cost)}</td></tr>`).join(''):
   `<tr><td colspan="4"><div class="empty">${lb('لا بيانات بعد||No data yet')}</div></td></tr>`}</table></div></div>
-  <div class="card"><h2>🧱 ${lb('نظرة عامة على المشاريع||Projects Overview')}
-    <button class="btn sm ghost" onclick="repProjCsv()">⬇ Excel</button></h2>
+  <div class="card"><h2> ${lb('نظرة عامة على المشاريع||Projects Overview')}
+    <button class="btn sm ghost" onclick="repProjCsv()"> Excel</button></h2>
   <div class="tbl-wrap"><table><tr><th>${lb('المشروع||Project')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الميزانية||Budget')}</th><th>${lb('المصروف||Spent')}</th><th>${lb('الإنجاز||Progress')}</th></tr>
   ${db.projects.filter(p=>p.compoundId===act).length?db.projects.filter(p=>p.compoundId===act).map(p=>{const c=projCosts(p);
     return `<tr><td><b>${esc(p.name)}</b><br><span class="muted">${p.no}</span></td>
     <td><span class="badge ${PRJSTAT[p.status][1]}">${PRJSTAT[p.status][0]}</span></td>
     <td>${money(p.budget)}</td><td>${money(c.total)}</td><td>${projProgress(p)}%</td></tr>`}).join(''):
   `<tr><td colspan="5"><div class="empty">${lb('لا مشاريع بعد||No projects yet')}</div></td></tr>`}</table></div></div>
-  <div class="card"><h2>📅 ${lb('مصروفات آخر 6 أشهر||Expenses — Last 6 Months')}
-    <button class="btn sm ghost" onclick="repMonthCsv()">⬇ Excel</button></h2>
+  <div class="card"><h2> ${lb('مصروفات آخر 6 أشهر||Expenses — Last 6 Months')}
+    <button class="btn sm ghost" onclick="repMonthCsv()"> Excel</button></h2>
   <div class="tbl-wrap"><table><tr><th>${lb('الشهر||Month')}</th><th>${lb('عمالة||Labor')}</th><th>${lb('مشتريات||Purchases')}</th><th>${lb('الإجمالي||Total')}</th><th style="width:25%"></th></tr>
   ${months.map(m=>{const t=mLabor[m]+mPurch[m];
     return `<tr><td>${mName(m)}</td><td>${money(mLabor[m])}</td><td>${money(mPurch[m])}</td><td><b>${money(t)}</b></td>
@@ -3085,10 +3133,10 @@ function vUsers(){
     <td><span class="badge ${u.role==='admin'?'b-down':u.role==='tech'?'b-open':'b-prog'}">${ROLES[u.role]}</span></td>
     <td>${esc(u.phone||'—')}</td>
     <td>${u.role==='admin'?`<span class="badge b-ok">${lb('الكل||All')}</span>`:(u.cmpIds||[]).map(id=>cmpName(id)).join('، ')||'—'}</td>
-    <td nowrap><button class="btn sm ghost" onclick="userForm('${u.id}')">✏</button>
-    ${u.id!==me.id?`<button class="btn sm danger" onclick="delUser('${u.id}')">🗑</button>`:`<span class="muted">${lb('أنت||You')}</span>`}</td></tr>`).join('')}
+    <td nowrap><button class="btn sm ghost" onclick="userForm('${u.id}')">${ic('edit',13)}</button>
+    ${u.id!==me.id?`<button class="btn sm danger" onclick="delUser('${u.id}')">${ic('del',13)}</button>`:`<span class="muted">${lb('أنت||You')}</span>`}</td></tr>`).join('')}
   </table></div></div>
-  <p class="muted">📱 ${lb('رقم الجوال مطلوب لإرسال البلاغات عبر واتساب للفنيين.||Mobile number is needed for WhatsApp reports to technicians.')}</p>`;
+  <p class="muted"> ${lb('رقم الجوال مطلوب لإرسال البلاغات عبر واتساب للفنيين.||Mobile number is needed for WhatsApp reports to technicians.')}</p>`;
 }
 function userForm(id){
   const u=id?db.users.find(x=>x.id===id):{};
@@ -3112,20 +3160,20 @@ function userForm(id){
 function saveUser(id){
   const n=$('fu_n').value.trim(),un=$('fu_u').value.trim(),p=$('fu_p').value;
   const email=$('fu_e').value.trim().toLowerCase();
-  if(!n||!un||(!id&&!p))return toast(lb('⚠ أكمل الحقول||⚠ Fill all fields'),'err');
-  if(email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return toast(lb('⚠ البريد الإلكتروني غير صحيح||⚠ Invalid email'),'err');
-  if(db.users.some(x=>x.u.toLowerCase()===un.toLowerCase()&&x.id!==id))return toast(lb('⚠ اسم الدخول مستخدم||⚠ Username taken'),'err');
-  if(email&&db.users.some(x=>String(x.email||'').toLowerCase()===email&&x.id!==id))return toast(lb('⚠ البريد مستخدم لحساب آخر||⚠ Email already used'),'err');
+  if(!n||!un||(!id&&!p))return toast(lb(' أكمل الحقول|| Fill all fields'),'err');
+  if(email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return toast(lb(' البريد الإلكتروني غير صحيح|| Invalid email'),'err');
+  if(db.users.some(x=>x.u.toLowerCase()===un.toLowerCase()&&x.id!==id))return toast(lb(' اسم الدخول مستخدم|| Username taken'),'err');
+  if(email&&db.users.some(x=>String(x.email||'').toLowerCase()===email&&x.id!==id))return toast(lb(' البريد مستخدم لحساب آخر|| Email already used'),'err');
   const cmpIds=[...document.querySelectorAll('.fu_cmp:checked')].map(x=>x.value);
   const role=(id&&id===me.id)?'admin':$('fu_r').value; /* المدير يبقى مديراً — لا يستطيع سحب صلاحيته من نفسه */
-  if(role!=='admin'&&!cmpIds.length)return toast(lb('⚠ اختر مجمعاً واحداً على الأقل لهذا المستخدم||⚠ Pick at least one compound for this user'),'err');
+  if(role!=='admin'&&!cmpIds.length)return toast(lb(' اختر مجمعاً واحداً على الأقل لهذا المستخدم|| Pick at least one compound for this user'),'err');
   const phone=$('fu_ph').value.trim();
   if(id){const x=db.users.find(y=>y.id===id);
     const upd={name:n,u:un,email,role,phone,cmpIds,activeCmp:(x.activeCmp&&(cmpIds.includes(x.activeCmp)||role==='admin'))?x.activeCmp:''};
     if(p)upd.p=p; /* فارغة = إبقاء كلمة المرور القديمة كما هي (قد تكون مشفّرة) */
     Object.assign(x,upd);}
   else db.users.push({id:uid('U'),name:n,u:un,p,email,role,phone,cmpIds,activeCmp:''});
-  persist();closeModal();paintTab();toast(lb('✔ تم||Saved'),'ok');
+  persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
 function delUser(id){if(!confirm(lb('حذف المستخدم؟||Delete user?')))return;
   db.users=db.users.filter(u=>u.id!==id);persist();paintTab();}

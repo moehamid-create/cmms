@@ -46,13 +46,13 @@ textarea{resize:vertical;min-height:90px}
   </div>
 
   <div class="tabs">
-    <button id="tabNew" class="on" onclick="showTab('new')">📝 بلاغ جديد</button>
-    <button id="tabTrack" onclick="showTab('track')">🔍 تتبع بلاغاتي</button>
+    <button id="tabNew" class="on" onclick="showTab('new')"> بلاغ جديد</button>
+    <button id="tabTrack" onclick="showTab('track')"> تتبع بلاغاتي</button>
   </div>
 
   <div class="card" id="paneNew">
-    <h2>📝 بيانات البلاغ</h2>
-    <div id="doneBox" class="ok hidden">✅ تم استلام بلاغك بنجاح<div class="no" id="doneNo"></div><div class="muted">احتفظ برقم البلاغ للمتابعة</div></div>
+    <h2> بيانات البلاغ</h2>
+    <div id="doneBox" class="ok hidden"> تم استلام بلاغك بنجاح<div class="no" id="doneNo"></div><div class="muted">احتفظ برقم البلاغ للمتابعة</div></div>
     <form id="f" onsubmit="send(event)">
       <label>المجمع *</label><select id="c" required><option value="">— جارِ التحميل… —</option></select>
       <div class="row">
@@ -69,12 +69,12 @@ textarea{resize:vertical;min-height:90px}
       <label>عنوان البلاغ *</label><input id="t" required maxlength="140" placeholder="مثال: تسريب مياه في الحمام">
       <label>شرح المشكلة</label><textarea id="d" maxlength="2000" placeholder="اشرح المشكلة ومكانها بالتفصيل…"></textarea>
       <div id="e" class="err hidden"></div>
-      <button class="btn" id="btnSend">إرسال البلاغ ✅</button>
+      <button class="btn" id="btnSend">إرسال البلاغ </button>
     </form>
   </div>
 
   <div class="card hidden" id="paneTrack">
-    <h2>🔍 تتبع بلاغاتي</h2>
+    <h2> تتبع بلاغاتي</h2>
     <label>رقم الجوال المستخدم في البلاغ</label>
     <input id="tp" inputmode="tel" dir="ltr" placeholder="05xxxxxxxx">
     <button class="btn" onclick="track()">عرض بلاغاتي</button>
@@ -82,7 +82,7 @@ textarea{resize:vertical;min-height:90px}
     <div id="list"></div>
   </div>
 
-  <p class="muted">للحالات الطارئة (حريق/تسريب كبير/انقطاع كامل) اتصل بإدارة المجمع مباشرة 📞</p>
+  <p class="muted">للحالات الطارئة (حريق/تسريب كبير/انقطاع كامل) اتصل بإدارة المجمع مباشرة </p>
 </div>
 
 <script>
@@ -125,24 +125,24 @@ async function send(e){
     title: document.getElementById('t').value.trim(),
     details: document.getElementById('d').value.trim(),
   };
-  if(!body.compoundId) return err('e','⚠ اختر المجمع');
-  if(body.phone.replace(/\D/g,'').length < 9) return err('e','⚠ رقم الجوال غير صحيح');
+  if(!body.compoundId) return err('e',' اختر المجمع');
+  if(body.phone.replace(/\D/g,'').length < 9) return err('e',' رقم الجوال غير صحيح');
   btn.disabled = true; btn.textContent = 'جارِ الإرسال…';
   try{
     const r = await fetch('/api/public/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const j = await r.json();
-    if(!r.ok) throw new Error(j.error==='TOO_MANY' ? '⚠ محاولات كثيرة — حاول بعد ساعة' : '⚠ تعذر الإرسال — تحقق من البيانات');
+    if(!r.ok) throw new Error(j.error==='TOO_MANY' ? ' محاولات كثيرة — حاول بعد ساعة' : ' تعذر الإرسال — تحقق من البيانات');
     document.getElementById('f').reset(); loadCompounds();
     document.getElementById('doneNo').textContent = j.no;
     document.getElementById('doneBox').classList.remove('hidden');
     window.scrollTo({top:0,behavior:'smooth'});
-  }catch(ex){ err('e', ex.message || '⚠ خطأ في الاتصال'); }
-  btn.disabled = false; btn.textContent = 'إرسال البلاغ ✅';
+  }catch(ex){ err('e', ex.message || ' خطأ في الاتصال'); }
+  btn.disabled = false; btn.textContent = 'إرسال البلاغ ';
 }
 async function track(){
   err('e2'); const list = document.getElementById('list'); list.innerHTML = '';
   const ph = document.getElementById('tp').value.trim();
-  if(ph.replace(/\D/g,'').length < 9) return err('e2','⚠ أدخل رقم الجوال');
+  if(ph.replace(/\D/g,'').length < 9) return err('e2',' أدخل رقم الجوال');
   try{
     const r = await fetch('/api/public/requests?phone=' + encodeURIComponent(ph));
     const arr = await r.json();
@@ -153,7 +153,7 @@ async function track(){
       const dt = new Date(w.createdAt).toLocaleDateString('ar');
       return `<div class="req"><b>${w.no}</b> — ${String(w.title).replace(/</g,'&lt;')}<div class="meta"><span class="badge ${s[1]}">${s[0]}</span> · ${dt}${w.closedAt?' · أُغلق '+new Date(w.closedAt).toLocaleDateString('ar'):''}</div></div>`;
     }).join('');
-  }catch(ex){ err('e2','⚠ تعذر الجلب — حاول لاحقاً'); }
+  }catch(ex){ err('e2',' تعذر الجلب — حاول لاحقاً'); }
 }
 loadCompounds();
 </script>
