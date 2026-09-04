@@ -104,13 +104,7 @@ function seedState(){
   const d={
     lang:'ar',ver:6,seq:0,prSeq:0,poSeq:0,rnSeq:0,prjSeq:0,ctSeq:0,seeded:false,
     users:[
-      U({u:'admin',  p:'1234',name:'مدير النظام',   role:'admin'}),
-      U({u:'eng',    p:'1234',name:'مهندس العمليات',role:'engineer'}),
-      U({u:'sitemgr',p:'1234',name:'مدير الموقع',   role:'sitemgr'}),
-      U({u:'sami',   p:'1234',name:'سامي العتيبي',  role:'tech'}),
-      U({u:'khalid', p:'1234',name:'خالد منصور',    role:'tech'}),
-      U({u:'store',  p:'1234',name:'مسؤول المخزون', role:'store'}),
-      U({u:'proc',   p:'1234',name:'مسؤول المشتريات',role:'proc'})
+      U({u:'admin',  p:'1234',name:'مدير النظام',   role:'admin'})
     ],
     categories:['تكييف سبليت','تكييف مركزي / دكت','سخان مياه','مضخة مياه',
      'مضخة / فلتر مسبح','نظام معالجة مياه','جاكوزي / سبا','أجهزة الجيم','لوحة كهرباء','إنارة داخلية',

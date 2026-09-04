@@ -2933,8 +2933,8 @@ function vUsers(){
     <td><span class="badge ${u.role==='admin'?'b-down':u.role==='tech'?'b-open':'b-prog'}">${ROLES[u.role]}</span></td>
     <td>${esc(u.phone||'—')}</td>
     <td>${u.role==='admin'?`<span class="badge b-ok">${lb('الكل||All')}</span>`:(u.cmpIds||[]).map(id=>cmpName(id)).join('، ')||'—'}</td>
-    <td nowrap>${u.id!==me.id?`<button class="btn sm ghost" onclick="userForm('${u.id}')">✏</button>
-    <button class="btn sm danger" onclick="delUser('${u.id}')">🗑</button>`:`<span class="muted">${lb('أنت||You')}</span>`}</td></tr>`).join('')}
+    <td nowrap><button class="btn sm ghost" onclick="userForm('${u.id}')">✏</button>
+    ${u.id!==me.id?`<button class="btn sm danger" onclick="delUser('${u.id}')">🗑</button>`:`<span class="muted">${lb('أنت||You')}</span>`}</td></tr>`).join('')}
   </table></div></div>
   <p class="muted">📱 ${lb('رقم الجوال مطلوب لإرسال البلاغات عبر واتساب للفنيين.||Mobile number is needed for WhatsApp reports to technicians.')}</p>`;
 }
@@ -2961,7 +2961,7 @@ function saveUser(id){
   if(!n||!un||!p)return toast(lb('⚠ أكمل الحقول||⚠ Fill all fields'),'err');
   if(db.users.some(x=>x.u===un&&x.id!==id))return toast(lb('⚠ اسم الدخول مستخدم||⚠ Username taken'),'err');
   const cmpIds=[...document.querySelectorAll('.fu_cmp:checked')].map(x=>x.value);
-  const role=$('fu_r').value;
+  const role=(id&&id===me.id)?'admin':$('fu_r').value; /* المدير يبقى مديراً — لا يستطيع سحب صلاحيته من نفسه */
   if(role!=='admin'&&!cmpIds.length)return toast(lb('⚠ اختر مجمعاً واحداً على الأقل لهذا المستخدم||⚠ Pick at least one compound for this user'),'err');
   const phone=$('fu_ph').value.trim();
   if(id){const x=db.users.find(y=>y.id===id);
