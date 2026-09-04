@@ -467,6 +467,35 @@ html[dir="ltr"] .feature-item:hover{transform:translateX(3px)}
   .ucard{justify-content:center;padding:6px}
   .sideacts{flex-direction:column}
 }
+/* ===== MOBILE (phones): bottom icon nav + full-width sheets + roomy touch targets ===== */
+@media(max-width:760px){
+  .layout{display:block;min-height:100vh}
+  .side{position:fixed;inset:auto 0 0 0;height:auto;width:auto;margin:0;border-radius:18px 18px 0 0;
+    padding:8px 10px calc(10px + env(safe-area-inset-bottom));z-index:40;
+    flex-direction:row;align-items:center;gap:4px;overflow-x:auto;flex-wrap:nowrap;
+    box-shadow:0 -10px 34px rgba(2,44,66,.28)}
+  .side .brand,.side .sidediv,.side .slabel,.side .cmpchip,.side .cmpsel,.side .ucard .uinfo{display:none}
+  .side .nbtn{flex:0 0 auto;width:auto;flex-direction:column;gap:1px;padding:7px 11px}
+  .side .nbtn .ic{font-size:19px;width:auto}
+  .side .nbtn .nt{display:inline;font-size:9px;white-space:nowrap}
+  .side .sidefoot{margin:0;flex-direction:row;flex:0 0 auto;align-items:center;gap:4px}
+  .side .ucard{background:none;border:0;padding:3px}
+  .side .sideacts{flex-direction:row;flex:0 0 auto}
+  .content{padding:10px 10px 104px}
+  .topbar{top:8px;padding:8px 12px}
+  .topbar .ttl{font-size:14px}
+  .stats{grid-template-columns:repeat(2,1fr);gap:8px}
+  .stat{padding:10px}.stat .num{font-size:22px}
+  .card{padding:12px}
+  .modal-bg{padding:0}
+  .modal{border-radius:16px 16px 0 0;margin:14px 0 0;max-width:none;min-height:calc(100vh - 14px)}
+  table{font-size:12.5px}
+  td,th{padding:7px 6px}
+  .searchbar{max-width:none}
+  .qa .btn,.toolbar .btn{flex:1 1 46%}
+  button.btn:not(.sm){min-height:40px}
+  .toast{bottom:92px}
+}
 @media print{
   body::before,.side,.topbar,.btn,.toolbar,.searchbar,.chips,.qa,footer,.sideacts{display:none!important}
   body{background:#fff}
@@ -915,19 +944,19 @@ function setCmp(id){
 
 function navItems(){
   return [
-    ['dash','',lb('الرئيسية||Dashboard'),['admin','engineer','sitemgr','tech','store','proc']],
-    ['wos','',lb('أوامر الشغل||Work Orders'),['admin','engineer','sitemgr','tech']],
-    ['pm','',lb('الصيانة الدورية||Preventive'),['admin','engineer','sitemgr']],
-    ['proj','',lb('المشاريع||Projects'),['admin','engineer','sitemgr']],
-    ['cmps','',lb('المجمعات||Compounds'),['admin']],
-    ['assets','',lb('الأصول||Assets'),['admin','engineer','sitemgr']],
-    ['units','',lb('الوحدات والمستأجرون||Units & Tenants'),['admin','engineer','sitemgr']],
-    ['inv','',lb('المخزون||Inventory'),['admin','engineer','store']],
-    ['proc','',lb('المشتريات||Procurement'),['admin','engineer','sitemgr','proc']],
-    ['contracts','',lb('العقود||Contracts'),['admin','engineer','sitemgr']],
-    ['hr','',lb('الموظفون||Workforce'),['admin','engineer']],
-    ['rep','',lb('التقارير||Reports'),['admin','engineer','sitemgr']],
-    ['users','',lb('المستخدمون||Users'),['admin']]
+    ['dash','🏠',lb('الرئيسية||Dashboard'),['admin','engineer','sitemgr','tech','store','proc']],
+    ['wos','🛠️',lb('أوامر الشغل||Work Orders'),['admin','engineer','sitemgr','tech']],
+    ['pm','🗓️',lb('الصيانة الدورية||Preventive'),['admin','engineer','sitemgr']],
+    ['proj','🧱',lb('المشاريع||Projects'),['admin','engineer','sitemgr']],
+    ['cmps','🏢',lb('المجمعات||Compounds'),['admin']],
+    ['assets','⚙️',lb('الأصول||Assets'),['admin','engineer','sitemgr']],
+    ['units','🏘️',lb('الوحدات والمستأجرون||Units & Tenants'),['admin','engineer','sitemgr']],
+    ['inv','📦',lb('المخزون||Inventory'),['admin','engineer','store']],
+    ['proc','🛒',lb('المشتريات||Procurement'),['admin','engineer','sitemgr','proc']],
+    ['contracts','📜',lb('العقود||Contracts'),['admin','engineer','sitemgr']],
+    ['hr','👷',lb('الموظفون||Workforce'),['admin','engineer']],
+    ['rep','📊',lb('التقارير||Reports'),['admin','engineer','sitemgr']],
+    ['users','👥',lb('المستخدمون||Users'),['admin']]
   ].filter(n=>n[3].includes(me.role));
 }
 function tabAllowed(t){return navItems().some(n=>n[0]===t);}
@@ -1256,9 +1285,9 @@ function shell(){
       ${cmpSel}
       <div class="sidediv"></div>
       <div class="slabel">${lb('التشغيل||Operations')}</div>
-      ${groups[0].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" onclick="TAB='${n[0]}';render()"><span class="nt">${n[2]}</span></button>`).join('')}
+      ${groups[0].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" title="${n[2]}" onclick="TAB='${n[0]}';render()"><span class="ic">${n[1]}</span><span class="nt">${n[2]}</span></button>`).join('')}
       ${groups[1].length?`<div class="sidediv"></div><div class="slabel">${lb('الإدارة||Management')}</div>
-      ${groups[1].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" onclick="TAB='${n[0]}';render()"><span class="nt">${n[2]}</span></button>`).join('')}`:''}
+      ${groups[1].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" title="${n[2]}" onclick="TAB='${n[0]}';render()"><span class="ic">${n[1]}</span><span class="nt">${n[2]}</span></button>`).join('')}`:''}
       <div class="sidefoot">
         <div class="ucard"><span class="av">${esc(initials)}</span>
           <span class="uinfo"><span class="nm">${esc(me.name)}</span><br><span class="rl">${ROLES[me.role]}</span></span>
@@ -1362,21 +1391,32 @@ function delCmp(i){const c=db.compounds[i];
 /* ===== PREVENTIVE MAINTENANCE ===== */
 function intervalDays(p){const n=Math.max(1,+p.freqVal||1);return p.freqUnit==='days'?n:p.freqUnit==='weeks'?n*7:n*30;}
 function nextDueOf(p){return p.nextDue||(p.lastDone?addDays(p.lastDone,intervalDays(p)):todayISO());}
+/* المتبقي من العداد حتى الاستحقاق (null = لا يوجد محفّز عدّاد لهذه الخطة) */
+function meterDueIn(p){
+  if(!(p.mEvery>0))return null;
+  const a=db.assets.find(x=>x.id===p.assetId);
+  if(!a||a.meter==null||a.meter==='')return null;
+  return ((p.lastMeter||0)+p.mEvery)-Number(a.meter);
+}
 function pmGen(){
   let created=0;
   db.pms.forEach(p=>{
-    if(daysUntil(nextDueOf(p))<=0){
+    const md=meterDueIn(p);
+    const timeDue=daysUntil(nextDueOf(p))<=0;
+    const meterDue=(md!=null&&md<=0);
+    if(timeDue||meterDue){
       const hasOpen=db.wos.some(w=>w.pmId===p.id&&w.status!=='closed');
       if(!hasOpen){
         db.seq++;const y=new Date().getFullYear();
         const ast=db.assets.find(a=>a.id===p.assetId)||{};
+        if(meterDue&&ast&&ast.meter!=null&&ast.meter!=='')p.lastMeter=Number(ast.meter);
         db.wos.unshift({no:'WO-'+y+'-'+String(db.seq).padStart(4,'0'),type:'pm',pmId:p.id,compoundId:p.compoundId||activeCmp(),
-          title:(db.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name,
+          title:(db.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name+(meterDue?' ⏱':''),
           desc:p.tasks||'',assetId:p.assetId||'',assetName:ast?ast.name:'',
           bname:ast?bName(ast.building):'',
           priority:'normal',status:'open',createdAt:Date.now(),startedAt:null,closedAt:null,projectId:'',
           unitId:'',unitCode:'',tenantName:'',
-          dueDate:nextDueOf(p),assigneeId:p.assigneeId||'',assigneeName:p.assigneeName||'',
+          dueDate:timeDue?nextDueOf(p):todayISO(),assigneeId:p.assigneeId||'',assigneeName:p.assigneeName||'',
           cost:0,closeNotes:'',parts:[],photos:[],sig:'',
           reportedBy:lb('الجدولة التلقائية||Auto-scheduler'),
           checklist:(p.tasks||'').split('\n').map(s=>s.trim()).filter(Boolean).map(t=>({t,done:false,v:''}))});
@@ -1394,11 +1434,12 @@ function vPM(){
   let rows='';
   [...db.pms].filter(p=>p.compoundId===act).sort((a,b)=>daysUntil(nextDueOf(a))-daysUntil(nextDueOf(b))).forEach((p,i)=>{
     const nd=nextDueOf(p),du=daysUntil(nd);
+    const mdi=meterDueIn(p);
     const ast=db.assets.find(a=>a.id===p.assetId)||null;
     rows+=`<tr class="${du<0?'overdue':''}"><td><b>${esc(p.name)}</b><br><span class="muted">${esc((p.tasks||'').split('\n')[0]||'')}…</span></td>
-    <td>${esc(ast?ast.name:'—')}</td><td>${p.freqVal} ${FREQUNIT[p.freqUnit]}</td>
+    <td>${esc(ast?ast.name:'—')}</td><td>${p.freqVal} ${FREQUNIT[p.freqUnit]}${p.mEvery>0?`<br><span class="muted">⏱ ${lb('كل||every')} ${p.mEvery}</span>`:''}</td>
     <td>${fmtD(p.lastDone)}</td>
-    <td>${du<0?`<span class="badge b-urgent">${lb('متأخرة||OVERDUE')} ${-du} ${lb('يوم||d')}</span> `:''}${fmtD(nd)}</td>
+    <td>${du<0?`<span class="badge b-urgent">${lb('متأخرة||OVERDUE')} ${-du} ${lb('يوم||d')}</span> `:''}${fmtD(nd)}${mdi!=null?` <span class="badge ${mdi<=0?'b-urgent':'b-open'}">⏱ ${mdi<=0?lb('حان||DUE'):mdi}</span>`:''}</td>
     <td>${esc(p.assigneeName||'—')}</td>
     <td nowrap>${isEng()?`<button class="btn sm ghost" onclick="pmDone('${p.id}')">✅ ${lb('سجّل إنجاز||Log Done')}</button>
     <button class="btn sm ghost" onclick="pmForm('${p.id}')">✏</button>
@@ -1426,6 +1467,7 @@ function pmForm(pid){
       <div style="display:flex;gap:6px"><input type="number" min="1" id="fp_fv" value="${p.freqVal||2}" style="width:80px">
       <select id="fp_fu">${Object.keys(FREQUNIT).map(k=>`<option value="${k}" ${(p.freqUnit||'weeks')===k?'selected':''}>${FREQUNIT[k]}</option>`).join('')}</select></div></div>
     <div><label>${lb('آخر تنفيذ (فارغ = اليوم)||Last Done (blank = today)')}</label><input type="date" id="fp_l" value="${p.lastDone||''}"></div>
+    <div><label>⏱ ${lb('كل كم من العداد؟ (اختياري)||Every how many meter units? (optional)')}</label><input type="number" min="0" id="fp_me" value="${p.mEvery||''}" placeholder="مثال: 500"></div>
     <div><label>${lb('الفني المسؤول||Technician')}</label><select id="fp_as"><option value="">—</option>${techs.map(t=>`<option value="${t.id}" ${p.assigneeId===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
   </div>
   <label>${lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')}</label>
@@ -1437,7 +1479,8 @@ function savePM(pid){
   const n=$('fp_n').value.trim();if(!n)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
   const tech=db.users.find(u=>u.id===$('fp_as').value);
   const o={name:n,assetId:$('fp_a').value,compoundId:activeCmp(),freqVal:Math.max(1,+$('fp_fv').value||1),freqUnit:$('fp_fu').value,
-    lastDone:$('fp_l').value||todayISO(),assigneeId:$('fp_as').value||'',assigneeName:tech?tech.name:'',tasks:$('fp_t').value};
+    lastDone:$('fp_l').value||todayISO(),assigneeId:$('fp_as').value||'',assigneeName:tech?tech.name:'',tasks:$('fp_t').value,
+    mEvery:+$('fp_me').value||0};
   if(pid){const ex=db.pms.find(x=>x.id===pid);if(!ex)return toast(lb('⚠ الخطة غير موجودة||⚠ Plan not found'),'err');Object.assign(ex,o);delete ex.nextDue;}
   else db.pms.push(Object.assign({id:uid('P')},o));
   persist();closeModal();paintTab();toast(lb('✔ حُفظت الخطة||✔ Plan saved'),'ok');
@@ -1593,11 +1636,13 @@ function drawAssetsTable(){
     list.forEach(a=>{
       const st=ASTAT[a.status]||ASTAT.ok;
       const wr=a.warrantyend&&daysUntil(a.warrantyend)>=0&&daysUntil(a.warrantyend)<90;
-      rows+=`<tr><td><b>${esc(a.name)}</b>${(a.photos&&a.photos.length)?' 🖼':''}</td><td>${esc(a.category||'—')}</td>
+      rows+=`<tr><td><b>${esc(a.name)}</b>${(a.photos&&a.photos.length)?' 🖼':''}${a.meter!=null&&a.meter!==''?`<br><span class="muted">⏱ ${a.meter} ${esc(a.meterUnit||'')}</span>`:''}</td><td>${esc(a.category||'—')}</td>
       <td>${esc(bName(a.building))}</td><td>${esc(a.floor||'—')}</td>
       <td><span class="badge ${st[1]}">${st[0]}</span></td>
       <td>${wr?`<span class="badge b-prog">${fmtD(a.warrantyend)}</span>`:fmtD(a.warrantyend)}</td>
       ${isEng()?`<td nowrap><button class="btn sm ghost" title="${lb('صور ومستندات||Photos')}" onclick="assetPhotos('${a.id}')">🖼</button>
+        <button class="btn sm ghost" title="⏱ ${lb('تسجيل قراءة عداد||Log meter')}" onclick="meterLog('${a.id}')">⏱</button>
+        <button class="btn sm ghost" title="${lb('ملصق QR للطباعة||Printable QR tag')}" onclick="assetTag('${a.id}')">🏷</button>
         <button class="btn sm ghost" onclick="woForm(null,'${a.id}')">🛠</button>
         <button class="btn sm ghost" onclick="assetForm('${a.id}')">✏</button>
         <button class="btn sm danger" onclick="delAsset('${a.id}')">🗑</button></td>`:''}</tr>`;
@@ -1637,6 +1682,8 @@ function assetForm(id){
     <div><label>${lb('تاريخ التركيب||Installed')}</label><input type="date" id="fa_i" value="${a.installdate||''}"></div>
     <div><label>${lb('انتهاء الضمان||Warranty End')}</label><input type="date" id="fa_w" value="${a.warrantyend||''}"></div>
     <div><label>${lb('الحالة||Status')}</label><select id="fa_st">${Object.keys(ASTAT).map(k=>`<option value="${k}" ${(a.status||'ok')===k?'selected':''}>${ASTAT[k][0]}</option>`).join('')}</select></div>
+    <div><label>⏱ ${lb('قراءة العداد الحالية||Current Meter Reading')}</label><input type="number" step="any" min="0" id="fa_mr" value="${a.meter??''}" placeholder="مثال: 1250"></div>
+    <div><label>${lb('وحدة العداد||Meter Unit')}</label><select id="fa_mu"><option value="">—</option>${['ساعة','كم','دورة'].map(u=>`<option ${a.meterUnit===u?'selected':''}>${u}</option>`).join('')}</select></div>
   </div>
   <label>📷 ${lb('صور ومستندات الأصل||Asset Photos & Documents')}</label>
   <div id="fa_photos" class="pgrid"></div>
@@ -1657,7 +1704,8 @@ function saveAsset(id){
   const name=$('fa_n').value.trim();if(!name)return toast(lb('⚠ الاسم مطلوب||⚠ Name required'),'err');
   const o={name,category:$('fa_c').value,building:$('fa_b').value,floor:$('fa_f').value,detail:$('fa_d').value,
     model:$('fa_m').value,serial:$('fa_s').value,installdate:$('fa_i').value,warrantyend:$('fa_w').value,
-    status:$('fa_st').value,notes:$('fa_no').value};
+    status:$('fa_st').value,notes:$('fa_no').value,
+    meter:$('fa_mr').value===''||$('fa_mr').value==null?null:+$('fa_mr').value,meterUnit:$('fa_mu').value};
   o.compoundId=activeCmp();
   o.photos=(window._faPh||[]).slice();
   if(id)Object.assign(db.assets.find(x=>x.id===id),o);
@@ -1687,6 +1735,37 @@ function assetPhotoAdd(id){pickImages(imgs=>{
   persist();assetPhotos(id);toast(lb('✔ أُضيفت الصور||✔ Photos added'),'ok');});}
 function assetPhotoDel(id,j){const a=db.assets.find(x=>x.id===id);if(!a)return;
   a.photos.splice(j,1);persist();assetPhotos(id);}
+/* تسجيل قراءة عداد (تسجيل القراءة ليس صيانة — لا يصفّر عدّاد الخطة) */
+function meterLog(id){
+  const a=db.assets.find(x=>x.id===id);if(!a||!isEng())return;
+  modal(`<h3>⏱ ${lb('تسجيل قراءة عداد||Log Meter Reading')} — ${esc(a.name)}</h3>
+  <p class="muted">${lb('القراءة الحالية:||Current:')} <b>${a.meter??'—'}</b> ${esc(a.meterUnit||'')}</p>
+  <label>${lb('القراءة الجديدة *||New Reading *')}</label><input type="number" step="any" min="0" id="fm_v" value="${a.meter??''}">
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" onclick="meterSave('${id}')">${lb('حفظ القراءة||Save Reading')}</button></div>`);
+}
+function meterSave(id){
+  const a=db.assets.find(x=>x.id===id);if(!a)return;
+  const v=$('fm_v').value;
+  if(v===''||v==null||+v<0)return toast(lb('⚠ أدخل قراءة صحيحة||⚠ Enter a valid reading'),'err');
+  if(a.meter!=null&&a.meter!==''&&+v<+a.meter&&!confirm(lb('⚠ القراءة الجديدة أقل من الحالية — متابعة؟||⚠ New reading is lower than current — continue?')))return;
+  a.meter=+v;persist();closeModal();drawAssetsTable();toast(lb('✔ سُجلت القراءة||✔ Reading saved'),'ok');
+}
+/* ملصق QR للطباعة: المسح يفتح بوابة البلاغات على هذا الأصل (خدمة QR مجانية، والنص بديل عند انقطاعها) */
+function assetTag(id){
+  const a=db.assets.find(x=>x.id===id);if(!a)return;
+  const url=location.origin+'/request.html?c='+a.compoundId+'&asset='+encodeURIComponent(a.name);
+  const qr='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(url);
+  const w=window.open('','_blank','width=440,height=620');
+  if(!w)return toast(lb('⚠ اسمح بالنوافذ المنبثقة للطباعة||⚠ Allow popups to print'),'err');
+  w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+esc(a.name)+'</title>'
+  +'<style>body{font-family:Tahoma,Arial;text-align:center;padding:24px;color:#111}.tag{border:2px dashed #0e7490;border-radius:16px;padding:22px;max-width:340px;margin:0 auto}h2{font-size:19px;margin:10px 0 2px}.sub{font-size:13px;color:#555;margin-bottom:10px}img{width:200px;height:200px}.url{font-size:11px;direction:ltr;word-break:break-all;color:#333;margin-top:10px}.hint{font-size:12px;color:#666;margin-top:12px}</style></head>'
+  +'<body onload="setTimeout(function(){window.print()},700)"><div class="tag"><div style="font-size:30px">⚙️</div>'
+  +'<h2>'+esc(a.name)+'</h2><div class="sub">'+esc(bName(a.building))+(a.floor?' · '+esc(a.floor):'')+'</div>'
+  +'<img src="'+qr+'" onerror="this.style.display=\'none\'"><div class="url">'+esc(url)+'</div>'
+  +'<div class="hint">امسح الرمز لإرسال بلاغ صيانة لهذا الأصل</div></div></body></html>');
+  w.document.close();
+}
 
 function buildingForm(){
   modal(`<h3>${lb('إضافة مبنى/منطقة||Add Building/Area')}</h3>
@@ -2196,7 +2275,9 @@ function doCloseWO(i){
   w.status='closed';w.closedAt=Date.now();if(!w.startedAt)w.startedAt=w.closedAt;
   if(w.type==='pm'&&w.pmId){
     const p=db.pms.find(x=>x.id===w.pmId);
-    if(p){p.lastDone=todayISO();p.nextDue=addDays(todayISO(),intervalDays(p));}
+    if(p){p.lastDone=todayISO();p.nextDue=addDays(todayISO(),intervalDays(p));
+      const wa=db.assets.find(a=>a.id===w.assetId);
+      if(wa&&wa.meter!=null&&wa.meter!=='')p.lastMeter=Number(wa.meter);}
   }
   persist();closeModal();paintTab();toast(lb('✔ أُغلق الأمر||✔ Closed'),'ok');
 }

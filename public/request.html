@@ -105,6 +105,8 @@ async function loadCompounds(){
   }catch(e){ sel.innerHTML = '<option value="">تعذر التحميل — حدّث الصفحة</option>'; }
   const unit = qs.get('unit');
   if(unit) document.getElementById('u').value = unit;
+  const asset = qs.get('asset');
+  if(asset) document.getElementById('d').value = 'الأصل: ' + asset + '\n';
 }
 function err(id,msg){
   const el = document.getElementById(id);
