@@ -5,3 +5,5 @@ cmms.db-wal
 .env
 .DS_Store
 data/
+.neon
+.env.local
