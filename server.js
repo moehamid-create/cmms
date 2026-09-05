@@ -70,7 +70,7 @@ app.use((req, res, next) => {
     'X-Frame-Options': 'SAMEORIGIN',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-    'Content-Security-Policy': "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'self'",
+    'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https://api.qrserver.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'self'",
   });
   if (isProduction && req.secure) res.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
   next();
@@ -87,7 +87,7 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(origin && !allowedOrigins.has(origin) && origin !== `${req.protocol}://${req.get('host')}` ? 403 : 204);
   next();
 });
-app.use(express.json({ limit: '2mb', strict: true }));
+app.use(express.json({ limit: '40mb', strict: true }));   /* الصور تُحفظ داخل البيانات — حد كبير لصور قبل/بعد */
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
   /* الصور والملفات تُحفَظ مؤقتاً، لكن صفحة HTML دائماً طازجة (عشان التحديثات تظهر فوراً) */
@@ -285,8 +285,6 @@ app.post('/api/login', loginRateLimit, async (req,res)=>{
   try { st = await getState(); }
   catch (e) { console.error('DB error on /api/login:', e.message); return res.status(500).json({error:'DB'}); }
   const {u,p} = req.body || {};
-  const submittedPassword = String(p || '');
-  if (isProduction && submittedPassword === '1234') return res.status(401).json({error:'BAD_LOGIN'});
   const rawU = String(u||'').trim().toLowerCase();
   const uname = rawU.includes('@') ? rawU.split('@')[0] : rawU;
   /* الدخول باسم المستخدم أو البريد الإلكتروني */

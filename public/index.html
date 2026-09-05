@@ -571,10 +571,8 @@ html[dir="ltr"] .feature-item:hover{transform:translateX(3px)}
   .printhead{display:block!important;text-align:center;font-weight:800;font-size:15px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #333}
 }
 .printhead{display:none}
-/* Secure, calm operations surface */
-:focus-visible{outline:3px solid rgba(14,116,144,.55);outline-offset:2px}.btn:disabled,.nbtn:disabled{cursor:not-allowed;opacity:.55;transform:none!important}.error,.alert{line-height:1.7}.content{max-width:1600px}.card,.stat,.topbar,.side{border-color:rgba(14,116,144,.16)}
-@media(max-width:900px){.layout{display:block}.side{position:relative;top:auto;height:auto;margin:10px;border-radius:16px;display:block;padding:10px}.side .slabel,.side .sidediv,.side .sidefoot{display:none}.side .brand{padding:4px 8px}.side nav{display:flex;gap:6px;overflow:auto;padding:4px}.side .nbtn{min-width:120px;justify-content:center}.content{padding:8px 10px 20px}.topbar{position:relative}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:520px){.stats{grid-template-columns:1fr 1fr}.topbar{align-items:flex-start}.modal{padding:16px}.fg{grid-template-columns:1fr}}
+/* Kept from security pass: focus visibility + layout cap (responsive nav lives in the 1180px/760px blocks above) */
+:focus-visible{outline:3px solid rgba(14,116,144,.55);outline-offset:2px}.btn:disabled,.nbtn:disabled{cursor:not-allowed;opacity:.55;transform:none!important}.content{max-width:1600px}
 </style>
 </head>
 <body>
@@ -1863,7 +1861,7 @@ function saveAsset(id){
 }
 function delAsset(id){
   const linked=db.wos.some(w=>w.assetId===id)||db.pms.some(p=>p.assetId===id);
-  if(linked)return toast(lb(' لا يمكن الحذف — توجد أوامر شغل ��و خطط صيانة مرتبطة بهذا الأصل|| Cannot delete — linked work orders or PM plans exist'),'err');
+  if(linked)return toast(lb(' لا يمكن الحذف — توجد أوامر شغل أو خطط صيانة مرتبطة بهذا الأصل|| Cannot delete — linked work orders or PM plans exist'),'err');
   if(!confirm(lb('حذف هذا الأصل؟||Delete this asset?')))return;
   db.assets=db.assets.filter(a=>a.id!==id);persist();paintTab();}
 function assetPhotos(id){
@@ -1887,7 +1885,7 @@ function assetPhotoDel(id,j){const a=db.assets.find(x=>x.id===id);if(!a)return;
 /* تسجيل قراءة عداد (تسجيل القراءة ليس صيانة — لا يصفّر عدّاد الخطة) */
 function meterLog(id){
   const a=db.assets.find(x=>x.id===id);if(!a||!isEng())return;
-  modal(`<h3> ${lb('تس��يل قراءة عداد||Log Meter Reading')} — ${esc(a.name)}</h3>
+  modal(`<h3> ${lb('تسجيل قراءة عداد||Log Meter Reading')} — ${esc(a.name)}</h3>
   <p class="muted">${lb('القراءة الحالية:||Current:')} <b>${a.meter??'—'}</b> ${esc(a.meterUnit||'')}</p>
   <label>${lb('القراءة الجديدة *||New Reading *')}</label><input type="number" step="any" min="0" id="fm_v" value="${a.meter??''}">
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
