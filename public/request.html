@@ -1,163 +1,19 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>بوابة البلاغات — أملاكي</title>
-<link rel="icon" type="image/svg+xml" href="/logo-mark.svg">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>بوابة الصيانة | أملاكي</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:linear-gradient(135deg,#0e7490,#155e75 55%,#0c4a6e);min-height:100vh;color:#0f172a;padding:18px 12px 60px}
-.wrap{max-width:620px;margin:0 auto}
-.card{background:#fff;border-radius:18px;padding:22px 20px;margin-bottom:14px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
-.brand{text-align:center;color:#fff;margin:6px 0 16px}
-.brand .logo{width:56px;height:56px;border-radius:16px;display:inline-block;margin-bottom:8px;box-shadow:0 8px 20px rgba(0,0,0,.25)}
-.brand .logo img{width:56px;height:56px;border-radius:16px;display:block}
-.brand h1{font-size:20px}.brand p{font-size:13px;opacity:.85}
-h2{font-size:16px;margin-bottom:12px}
-label{display:block;font-size:13px;font-weight:700;margin:12px 0 4px}
-input,select,textarea{width:100%;border:1.5px solid #cbd5e1;border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;background:#f8fafc}
-input:focus,select,textarea:focus{outline:none;border-color:#0e7490;background:#fff}
-textarea{resize:vertical;min-height:90px}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn{width:100%;border:0;border-radius:12px;padding:13px;font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0e7490,#155e75);cursor:pointer;margin-top:16px}
-.btn:active{transform:scale(.98)}
-.btn.ghost{background:#e2e8f0;color:#0f172a}
-.ok{background:#ecfdf5;border:1.5px solid #6ee7b7;border-radius:12px;padding:14px;text-align:center}
-.ok .no{font-size:22px;font-weight:900;color:#047857;letter-spacing:1px}
-.muted{font-size:12px;color:#64748b;text-align:center;margin-top:10px}
-.req{border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;margin-top:8px}
-.req b{font-size:14px}.req .meta{font-size:12px;color:#64748b;margin-top:4px}
-.badge{display:inline-block;font-size:11px;font-weight:800;border-radius:20px;padding:2px 10px}
-.b-open{background:#fef9c3;color:#854d0e}.b-inprog{background:#dbeafe;color:#1d4ed8}
-.b-wait{background:#ffedd5;color:#9a3412}.b-closed{background:#dcfce7;color:#166534}
-.tabs{display:flex;gap:8px;margin-bottom:14px}
-.tabs button{flex:1;border:0;border-radius:12px;padding:11px;font-size:14px;font-weight:800;cursor:pointer;background:rgba(255,255,255,.25);color:#fff}
-.tabs button.on{background:#fff;color:#0e7490}
-.hidden{display:none}
-.err{background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;border-radius:12px;padding:10px;margin-top:12px;font-size:13px;font-weight:700}
-@media(max-width:480px){.row{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="brand">
-    <div class="logo"><img src="/logo-mark.svg" alt="أملاكي"></div>
-    <h1>بوابة بلاغات الصيانة</h1>
-    <p>أملاكي — أرسل بلاغك بدون تسجيل دخول</p>
-  </div>
-
-  <div class="tabs">
-    <button id="tabNew" class="on" onclick="showTab('new')"> بلاغ جديد</button>
-    <button id="tabTrack" onclick="showTab('track')"> تتبع بلاغاتي</button>
-  </div>
-
-  <div class="card" id="paneNew">
-    <h2> بيانات البلاغ</h2>
-    <div id="doneBox" class="ok hidden"> تم استلام بلاغك بنجاح<div class="no" id="doneNo"></div><div class="muted">احتفظ برقم البلاغ للمتابعة</div></div>
-    <form id="f" onsubmit="send(event)">
-      <label>المجمع *</label><select id="c" required><option value="">— جارِ التحميل… —</option></select>
-      <div class="row">
-        <div><label>الاسم *</label><input id="n" required maxlength="80" placeholder="مثال: محمد عبدالله"></div>
-        <div><label>الجوال *</label><input id="p" required inputmode="tel" dir="ltr" placeholder="05xxxxxxxx"></div>
-      </div>
-      <div class="row">
-        <div><label>الوحدة (اختياري)</label><input id="u" maxlength="30" placeholder="مثال: A-101"></div>
-        <div><label>التصنيف</label><select id="k">
-          <option value="">— عام —</option><option>سباكة</option><option>كهرباء</option><option>تكييف</option>
-          <option>مصعد</option><option>نظافة</option><option>أخرى</option>
-        </select></div>
-      </div>
-      <label>عنوان البلاغ *</label><input id="t" required maxlength="140" placeholder="مثال: تسريب مياه في الحمام">
-      <label>شرح المشكلة</label><textarea id="d" maxlength="2000" placeholder="اشرح المشكلة ومكانها بالتفصيل…"></textarea>
-      <div id="e" class="err hidden"></div>
-      <button class="btn" id="btnSend">إرسال البلاغ </button>
-    </form>
-  </div>
-
-  <div class="card hidden" id="paneTrack">
-    <h2> تتبع بلاغاتي</h2>
-    <label>رقم الجوال المستخدم في البلاغ</label>
-    <input id="tp" inputmode="tel" dir="ltr" placeholder="05xxxxxxxx">
-    <button class="btn" onclick="track()">عرض بلاغاتي</button>
-    <div id="e2" class="err hidden"></div>
-    <div id="list"></div>
-  </div>
-
-  <p class="muted">للحالات الطارئة (حريق/تسريب كبير/انقطاع كامل) اتصل بإدارة المجمع مباشرة </p>
-</div>
-
+:root{--navy:#102a43;--teal:#0f766e;--mint:#dff7f1;--paper:#f7fafc;--ink:#17324d;--muted:#60758a;--line:#d7e2ea;--danger:#a33a3a}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(145deg,#e9f5f4,#f7fafc 52%,#e7eef6);font-family:"Segoe UI",Tahoma,Arial,sans-serif;color:var(--ink);padding:24px 16px 56px}.shell{max-width:760px;margin:auto}.hero{display:flex;align-items:center;gap:14px;margin:10px 0 22px}.mark{width:52px;height:52px;border-radius:16px;background:var(--navy);display:grid;place-items:center;color:#fff;font-weight:900;font-size:21px;box-shadow:0 12px 24px #102a4330}.hero h1{margin:0;font-size:22px}.hero p{margin:4px 0;color:var(--muted);font-size:13px}.tabs{display:flex;gap:8px;margin-bottom:12px}.tab{flex:1;padding:13px;border:1px solid var(--line);border-radius:14px;background:#ffffffb8;color:var(--navy);font:inherit;font-weight:800;cursor:pointer}.tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:0 18px 45px #102a4314;margin-bottom:14px}h2{font-size:17px;margin:0 0 18px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}.field.full{grid-column:1/-1}label{font-size:13px;font-weight:800}input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--paper);color:var(--ink);font:inherit}textarea{min-height:110px;resize:vertical}input:focus,select:focus,textarea:focus{outline:3px solid #0f766e2b;border-color:var(--teal)}button.submit{width:100%;border:0;border-radius:12px;padding:13px;background:var(--teal);color:#fff;font:inherit;font-weight:900;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.notice{background:var(--mint);border:1px solid #a6dfd2;border-radius:13px;padding:13px;margin-bottom:16px;font-size:13px;line-height:1.7}.success{background:#effaf5;border:1px solid #9ad6b8;border-radius:13px;padding:16px;text-align:center;margin-bottom:16px}.success strong{display:block;color:#116149;font-size:22px;letter-spacing:1px;margin-top:6px}.error{color:var(--danger);background:#fff3f3;border:1px solid #efb6b6;border-radius:11px;padding:10px;font-size:13px;margin:10px 0}.hidden{display:none!important}.hint{text-align:center;color:var(--muted);font-size:12px;line-height:1.7}.result{border:1px solid var(--line);border-radius:13px;padding:13px;margin-top:10px}.result strong{display:block}.badge{display:inline-block;margin-top:7px;border-radius:99px;padding:4px 9px;background:var(--mint);color:#116149;font-size:12px;font-weight:800}@media(max-width:560px){body{padding:16px 12px 40px}.card{padding:18px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.hero h1{font-size:19px}}
+</style></head>
+<body><main class="shell"><header class="hero"><div class="mark" aria-hidden="true">أ</div><div><h1>بوابة بلاغات الصيانة</h1><p>أرسل طلبك إلى إدارة المجمع بأمان وبدون تسجيل دخول</p></div></header><div class="tabs" role="tablist"><button class="tab active" id="newTab" onclick="show('new')">بلاغ جديد</button><button class="tab" id="trackTab" onclick="show('track')">تتبع بلاغ</button></div>
+<section class="card" id="newPane"><div class="notice">للحالات الطارئة مثل الحريق أو التسريب الكبير، تواصل مع إدارة المجمع مباشرة.</div><div id="success" class="success hidden">تم استلام بلاغك. احتفظ برقم البلاغ ورمز المتابعة.<strong id="successNo"></strong><div id="successToken" class="hint"></div></div><h2>تفاصيل البلاغ</h2><form id="form"><div class="grid"><div class="field"><label for="compound">المجمع *</label><select id="compound" required><option>جارِ التحميل…</option></select></div><div class="field"><label for="name">الاسم *</label><input id="name" required maxlength="80" autocomplete="name"></div><div class="field"><label for="phone">الجوال *</label><input id="phone" required maxlength="20" inputmode="tel" dir="ltr" autocomplete="tel" placeholder="05xxxxxxxx"></div><div class="field"><label for="unit">الوحدة</label><input id="unit" maxlength="30"></div><div class="field"><label for="category">التصنيف</label><select id="category"><option>عام</option><option>سباكة</option><option>كهرباء</option><option>تكييف</option><option>مصعد</option><option>نظافة</option><option>أخرى</option></select></div><div class="field full"><label for="title">عنوان البلاغ *</label><input id="title" required maxlength="140" placeholder="مثال: تسريب مياه في الحمام"></div><div class="field full"><label for="details">شرح المشكلة</label><textarea id="details" maxlength="2000"></textarea></div></div><div id="error" class="error hidden" role="alert"></div><button class="submit" id="send">إرسال البلاغ</button></form></section>
+<section class="card hidden" id="trackPane"><h2>تتبع بلاغك</h2><div class="notice">أدخل رمز المتابعة الذي ظهر لك بعد إرسال البلاغ. لا نعرض البلاغات بالبحث عن رقم الجوال حفاظاً على الخصوصية.</div><div class="field"><label for="token">رمز المتابعة</label><input id="token" dir="ltr" autocomplete="one-time-code" placeholder="ألصق الرمز هنا"></div><div id="trackError" class="error hidden" role="alert"></div><button class="submit" id="trackBtn" onclick="track()">عرض حالة البلاغ</button><div id="results" aria-live="polite"></div></section><p class="hint">تُستخدم بياناتك لمعالجة طلب الصيانة فقط، ولا تشارك مع جهات تسويقية.</p></main>
 <script>
-const qs = new URLSearchParams(location.search);
-function showTab(w){
-  document.getElementById('tabNew').classList.toggle('on', w==='new');
-  document.getElementById('tabTrack').classList.toggle('on', w==='track');
-  document.getElementById('paneNew').classList.toggle('hidden', w!=='new');
-  document.getElementById('paneTrack').classList.toggle('hidden', w!=='track');
-}
-const ST = {open:['مفتوح','b-open'], inprog:['قيد التنفيذ','b-inprog'], wait:['بانتظار','b-wait'], closed:['مغلق','b-closed']};
-async function loadCompounds(){
-  const sel = document.getElementById('c');
-  try{
-    const r = await fetch('/api/public/compounds');
-    const arr = await r.json();
-    sel.innerHTML = '<option value="">— اختر المجمع —</option>' + arr.map(c=>`<option value="${c.id}">${c.name.replace(/</g,'&lt;')}</option>`).join('');
-    const pre = qs.get('c');
-    if(pre && arr.some(c=>c.id===pre)) sel.value = pre;
-  }catch(e){ sel.innerHTML = '<option value="">تعذر التحميل — حدّث الصفحة</option>'; }
-  const unit = qs.get('unit');
-  if(unit) document.getElementById('u').value = unit;
-  const asset = qs.get('asset');
-  if(asset) document.getElementById('d').value = 'الأصل: ' + asset + '\n';
-}
-function err(id,msg){
-  const el = document.getElementById(id);
-  if(!msg){ el.classList.add('hidden'); return; }
-  el.textContent = msg; el.classList.remove('hidden');
-}
-async function send(e){
-  e.preventDefault(); err('e');
-  const btn = document.getElementById('btnSend');
-  const body = {
-    compoundId: document.getElementById('c').value,
-    name: document.getElementById('n').value.trim(),
-    phone: document.getElementById('p').value.trim(),
-    unitCode: document.getElementById('u').value.trim(),
-    cat: document.getElementById('k').value,
-    title: document.getElementById('t').value.trim(),
-    details: document.getElementById('d').value.trim(),
-  };
-  if(!body.compoundId) return err('e',' اختر المجمع');
-  if(body.phone.replace(/\D/g,'').length < 9) return err('e',' رقم الجوال غير صحيح');
-  btn.disabled = true; btn.textContent = 'جارِ الإرسال…';
-  try{
-    const r = await fetch('/api/public/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const j = await r.json();
-    if(!r.ok) throw new Error(j.error==='TOO_MANY' ? ' محاولات كثيرة — حاول بعد ساعة' : ' تعذر الإرسال — تحقق من البيانات');
-    document.getElementById('f').reset(); loadCompounds();
-    document.getElementById('doneNo').textContent = j.no;
-    document.getElementById('doneBox').classList.remove('hidden');
-    window.scrollTo({top:0,behavior:'smooth'});
-  }catch(ex){ err('e', ex.message || ' خطأ في الاتصال'); }
-  btn.disabled = false; btn.textContent = 'إرسال البلاغ ';
-}
-async function track(){
-  err('e2'); const list = document.getElementById('list'); list.innerHTML = '';
-  const ph = document.getElementById('tp').value.trim();
-  if(ph.replace(/\D/g,'').length < 9) return err('e2',' أدخل رقم الجوال');
-  try{
-    const r = await fetch('/api/public/requests?phone=' + encodeURIComponent(ph));
-    const arr = await r.json();
-    if(!r.ok) throw new Error('err');
-    if(!arr.length){ list.innerHTML = '<p class="muted">لا توجد بلاغات بهذا الرقم</p>'; return; }
-    list.innerHTML = arr.map(w=>{
-      const s = ST[w.status] || ST.open;
-      const dt = new Date(w.createdAt).toLocaleDateString('ar');
-      return `<div class="req"><b>${w.no}</b> — ${String(w.title).replace(/</g,'&lt;')}<div class="meta"><span class="badge ${s[1]}">${s[0]}</span> · ${dt}${w.closedAt?' · أُغلق '+new Date(w.closedAt).toLocaleDateString('ar'):''}</div></div>`;
-    }).join('');
-  }catch(ex){ err('e2',' تعذر الجلب — حاول لاحقاً'); }
-}
-loadCompounds();
-</script>
-</body>
-</html>
+const $=id=>document.getElementById(id), qs=new URLSearchParams(location.search); const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function show(which){$('newPane').classList.toggle('hidden',which!=='new');$('trackPane').classList.toggle('hidden',which!=='track');$('newTab').classList.toggle('active',which==='new');$('trackTab').classList.toggle('active',which==='track');}
+function message(id,text){$(id).textContent=text;$(id).classList.toggle('hidden',!text)}
+async function load(){try{const r=await fetch('/api/public/compounds');const a=await r.json();$('compound').innerHTML='<option value="">اختر المجمع</option>'+a.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');if(qs.get('c'))$('compound').value=qs.get('c');if(qs.get('unit'))$('unit').value=qs.get('unit');if(qs.get('asset'))$('details').value='الأصل: '+qs.get('asset')+'\n'}catch(e){$('compound').innerHTML='<option>تعذر التحميل</option>'}}
+$('form').addEventListener('submit',async e=>{e.preventDefault();message('error','');const btn=$('send');const body={compoundId:$('compound').value,name:$('name').value.trim(),phone:$('phone').value.trim(),unitCode:$('unit').value.trim(),cat:$('category').value,title:$('title').value.trim(),details:$('details').value.trim()};if(body.phone.replace(/\D/g,'').length<9)return message('error','تحقق من رقم الجوال');btn.disabled=true;btn.textContent='جارِ الإرسال…';try{const r=await fetch('/api/public/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw new Error(j.error==='TOO_MANY'?'تم تجاوز عدد المحاولات، حاول لاحقاً':'تحقق من البيانات ثم أعد المحاولة');$('form').reset();load();$('successNo').textContent=j.no;$('successToken').textContent='رمز المتابعة: '+j.token;$('success').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'})}catch(e){message('error',e.message)}finally{btn.disabled=false;btn.textContent='إرسال البلاغ'}});
+async function track(){message('trackError','');$('results').innerHTML='';const token=$('token').value.trim();if(token.length<20)return message('trackError','أدخل رمز المتابعة كاملاً');const b=$('trackBtn');b.disabled=true;b.textContent='جارِ البحث…';try{const r=await fetch('/api/public/requests?token='+encodeURIComponent(token));const a=await r.json();if(!r.ok)throw new Error('تعذر العثور على البلاغ');if(!a.length)return message('trackError','لا توجد نتيجة بهذا الرمز');$('results').innerHTML=a.map(w=>`<article class="result"><strong>${esc(w.no)} — ${esc(w.title)}</strong><span class="badge">${esc({open:'مفتوح',inprog:'قيد التنفيذ',wait:'بانتظار',closed:'مغلق'}[w.status]||w.status)}</span></article>`).join('')}catch(e){message('trackError',e.message)}finally{b.disabled=false;b.textContent='عرض حالة البلاغ'}}load();
+</script></body></html>

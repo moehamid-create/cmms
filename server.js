@@ -54,23 +54,40 @@ async function pgInit() {
 
 const app = express();
 app.set('trust proxy', 1);
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = new Set((process.env.ALLOWED_ORIGINS || '').split(',').map(v => v.trim()).filter(Boolean));
+const sessionCookie = process.env.SESSION_COOKIE || 'cmms_session';
+const sessionSecret = process.env.SESSION_SECRET || (!isProduction ? 'local-development-only-change-me' : '');
+if (isProduction && (!sessionSecret || sessionSecret.length < 32)) {
+  console.error('SESSION_SECRET must be set to at least 32 characters in production');
+  process.exit(1);
+}
 
-/* ---- Minimal security headers (no extra deps) ---- */
+/* ---- Baseline browser security; same-origin by default ---- */
 app.use((req, res, next) => {
-  res.header('X-Content-Type-Options', 'nosniff');
-  res.header('X-Frame-Options', 'SAMEORIGIN');
-  res.header('Referrer-Policy', 'no-referrer-when-downgrade');
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    'Content-Security-Policy': "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'self'",
+  });
+  if (isProduction && req.secure) res.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
   next();
 });
-
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  const origin = req.headers.origin;
+  if (origin && (allowedOrigins.has(origin) || origin === `${req.protocol}://${req.get('host')}`)) {
+    res.set('Access-Control-Allow-Origin', origin);
+    res.set('Vary', 'Origin');
+    res.set('Access-Control-Allow-Credentials', 'true');
+  }
+  res.set('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(origin && !allowedOrigins.has(origin) && origin !== `${req.protocol}://${req.get('host')}` ? 403 : 204);
   next();
 });
-app.use(express.json({ limit: '40mb' }));            /* الصور تُحفظ داخل البيانات */
+app.use(express.json({ limit: '2mb', strict: true }));
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
   /* الصور والملفات تُحفَظ مؤقتاً، لكن صفحة HTML دائماً طازجة (عشان التحديثات تظهر فوراً) */
@@ -83,13 +100,17 @@ app.get('/api/health', (req, res) => res.json({ ok: true, db: DB_LABEL, time: ne
 
 /* ---- Simple login rate-limit: 20 attempts / 10 min per IP ---- */
 const loginHits = new Map();
+function boundedHit(map, key, windowMs, max) {
+  const now = Date.now();
+  const arr = (map.get(key) || []).filter(t => now - t < windowMs);
+  arr.push(now);
+  if (map.size > 5000) for (const [k, values] of map) if (!values.some(t => now - t < windowMs)) map.delete(k);
+  map.set(key, arr);
+  return arr.length <= max;
+}
 function loginRateLimit(req, res, next) {
   const ip = req.ip || req.socket.remoteAddress || 'x';
-  const now = Date.now();
-  const arr = (loginHits.get(ip) || []).filter(t => now - t < 10 * 60 * 1000);
-  arr.push(now);
-  loginHits.set(ip, arr);
-  if (arr.length > 20) return res.status(429).json({ error: 'TOO_MANY' });
+  if (!boundedHit(loginHits, ip, 10 * 60 * 1000, 10)) return res.status(429).json({ error: 'TOO_MANY' });
   next();
 }
 
@@ -97,11 +118,7 @@ function loginRateLimit(req, res, next) {
 const pubHits = new Map();
 function pubLimit(req, res, next) {
   const ip = req.ip || req.socket.remoteAddress || 'x';
-  const now = Date.now();
-  const arr = (pubHits.get(ip) || []).filter(t => now - t < 60 * 60 * 1000);
-  arr.push(now);
-  pubHits.set(ip, arr);
-  if (arr.length > 15) return res.status(429).json({ error: 'TOO_MANY' });
+  if (!boundedHit(pubHits, ip, 60 * 60 * 1000, 15)) return res.status(429).json({ error: 'TOO_MANY' });
   next();
 }
 /* Serialize state writes from the public portal (avoid lost updates) */
@@ -235,13 +252,31 @@ function sanitizePasswords(data){
   });
   return data;
 }
-function auth(req,res){
-  const h = req.headers.authorization || '';
-  const token = h.startsWith('Bearer ') ? h.slice(7) : '';
+function getCookie(req, name) {
+  const raw = String(req.headers.cookie || '');
+  const item = raw.split(';').map(v => v.trim()).find(v => v.startsWith(name + '='));
+  return item ? decodeURIComponent(item.slice(name.length + 1)) : '';
+}
+function csrfToken(token) {
+  return crypto.createHmac('sha256', sessionSecret).update(token).digest('hex');
+}
+function originAllowed(req) {
+  const origin = req.headers.origin;
+  return !origin || origin === `${req.protocol}://${req.get('host')}` || allowedOrigins.has(origin);
+}
+function auth(req,res, options = {}) {
+  const token = getCookie(req, sessionCookie);
   const s = sessions.get(token);
-  if(!s){ res.status(401).json({error:'AUTH'}); return null; }
+  if(!s || Date.now() - s.at > SESSION_TTL){
+    if (!options.silent) res.status(401).json({error:'AUTH'});
+    return null;
+  }
+  if (!originAllowed(req)) { if (!options.silent) res.status(403).json({error:'ORIGIN'}); return null; }
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+    if (req.headers['x-csrf-token'] !== csrfToken(token)) { if (!options.silent) res.status(403).json({error:'CSRF'}); return null; }
+  }
   s.at = Date.now();
-  return token;
+  return { token, session: s };
 }
 
 /* ---- تسجيل الدخول ---- */
@@ -250,6 +285,8 @@ app.post('/api/login', loginRateLimit, async (req,res)=>{
   try { st = await getState(); }
   catch (e) { console.error('DB error on /api/login:', e.message); return res.status(500).json({error:'DB'}); }
   const {u,p} = req.body || {};
+  const submittedPassword = String(p || '');
+  if (isProduction && submittedPassword === '1234') return res.status(401).json({error:'BAD_LOGIN'});
   const rawU = String(u||'').trim().toLowerCase();
   const uname = rawU.includes('@') ? rawU.split('@')[0] : rawU;
   /* الدخول باسم المستخدم أو البريد الإلكتروني */
@@ -259,14 +296,18 @@ app.post('/api/login', loginRateLimit, async (req,res)=>{
     return (uu === rawU || uu === uname || (em && em === rawU)) && verifyPassword(String(p||''), x.p);
   });
   if(!user)  return res.status(401).json({error:'BAD_LOGIN'});
-  const token = crypto.randomBytes(24).toString('hex');
-  sessions.set(token,{userId:user.id, at:Date.now()});
-  res.json({token, userId:user.id, ver:st.ver});
+  const token = crypto.randomBytes(32).toString('hex');
+  const csrf = csrfToken(token);
+  sessions.set(token,{userId:user.id, role:user.role || 'viewer', at:Date.now()});
+  res.cookie(sessionCookie, token, { httpOnly:true, secure:isProduction, sameSite:'lax', maxAge:SESSION_TTL, path:'/' });
+  res.json({userId:user.id, user:{id:user.id,name:user.name,role:user.role}, csrf, ver:st.ver});
 });
 
 app.post('/api/logout',(req,res)=>{
-  const t = auth(req,res); if(!t) return;
-  sessions.delete(t); res.json({ok:true});
+  const a = auth(req,res); if(!a) return;
+  sessions.delete(a.token);
+  res.clearCookie(sessionCookie, { httpOnly:true, secure:isProduction, sameSite:'lax', path:'/' });
+  res.json({ok:true});
 });
 
 /* ---- قراءة الحالة (يُسمح بلا توكن فقط إذا القاعدة فارغة لأول تهيئة) ---- */
@@ -274,8 +315,9 @@ app.get('/api/state', async (req,res)=>{
   let cur;
   try { cur = await getState(); }
   catch (e) { console.error('DB error on GET /api/state:', e.message); return res.status(500).json({error:'DB'}); }
-  if(cur.data && !auth(req,res)) return;
-  res.json(cur);
+  const actor = cur.data ? auth(req,res) : null;
+  if(cur.data && !actor) return;
+  res.json(cur.data ? { ...cur, userId: actor.session.userId, role: actor.session.role } : cur);
 });
 
 /* ---- حفظ الحالة (مع كشف تعارض التعديل المتزامن) ---- */
@@ -330,29 +372,30 @@ app.post('/api/public/requests', pubLimit, async (req, res) => {
         assigneeId: '', assigneeName: '',
         dueDate: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10),
         projectId: '', unitId: '', unitCode, tenantName: name,
-        source: 'portal', requester: { name, phone }, cat,
+        source: 'portal', requester: { name, phone }, trackToken: crypto.randomBytes(18).toString('hex'), cat,
         createdAt: Date.now(), startedAt: null, closedAt: null,
         cost: 0, closeNotes: '', parts: [], photos: [], sig: '',
       };
       st.data.wos.unshift(wo);
       const ver = await setState(st.data);
-      return { no: wo.no, ver };
+      return { no: wo.no, token: wo.trackToken, ver };
     });
     if (out.err) return res.status(out.err).json({ error: 'BAD_COMPOUND' });
-    res.json({ ok: true, no: out.no });
+    res.json({ ok: true, no: out.no, token: out.token });
   } catch (e) { console.error('DB error on POST /api/public/requests:', e.message); return res.status(500).json({ error: 'DB' }); }
 });
 
 /* ---- بوابة المستأجرين: تتبع بلاغاتي برقم الجوال ---- */
 app.get('/api/public/requests', pubLimit, async (req, res) => {
-  const phone = normPhone(req.query.phone);
-  if (phone.length < 9) return res.status(400).json({ error: 'MISSING' });
+  const token = String(req.query.token || '').trim();
+  if (token.length < 20) return res.status(400).json({ error: 'MISSING' });
   let st;
   try { st = await getState(); }
   catch (e) { return res.status(500).json({ error: 'DB' }); }
-  const mine = (st.data.wos || []).filter(w =>
-    w.source === 'portal' && w.requester &&
-    (w.requester.phone === phone || phone.endsWith(w.requester.phone) || w.requester.phone.endsWith(phone)));
+  const mine = (st.data.wos || []).filter(w => {
+    if (w.source !== 'portal' || !w.trackToken || String(w.trackToken).length !== token.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(String(w.trackToken)), Buffer.from(token));
+  });
   res.json(mine.slice(0, 30).map(w => ({
     no: w.no, title: w.title, status: w.status,
     createdAt: w.createdAt, closedAt: w.closedAt || null,
