@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>أملاكي — إدارة صيانة المجمعات</title>
+<script>try{if(localStorage.getItem('amlaki_theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600;700;800&family=Readex+Pro:wght@300;400;500;600;700&family=Reem+Kufi:wght@500;600;700&display=swap" rel="stylesheet">
@@ -54,6 +55,57 @@
   --shadow:0 12px 34px -14px rgba(2,44,66,.22),inset 0 1px 0 rgba(255,255,255,.75);
   --r:14px;
 }
+/* ===== DARK MODE (html.dark — saved per device) ===== */
+:root.dark{
+  --ink:#e9f1f6;--muted:#9db4c2;--brand:#22b8cf;--dark:#0e7490;
+  --line:rgba(255,255,255,.13);
+  --red:#f87171;--redbg:rgba(127,29,29,.45);
+  --green:#34d399;--greenbg:rgba(6,78,59,.5);
+  --amber:#fbbf24;--amberbg:rgba(120,53,15,.5);
+  --blue:#60a5fa;--bluebg:rgba(30,58,138,.55);
+  --purple:#a78bfa;--purplebg:rgba(76,29,149,.55);
+  --glass-hi:rgba(23,38,52,.82);--glass-lo:rgba(13,24,35,.6);
+  --shadow:0 12px 34px -14px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);
+}
+.dark body{background:#0b1620;color-scheme:dark}
+.dark body::before{background:
+  radial-gradient(42% 34% at 82% 8%, rgba(34,184,207,.16), transparent 62%),
+  radial-gradient(36% 30% at 8% 22%, rgba(124,58,237,.14), transparent 62%),
+  radial-gradient(46% 40% at 55% 105%, rgba(37,99,235,.12), transparent 62%),
+  linear-gradient(165deg,#0b1620 0%,#0e1e2c 55%,#0b1620 100%)}
+.dark .nbtn{color:#c7d6e0}
+.dark .nbtn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14)}
+.dark .ucard,.dark .bell,.dark .chip,.dark .cmpcard{background:rgba(255,255,255,.07)}
+.dark button.btn.ghost{background:rgba(255,255,255,.08);color:var(--ink)}
+.dark button.btn.danger{background:rgba(127,29,29,.35)}
+.dark input,.dark select,.dark textarea{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16);color:var(--ink)}
+.dark select option{background:#14242f;color:#e9f1f6}
+.dark input::placeholder,.dark textarea::placeholder{color:#7d93a3}
+.dark .modal{background:linear-gradient(160deg,rgba(24,39,53,.97),rgba(15,27,39,.95))}
+.dark table th{border-color:rgba(255,255,255,.14)}
+.dark td{border-color:rgba(255,255,255,.07)}
+.dark tr:hover td{background:rgba(255,255,255,.05)}
+.dark .sidediv{background:rgba(255,255,255,.12);box-shadow:none}
+.dark .auth-wrapper{background:#0b1620}
+.dark .auth-form-side{background:radial-gradient(circle at 10% 20%,rgba(34,184,207,.08) 0%,transparent 60%),#0e1a26}
+.dark .auth-card{background:#14242f;box-shadow:0 22px 50px -12px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.09)}
+.dark .auth-title{color:#f1f5f9}
+.dark .auth-sub{color:#9db4c2}
+.dark .btn-google{background:#1c2f40;border-color:rgba(255,255,255,.14);color:#e9f1f6}
+.dark .btn-google:hover{background:#24394d;border-color:rgba(255,255,255,.22)}
+.dark .auth-divider{color:#7d93a3}
+.dark .auth-divider::before,.dark .auth-divider::after{background:rgba(255,255,255,.14)}
+.dark .form-group label{color:#c7d6e0}
+.dark .input-icon-wrap input{background:#1c2f40;border-color:rgba(255,255,255,.14);color:#e9f1f6}
+.dark .input-icon-wrap input:focus{background:#24394d}
+.dark .input-icon-wrap .input-icon{color:#7d93a3}
+.dark .forgot-link,.dark .signup-link{color:#22b8cf}
+.dark .btn-lang{background:#1c2f40!important;color:#e9f1f6!important;border-color:rgba(255,255,255,.14)!important}
+.dark .btn-toggle-pw{background:#24394d!important;color:#c7d6e0!important}
+.dark .cmpchip{background:rgba(255,255,255,.07)}
+.dark .cmpsel{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16);color:var(--ink)}
+.dark .sigbox{background:rgba(255,255,255,.92)}
+.dark footer{color:#7d93a3}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{
@@ -81,25 +133,26 @@ body::before{
 ::-webkit-scrollbar-thumb:hover{background:rgba(100,130,150,.55);border:2px solid transparent;background-clip:content-box}
 .layout{display:flex;min-height:100vh;align-items:stretch}
 .side{
-  position:sticky;top:14px;height:calc(100vh - 28px);flex:0 0 236px;margin:14px;border-radius:20px;
-  padding:16px 12px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;overflow-x:hidden;
+  position:sticky;top:14px;height:calc(100vh - 28px);flex:0 0 240px;margin:14px;border-radius:20px;
+  padding:18px 14px 14px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;overflow-x:hidden;
+  scrollbar-width:thin;
   background:linear-gradient(160deg,var(--glass-hi),var(--glass-lo));
   backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);
   border:1px solid var(--line);box-shadow:var(--shadow);
 }
-.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 14px}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 6px 12px}
 .brand .logo{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;
   background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff;box-shadow:0 8px 20px -6px rgba(14,116,144,.55)}
 .brand .logo img{width:40px;height:40px;border-radius:12px;display:block}
 .brand-t{line-height:1.25;font-weight:800;font-size:13.5px}
 .brand-t small{display:block;font-weight:600;color:var(--muted);font-size:10.5px}
 .cmpsel{font-size:12.5px;font-weight:700}
-.cmpchip{margin:0 6px 6px;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.5);
-  border:1px solid var(--line);font-size:11.5px;font-weight:800;color:var(--muted);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmpchip{margin:0 4px 4px;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.5);
+  border:1px solid var(--line);font-size:12.5px;font-weight:800;color:var(--ink);line-height:1.6}
+.cmpchip small{display:block;font-size:10px;color:var(--muted);font-weight:700;margin-bottom:1px}
 .sidediv{height:1px;background:rgba(255,255,255,.6);margin:8px 6px;box-shadow:0 1px 0 rgba(2,44,66,.05)}
-.slabel{font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);padding:6px 10px 2px}
-.nbtn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:12px;
+.slabel{font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);padding:8px 10px 2px}
+.nbtn{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:8px 12px;border-radius:12px;
   border:1px solid transparent;background:none;color:#39505f;font-weight:700;font-size:13.5px;
   cursor:pointer;transition:.18s;text-align:start;white-space:nowrap;overflow:hidden}
 .nbtn .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -113,7 +166,7 @@ button.btn.sm svg{width:13px;height:13px}
 .nbtn.active{background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff;border-color:transparent;
   box-shadow:0 10px 22px -8px rgba(14,116,144,.55)}
 .nbtn.active .ic{filter:none}
-.sidefoot{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+.sidefoot{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:8px}
 .ucard{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:13px;
   background:rgba(255,255,255,.55);border:1px solid var(--line)}
 .ucard .av{width:34px;height:34px;border-radius:99px;display:grid;place-items:center;font-weight:800;color:#fff;
@@ -514,6 +567,7 @@ html[dir="ltr"] .feature-item:hover{transform:translateX(3px)}
   .toast{bottom:92px}
 }
 @media print{
+  html.dark body{--ink:#132430;--muted:#5f7484}
   body::before,.side,.topbar,.btn,.toolbar,.searchbar,.chips,.qa,footer,.sideacts{display:none!important}
   body{background:#fff}
   .card,.stat{background:#fff!important;backdrop-filter:none!important;box-shadow:none!important;border:1px solid #ddd;break-inside:avoid}
@@ -582,7 +636,9 @@ clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
 tag:'<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5"/>',
 chat:'<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
 alert:'<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',
-print:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>'
+print:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+sun:'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'
 };
 function ic(n,s){s=s||18;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]||''}</svg>`;}
 
@@ -803,7 +859,9 @@ function migrate(d){
     d.compounds.push({id:uid('C'),name:'مجمع الخير السكني - حي الروضة',loc:'',notes:'',createdAt:Date.now()});
   /* العقارات القديمة بلا مالك تُنسب لأول مدير (خصوصية الحسابات) */
   const firstAdm=(d.users.find(u=>u.role==='admin')||{}).id||'';
-  d.compounds.forEach(c=>{if(!c.ownerId)c.ownerId=firstAdm;});
+  d.compounds.forEach(c=>{if(!c.ownerId)c.ownerId=firstAdm;if(!c.kind)c.kind='property';});
+  if(!Array.isArray(d.categories))d.categories=[];
+  ['سيارات','معدات'].forEach(x=>{if(!d.categories.includes(x))d.categories.push(x);});
   const defC=d.compounds[0].id;
   d.users.forEach(u=>{
     if(u.phone==null)u.phone='';
@@ -1091,6 +1149,9 @@ function loginHtml(){
           <button type="button" class="btn-lang" onclick="toggleLang()">
              ${db.lang==='ar'?'English':'العربية'}
           </button>
+          <button type="button" class="btn-lang" onclick="toggleTheme()">
+             ${document.documentElement.classList.contains('dark')?lb('الوضع النهاري||Light mode'):lb('الوضع الليلي||Night mode')}
+          </button>
         </div>
       </div>
     </div>
@@ -1294,29 +1355,35 @@ function pickerHtml(){
     const bl=db.buildings.filter(b=>b.compoundId===c.id).length;
     const as=db.assets.filter(a=>a.compoundId===c.id).length;
     const wo=db.wos.filter(w=>w.compoundId===c.id&&w.status!=='closed').length;
+    const kindT=(KINDL()[c.kind||'property']||'')+(c.ptype?(' · '+(PTYPEL()[c.ptype]||c.ptype)):'');
     return `<div class="cmpcard" onclick="setCmp('${c.id}')">
-      <div class="cc-t"> ${esc(c.name)}</div>
-      ${c.loc?`<div class="muted"> ${esc(c.loc)}</div>`:''}
-      <div class="cc-s"><span> ${bl} ${lb('مبنى||bldgs')}</span><span> ${wo} ${lb('مفتوح||open')}</span><span> ${as} ${lb('أصل||assets')}</span></div>
-      <div class="cc-go">${lb('دخول المجمع ←||Enter compound →')}</div></div>`;};
+      <div class="cc-t">${esc(c.name)}</div>
+      ${kindT?`<div class="muted">${kindT}</div>`:''}
+      ${c.loc?`<div class="muted">${esc(c.loc)}</div>`:''}
+      <div class="cc-s"><span>${bl} ${lb('مبنى||bldgs')}</span><span>${wo} ${lb('مفتوح||open')}</span><span>${as} ${lb('أصل||assets')}</span></div>
+      <div class="cc-go">${lb('دخول ←||Enter →')}</div></div>`;};
   const canCreate=isAdmin();
   const addActions=canCreate?`<div class="property-actions">
-      <button class="btn property-action" onclick="cmpForm(null,'residentialBuilding')"> ${lb('إضافة مبنى سكني||Add residential building')}</button>
-      <button class="btn ghost property-action" onclick="cmpForm(null,'property')">＋ ${lb('إضافة عقار||Add property')}</button>
+      <button class="btn property-action" onclick="cmpForm(null,'property')">＋ ${lb('إضافة عقار||Add property')}</button>
+      <button class="btn ghost property-action" onclick="cmpForm(null,'other')">＋ ${lb('إضافة أملاك أخرى||Add other assets')}</button>
     </div>`:'';
   return `<div class="login-wrap"><div class="login-card property-picker">
     <h1>${lb('العقارات||Properties')}</h1>
     <p class="sub">${esc(me.name)} — ${lb('اختر عقاراً لعرض لوحة الإدارة، أو أضف عقاراً جديداً.||Choose a property to open its dashboard, or add a new one.')}</p>
     ${addActions}
-    <div class="property-section-title"><span> ${lb('العقارات الموجودة||Existing properties')}</span><span class="muted">${list.length}</span></div>
-    <div class="cmpgrid">${list.map(card).join('')}</div>
-    <div style="text-align:center;margin-top:14px"><button class="btn ghost sm" onclick="PICK=false;logout()"> ${lb('خروج||Logout')}</button></div>
+    <div class="property-section-title"><span>${lb('العقارات الموجودة||Existing properties')}</span><span class="muted">${list.length}</span></div>
+    <div class="cmpgrid">${list.map(card).join('')||`<div class="empty">${lb('لا عقارات بعد — أضف أول عقار بالأعلى||No properties yet — add your first one above')}</div>`}</div>
+    <div style="text-align:center;margin-top:14px"><button class="btn ghost sm" onclick="PICK=false;logout()">${lb('خروج||Logout')}</button></div>
   </div></div>`;
 }
+/* أنواع العقارات والأملاك */
+function KINDL(){return {property:lb('عقار||Property'),residentialBuilding:lb('مبنى سكني||Residential'),other:lb('أملاك أخرى||Other assets')};}
+function PTYPEL(){return {residential:lb('سكني||Residential'),commercial:lb('تجاري||Commercial'),admin:lb('إداري||Administrative'),mixed:lb('مختلط||Mixed'),complex:lb('مجمع||Complex')};}
 function logout(){try{localStorage.removeItem('cmms_auth');}catch(e){}
   try{api('/logout',{method:'POST'});}catch(e){}
   AUTH.token='';me=null;PICK=false;render();}
 function toggleLang(){db.lang=db.lang==='ar'?'en':'ar';initLangMaps();persist();render();}
+function toggleTheme(){const d=document.documentElement.classList.toggle('dark');try{localStorage.setItem('amlaki_theme',d?'dark':'light');}catch(e){}render();}
 
 /* ===== SHELL ===== */
 function shell(){
@@ -1326,8 +1393,8 @@ function shell(){
   const groups=[nav.slice(0,4),nav.slice(4)];
   const act=activeCmp();
   const cmpSel=myCmps().length>1
-    ?`<div style="padding:0 4px 6px"><select class="cmpsel" onchange="setCmp(this.value)">${myCmps().map(c=>`<option value="${c.id}" ${act===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>`
-    :`<div class="cmpchip" title="${lb('المجمع الحالي||Current compound')}">${esc(cmpName(act))}</div>`;
+    ?`<div style="padding:0 4px 6px"><div class="slabel" style="padding:0 4px 3px">${lb('العقار الحالي||Current property')}</div><select class="cmpsel" title="${lb('تبديل العقار||Switch property')}" onchange="setCmp(this.value)">${myCmps().map(c=>`<option value="${c.id}" ${act===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>`
+    :`<div class="cmpchip" title="${lb('العقار الحالي||Current property')}"><small>${lb('العقار الحالي||Current property')}</small>${esc(cmpName(act))}</div>`;
   return `
   <div class="layout">
     <aside class="side">
@@ -1346,6 +1413,7 @@ function shell(){
         </div>
         <div class="sideacts">
           ${isAdmin()?`<button class="btn ghost sm" title="${lb('نسخة احتياطية الآن||Backup now')}" onclick="bkNow()">${lb('نسخة||Backup')}</button>`:''}
+          <button class="btn ghost sm" title="${lb('الوضع الليلي||Night mode')}" onclick="toggleTheme()">${ic(document.documentElement.classList.contains('dark')?'sun':'moon',14)}</button>
           <button class="btn ghost sm" title="${lb('اللغة||Language')}" onclick="toggleLang()">${db.lang==='ar'?'EN':'ع'}</button>
           <button class="btn ghost sm" title="${lb('تبديل المجمع||Switch compound')}" onclick="PICK=true;render()">${lb('تبديل||Switch')}</button>
           <button class="btn ghost sm" title="${lb('خروج||Logout')}" onclick="logout()">${lb('خروج||Exit')}</button>
@@ -1398,7 +1466,7 @@ function vCmps(){
     const as=db.assets.filter(a=>a.compoundId===c.id).length;
     const wo=db.wos.filter(w=>w.compoundId===c.id&&w.status!=='closed').length;
     const tc=db.users.filter(u=>u.role==='tech'&&(u.cmpIds||[]).includes(c.id)).length;
-    return `<tr><td><b>${esc(c.name)}</b>${act===c.id?` <span class="badge b-ok">${lb('الحالي||Active')}</span>`:''}</td>
+    return `<tr><td><b>${esc(c.name)}</b>${act===c.id?` <span class="badge b-ok">${lb('الحالي||Active')}</span>`:''}<br><span class="muted">${KINDL()[c.kind||'property']||''}${c.ptype?' · '+((PTYPEL()[c.ptype])||c.ptype):''}</span></td>
     <td>${esc(c.loc||'—')}</td><td>${bl}</td><td>${as}</td>
     <td>${wo?`<span class="badge b-open">${wo}</span>`:'0'}</td><td>${tc}</td>
     <td nowrap><button class="btn sm ghost" onclick="cmpForm('${c.id}')">${ic('edit',13)}</button>
@@ -1408,21 +1476,25 @@ function vCmps(){
 function cmpForm(cid,kind){
   let c={};
   if(cid){const f=db.compounds.find(x=>x.id===cid);if(f)c=f;}
-  const isResidential=kind==='residentialBuilding';
-  const newTitle=isResidential?lb('إضافة مبنى سكني||Add residential building'):lb('إضافة عقار||Add property');
-  const nameLabel=isResidential?lb('اسم المبنى السكني *||Residential building name *'):lb('اسم العقار *||Property name *');
-  const nameHint=isResidential?lb('مثال: عمارة النخيل السكنية||e.g. Al-Nakheel Residential Building'):lb('مثال: مجمع الخير السكني - حي الروضة||e.g. Al-Khair Property');
-  modal(`<h3>${cid?lb('تعديل العقار||Edit property'):newTitle}</h3>
-  <label>${cid?lb('اسم العقار *||Property name *'):nameLabel}</label><input id="fcpx_n" value="${esc(c.name||'')}" placeholder="${nameHint}">
+  const k=kind||c.kind||'property';
+  const isOther=k==='other';
+  const title=cid?lb('تعديل العقار||Edit property'):(isOther?lb('إضافة أملاك أخرى||Add other assets'):lb('إضافة عقار||Add property'));
+  const nameLabel=isOther?lb('اسم المجموعة * (مثال: أسطول السيارات)||Group name * (e.g. Vehicle fleet)'):lb('اسم العقار *||Property name *');
+  const nameHint=isOther?lb('مثال: أسطول السيارات - معدات - أصول متنقلة||e.g. Vehicle fleet, equipment'):lb('مثال: مجمع الخير السكني - حي الروضة||e.g. Al-Khair Property');
+  const ptypeOpts=Object.keys(PTYPEL()).map(v=>`<option value="${v}" ${c.ptype===v?'selected':''}>${PTYPEL()[v]}</option>`).join('');
+  modal(`<h3>${title}</h3>
+  <label>${nameLabel}</label><input id="fcpx_n" value="${esc(c.name||'')}" placeholder="${nameHint}">
+  ${isOther?'':`<div><label>${lb('نوع العقار||Property type')}</label><select id="fcpx_pt">${ptypeOpts}</select></div>`}
   <div class="fg"><div><label>${lb('الموقع / الحي||Location / District')}</label><input id="fcpx_l" value="${esc(c.loc||'')}"></div></div>
   <label>${lb('ملاحظات||Notes')}</label><textarea id="fcpx_no" rows="2">${esc(c.notes||'')}</textarea>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
-  <button class="btn" onclick="saveCmp('${cid||''}','${kind||''}')">${lb('حفظ||Save')}</button></div>`);
+  <button class="btn" onclick="saveCmp('${cid||''}','${k}')">${lb('حفظ||Save')}</button></div>`);
 }
 function saveCmp(iStr,kind){
   const isNew=(iStr==null||iStr==='null'||iStr==='');
   const n=$('fcpx_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
-  const o={name:n,loc:$('fcpx_l').value.trim(),notes:$('fcpx_no').value.trim()};
+  const o={name:n,loc:$('fcpx_l').value.trim(),notes:$('fcpx_no').value.trim(),
+    kind:kind||'property',ptype:($('fcpx_pt')?$('fcpx_pt').value:'')||''};
   if(isNew){const c=Object.assign({id:uid('C'),createdAt:Date.now(),kind:kind||'property',ownerId:me.id},o);db.compounds.push(c);
     if(me.role!=='admin'){me.cmpIds=[...(me.cmpIds||[]),c.id];}
     me.activeCmp=c.id;}
@@ -1737,7 +1809,21 @@ function closeModal(){const m=$('mbg');if(!m)return;
   const bx=m.querySelector('.modal');
   if(bx)bx.style.animation='pop .15s ease reverse forwards';
   setTimeout(()=>m.remove(),150);}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeModal();return;}
+  /* التنقل بين عناصر القائمة بأسهم الكيبورد (يعمل عندما يكون التركيز على أحد الأزرار فقط — لا يسرق الأسهم من الحقول) */
+  if(e.key!=='ArrowDown'&&e.key!=='ArrowUp'&&e.key!=='Home'&&e.key!=='End')return;
+  const btns=[...document.querySelectorAll('.side .nbtn')];
+  if(!btns.length)return;
+  const i=btns.indexOf(document.activeElement);
+  if(i<0)return;
+  e.preventDefault();
+  let n=i;
+  if(e.key==='ArrowDown')n=(i+1)%btns.length;
+  else if(e.key==='ArrowUp')n=(i-1+btns.length)%btns.length;
+  else if(e.key==='Home')n=0;else n=btns.length-1;
+  btns[n].focus();
+});
 function assetForm(id){
   if(!isEng())return;
   const a=id?db.assets.find(x=>x.id===id):{};
