@@ -5,10 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>أملاكي — إدارة صيانة المجمعات</title>
 <script>try{if(localStorage.getItem('amlaki_theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600;700;800&family=Readex+Pro:wght@300;400;500;600;700&family=Reem+Kufi:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@dawod/thmanyah-font-web/index.css">
+<!-- System fonts keep the dashboard self-contained and avoid third-party runtime dependencies. -->
 <link rel="icon" type="image/svg+xml" href="/logo-mark.svg">
 <style>
 @font-face {
@@ -574,6 +571,10 @@ html[dir="ltr"] .feature-item:hover{transform:translateX(3px)}
   .printhead{display:block!important;text-align:center;font-weight:800;font-size:15px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #333}
 }
 .printhead{display:none}
+/* Secure, calm operations surface */
+:focus-visible{outline:3px solid rgba(14,116,144,.55);outline-offset:2px}.btn:disabled,.nbtn:disabled{cursor:not-allowed;opacity:.55;transform:none!important}.error,.alert{line-height:1.7}.content{max-width:1600px}.card,.stat,.topbar,.side{border-color:rgba(14,116,144,.16)}
+@media(max-width:900px){.layout{display:block}.side{position:relative;top:auto;height:auto;margin:10px;border-radius:16px;display:block;padding:10px}.side .slabel,.side .sidediv,.side .sidefoot{display:none}.side .brand{padding:4px 8px}.side nav{display:flex;gap:6px;overflow:auto;padding:4px}.side .nbtn{min-width:120px;justify-content:center}.content{padding:8px 10px 20px}.topbar{position:relative}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.stats{grid-template-columns:1fr 1fr}.topbar{align-items:flex-start}.modal{padding:16px}.fg{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -584,12 +585,10 @@ html[dir="ltr"] .feature-item:hover{transform:translateX(3px)}
 /* ===== SERVER API (WEB EDITION) ===== */
 /* Production: same-origin /api on any hosted domain. Local file:// falls back to localhost. */
 const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:3000/api' : '/api';
-let AUTH={token:'',ver:0};
-async function api(pathname,opts){
-  const r=await fetch(API_BASE+pathname,Object.assign(
-    {headers:Object.assign({'Content-Type':'application/json'},AUTH.token?{'Authorization':'Bearer '+AUTH.token}:{})},
-    opts||{}));
-  return r;
+let AUTH={csrf:'',ver:0};
+async function api(pathname,opts={}){
+  const headers=Object.assign({'Content-Type':'application/json'},AUTH.csrf?{'X-CSRF-Token':AUTH.csrf}: {}, opts.headers||{});
+  return fetch(API_BASE+pathname,Object.assign({credentials:'same-origin',headers},opts));
 }
 
 let db=null,me=null,TAB='dash',PICK=false;
@@ -877,18 +876,12 @@ function migrate(d){
 /* ===== BOOT (SERVER) ===== */
 async function boot(){
   try{
-    try{const saved=JSON.parse(localStorage.getItem('cmms_auth')||'null');
-      if(saved&&saved.token)AUTH.token=saved.token;}catch(e){}
     const r=await api('/state');
-    if(r.status===401){AUTH.token='';try{localStorage.removeItem('cmms_auth');}catch(e){}
-      db=freshDb();db=migrate(db);return;}
+    if(r.status===401){AUTH.csrf='';db=freshDb();db=migrate(db);return;}
     const j=await r.json();
     if(j.data){db=j.data;AUTH.ver=j.ver;db=migrate(db);
-      try{const saved=JSON.parse(localStorage.getItem('cmms_auth')||'null');
-        if(saved&&saved.userId){me=db.users.find(x=>x.id===saved.userId)||null;
-          if(me){const L=myCmps();
-            if(!L.length)me=null;
-            else if(!me.activeCmp||!L.some(c=>c.id===me.activeCmp))me.activeCmp=L[0].id;}}}catch(e){}
+      me=db.users.find(x=>x.id===j.userId)||null;
+      if(me){const L=myCmps();if(!L.length)me=null;else if(!me.activeCmp||!L.some(c=>c.id===me.activeCmp))me.activeCmp=L[0].id;}
     } else {db=freshDb();db=migrate(db);}
   }catch(e){db=freshDb();db=migrate(db);}
 }
@@ -1261,7 +1254,7 @@ async function doLogin(e){
     });
     if(r.ok){
       const j = await r.json();
-      AUTH.token = j.token; AUTH.ver = j.ver;
+      AUTH.csrf = j.csrf || ''; AUTH.ver = j.ver;
       const s = await(await api('/state')).json();
       db = s.data; AUTH.ver = s.ver; db = migrate(db);
       me = db.users.find(x => x.id === j.userId) || null;
@@ -1286,20 +1279,19 @@ async function doLogin(e){
       return toast(lb(' اسم المستخدم أو كلمة المرور غير صحيحة|| Wrong username or password'), 'err');
     }
     me = localUser;
-    AUTH.token = 'local_session_' + Date.now();
+    AUTH.csrf = '';
   }
 
-  if(!me){ AUTH.token = ''; return toast(lb(' حساب غير موجود|| Account not found'), 'err'); }
+  if(!me){ AUTH.csrf = ''; return toast(lb(' حساب غير موجود|| Account not found'), 'err'); }
   TAB = 'dash'; FILT = { assets: '', wos: '', inv: '', woStatus: 'all', procTab: 'pr', units: '' };
   const L = myCmps();
   if(!L.length){
     toast(lb(' لا توجد مجمعات مسندة لحسابك — راجع مدير النظام|| No compounds assigned — contact admin'), 'err');
-    me = null; AUTH.token = ''; return;
+    me = null; AUTH.csrf = ''; return;
   }
   /* ابدأ دائماً من شاشة العقارات، حتى لو كان للمستخدم عقار واحد فقط. */
   if(!me.activeCmp || !L.some(c=>c.id===me.activeCmp)) me.activeCmp = L[0].id;
   PICK = true;
-  try{ localStorage.setItem('cmms_auth', JSON.stringify({ token: AUTH.token, userId: me.id })); }catch(e){}
   persist(); pmGen(); genSysNotifs(); render();
 }
 function genSysNotifs(){
@@ -1379,9 +1371,9 @@ function pickerHtml(){
 /* أنواع العقارات والأملاك */
 function KINDL(){return {property:lb('عقار||Property'),residentialBuilding:lb('مبنى سكني||Residential'),other:lb('أملاك أخرى||Other assets')};}
 function PTYPEL(){return {residential:lb('سكني||Residential'),commercial:lb('تجاري||Commercial'),admin:lb('إداري||Administrative'),mixed:lb('مختلط||Mixed'),complex:lb('مجمع||Complex')};}
-function logout(){try{localStorage.removeItem('cmms_auth');}catch(e){}
-  try{api('/logout',{method:'POST'});}catch(e){}
-  AUTH.token='';me=null;PICK=false;render();}
+  async function logout(){
+  try{await api('/logout',{method:'POST'});}catch(e){}
+  AUTH.csrf='';me=null;PICK=false;render();}
 function toggleLang(){db.lang=db.lang==='ar'?'en':'ar';initLangMaps();persist();render();}
 function toggleTheme(){const d=document.documentElement.classList.toggle('dark');try{localStorage.setItem('amlaki_theme',d?'dark':'light');}catch(e){}render();}
 
@@ -1871,7 +1863,7 @@ function saveAsset(id){
 }
 function delAsset(id){
   const linked=db.wos.some(w=>w.assetId===id)||db.pms.some(p=>p.assetId===id);
-  if(linked)return toast(lb(' لا يمكن الحذف — توجد أوامر شغل أو خطط صيانة مرتبطة بهذا الأصل|| Cannot delete — linked work orders or PM plans exist'),'err');
+  if(linked)return toast(lb(' لا يمكن الحذف — توجد أوامر شغل ��و خطط صيانة مرتبطة بهذا الأصل|| Cannot delete — linked work orders or PM plans exist'),'err');
   if(!confirm(lb('حذف هذا الأصل؟||Delete this asset?')))return;
   db.assets=db.assets.filter(a=>a.id!==id);persist();paintTab();}
 function assetPhotos(id){
@@ -1895,7 +1887,7 @@ function assetPhotoDel(id,j){const a=db.assets.find(x=>x.id===id);if(!a)return;
 /* تسجيل قراءة عداد (تسجيل القراءة ليس صيانة — لا يصفّر عدّاد الخطة) */
 function meterLog(id){
   const a=db.assets.find(x=>x.id===id);if(!a||!isEng())return;
-  modal(`<h3> ${lb('تسجيل قراءة عداد||Log Meter Reading')} — ${esc(a.name)}</h3>
+  modal(`<h3> ${lb('تس��يل قراءة عداد||Log Meter Reading')} — ${esc(a.name)}</h3>
   <p class="muted">${lb('القراءة الحالية:||Current:')} <b>${a.meter??'—'}</b> ${esc(a.meterUnit||'')}</p>
   <label>${lb('القراءة الجديدة *||New Reading *')}</label><input type="number" step="any" min="0" id="fm_v" value="${a.meter??''}">
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>

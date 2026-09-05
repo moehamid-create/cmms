@@ -2,13 +2,14 @@ services:
   - type: web
     name: cmms
     runtime: docker
-    # Free plan + free Neon Postgres (DATABASE_URL) = 100% free with permanent storage.
-    # If you upgrade to Starter later, add a 1GB disk mounted at /data instead.
     plan: free
     healthCheckPath: /healthz
     envVars:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false   # paste your Neon connection string in the Render dashboard
-      # PORT is set automatically by Render — do not hardcode it.
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
