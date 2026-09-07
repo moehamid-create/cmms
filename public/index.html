@@ -248,6 +248,10 @@ label{font-size:11px;font-weight:800;color:var(--muted);display:block;margin:9px
 @keyframes pop{from{transform:translateY(14px) scale(.98);opacity:0}}
 @keyframes fade{from{opacity:0}}
 .modal h3{margin-bottom:4px;font-size:16.5px}
+.fsec{font-size:12.5px;font-weight:800;color:var(--brand);margin:14px 0 2px;padding-top:10px;border-top:1px dashed rgba(2,44,66,.15)}
+.fsec:first-of-type{border-top:0;margin-top:6px;padding-top:0}
+.ckline{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;margin:8px 0;cursor:pointer}
+.ckline input{width:auto}
 .ma{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 .searchbar{margin-bottom:10px;max-width:300px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
@@ -744,7 +748,9 @@ function initLangMaps(){
     store:lb('مسؤول مخزون||Store Keeper'),proc:lb('مسؤول مشتريات||Procurement')};
   VILLA_FLOORS=db.lang==='ar'?['الدور الأرضي','الدور الأول','الملحق']:['Ground Floor','First Floor','Annex'];
   BTYPES={villa:lb('فيلا||Villa'),tower:lb('مبنى سكني||Residential Bldg'),mall:lb('مبنى تجاري||Commercial Bldg'),area:lb('منطقة عامة||Common Area')};
-  UNITKIND={apt:lb('شقة||Apartment'),office:lb('مكتب||Office'),shop:lb('محل تجاري||Shop'),clinic:lb('عيادة||Clinic'),store:lb('مستودع||Storage'),other:lb('أخرى||Other')};
+  UNITKIND={apt:lb('شقة||Apartment'),villa:lb('فيلا كاملة||Full Villa'),subunit:lb('وحدة فرعية (جزء فيلا)||Sub-unit'),office:lb('مكتب||Office'),shop:lb('محل تجاري||Shop'),annex:lb('ملحق||Annex'),land:lb('أرض||Land'),clinic:lb('عيادة||Clinic'),store:lb('مستودع||Storage'),other:lb('أخرى||Other')};
+const UNITKIND_NEW=['apt','villa','subunit','office','shop','annex','land'];
+const SUB_SUFFIX=['G','F1','F2','ANX','R'];
   CTRSC={amc:lb('عقد صيانة شامل||Annual Maintenance (AMC)'),cleaning:lb('نظافة||Cleaning'),security:lb('أمن وحراسة||Security'),
     pest:lb('مكافحة حشرات||Pest Control'),lifts:lb('مصاعد||Elevators'),landscape:lb('حدائق وري||Landscaping'),other:lb('أخرى||Other')};
   CYCLEK={mo:lb('شهري||Monthly'),q:lb('ربعي||Quarterly'),yr:lb('سنوي||Yearly'),one:lb('دفعة واحدة||One-time')};
@@ -877,6 +883,14 @@ function migrate(d){
     if(u.role!=='admin'&&!u.cmpIds.some(x=>d.compounds.some(c=>c.id===x)))
       u.cmpIds=d.compounds.map(c=>c.id);
     if(u.activeCmp==null)u.activeCmp='';
+  });
+  d.units.forEach(u=>{
+    if(u.st==='vacant')u.st='auto';
+    if(u.parentId==null)u.parentId='';
+    if(u.subdivided==null)u.subdivided=false;
+    if(u.rooms==null)u.rooms=0;
+    if(u.baths==null)u.baths=0;
+    if(u.rent==null)u.rent=0;
   });
   return d;
 }
@@ -1930,7 +1944,7 @@ function buildingForm(){
   <label>${lb('الاسم *||Name *')}</label><input id="fb_n">
   <div class="fg"><div><label>${lb('النوع||Type')}</label>
   <select id="fb_t" onchange="defFloors()">${Object.keys(BTYPES).map(k=>`<option value="${k}" ${k==='area'?'selected':''}>${BTYPES[k]}</option>`).join('')}</select></div></div>
-  <label>${lb('الأدوار/الأجزاء (كل سطر واحد)||Floors/Parts (one per line)')}</label><textarea id="fb_f" rows="4"></textarea>
+  <label>${lb('الأدوار/الأجزاء (كل سطر واحد)||Floors/Parts (one per line)')} <span class="muted" id="fb_fc"></span></label><textarea id="fb_f" rows="4" oninput="fbCount()" aria-label="${lb('الأدوار||Floors')}"></textarea>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="saveBuilding()">${lb('حفظ||Save')}</button></div>`);
 }
@@ -1941,8 +1955,10 @@ function defFloors(){
     tower:ar?['الدور الأرضي','الدور الأول','الدور الثاني','الدور الثالث']:['Ground Floor','First Floor','Second Floor','Third Floor'],
     mall:ar?['الدور الأرضي — محلات','الدور الأول — مكاتب']:['Ground — Shops','First — Offices'],
     area:[]};
-  $('fb_f').value=(map[t]||[]).join('\n');
+  $('fb_f').value=(map[t]||[]).join('\n');fbCount();
 }
+function fbCount(){const n=$('fb_f')?$('fb_f').value.split('\n').map(s=>s.trim()).filter(Boolean).length:0;
+  if($('fb_fc'))$('fb_fc').textContent='· '+n+' '+(db.lang==='ar'?'أدوار':'floors');}
 function saveBuilding(){
   const n=$('fb_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   db.buildings.push({id:uid('B'),name:n,type:$('fb_t').value,compoundId:activeCmp(),
@@ -1972,9 +1988,15 @@ function catForm(){
 }
 
 /* ===== UNITS & TENANTS ===== */
-function tenantOf(u){return db.tenants.find(t=>t.id===u.tenantId)||null;}
-function unitState(u){return u.tenantId?'occ':(u.st==='maint'?'maint':'vac');}
-function uBadge(st){return st==='occ'?['b-ok',lb('مشغولة||Occupied')]:st==='maint'?['b-maint',lb('خارج الخدمة||Out of Service')]:['b-normal',lb('شاغرة||Vacant')];}
+function tenantOf(u){return db.tenants.find(t=>t.id===u.tenantId)||db.tenants.find(t=>t.unitId===u.id)||null;}
+function tenantsOf(u){const p=tenantOf(u);const rest=db.tenants.filter(t=>t.unitId===u.id&&(!p||t.id!==p.id));return p?[p,...rest]:rest;}
+function unitState(u){
+  if(u.st==='maint')return 'maint';
+  if(u.tenantId||db.tenants.some(t=>t.unitId===u.id))return 'occ';
+  if(u.st==='reserved')return 'rsv';
+  return 'vac';
+}
+function uBadge(st){return st==='occ'?['b-ok',lb('مؤجرة||Rented')]:st==='maint'?['b-maint',lb('تحت الصيانة||Under Maintenance')]:st==='rsv'?['b-wait',lb('محجوزة||Reserved')]:['b-normal',lb('شاغرة||Vacant')];}
 function cmpUnits(){const act=activeCmp();
   return db.units.filter(u=>{const b=db.buildings.find(x=>x.id===u.buildingId);return b&&b.compoundId===act;});}
 function vUnits(){
@@ -2007,10 +2029,11 @@ function vUnits(){
   ${rows.length?rows.map(({u,b,t})=>{
     const cls=uBadge(unitState(u));
     const le=t?daysUntil(t.leaseEnd):9999;
-    return `<tr><td><b>${esc(u.code)}</b></td><td>${esc(b)}</td><td>${esc(u.floor||'—')}</td>
-    <td>${UNITKIND[u.kind]||esc(u.kind)}</td><td>${u.area||'—'}</td>
+    const sharers=t?db.tenants.filter(x=>x.unitId===u.id&&x.id!==t.id).length:0;
+    return `<tr><td><b>${esc(u.code)}</b>${u.parentId?(()=>{const pv=db.units.find(x=>x.id===u.parentId);return pv?`<br><span class="muted">← ${esc(pv.code)}</span>`:'';})():''}</td><td>${esc(b)}</td><td>${esc(u.floor||'—')}</td>
+    <td>${UNITKIND[u.kind]||esc(u.kind||'')}</td><td>${u.area||'—'}${u.rooms?`<br><span class="muted">${u.rooms} ${lb('غرف||rms')}</span>`:''}</td>
     <td><span class="badge ${cls[0]}">${cls[1]}</span></td>
-    <td>${t?`<b>${esc(t.name)}</b><br><span class="muted">${esc(t.phone||'')}</span>`:'—'}</td>
+    <td>${t?`<b>${esc(t.name)}</b>${sharers?` <span class="badge b-open">+${sharers} ${lb('مشترك||shared')}</span>`:''}<br><span class="muted">${esc(t.phone||'')}</span>`:'—'}</td>
     <td>${t?`${le<0?`<span class="badge b-low">${fmtD(t.leaseEnd)}</span>`:le<=60?`<span class="badge b-maint">${fmtD(t.leaseEnd)}</span>`:fmtD(t.leaseEnd)}`:'—'}</td>
     ${isEng()?`<td nowrap>
       <button class="btn sm ghost" title="${lb('مستأجر||Tenant')}" onclick="tenantForm(null,'${u.id}')">${ic('users',13)}</button>
@@ -2035,23 +2058,62 @@ function cmpTenants(){const ids=new Set(cmpUnits().map(u=>u.id));
 function unitForm(id){
   if(!isEng())return;
   const u=id?db.units.find(x=>x.id===id):{};
+  const kinds=UNITKIND_NEW.map(k=>`<option value="${k}" ${(u.kind||'apt')===k?'selected':''}>${UNITKIND[k]}</option>`).join('');
+  const villas=cmpUnits().filter(x=>x.kind==='villa'&&x.id!==(u.id||''));
   modal(`<h3>${id?lb('تعديل وحدة||Edit Unit'):lb('وحدة جديدة||New Unit')}</h3>
+  <h4 class="fsec">${lb('1) البيانات الأساسية||1) Basic Identifiers')}</h4>
   <div class="fg">
-    <div><label>${lb('كود الوحدة *||Unit Code *')}</label><input id="fun_c" value="${esc(u.code||'')}" placeholder="${lb('مثال: A-101||e.g. A-101')}"></div>
-    <div><label>${lb('المبنى||Building')}</label><select id="fun_b" onchange="uFloorsFill()"><option value="">—</option>${bOpts(u.buildingId)}</select></div>
-    <div><label>${lb('الدور||Floor')}</label><select id="fun_f"></select></div>
-    <div><label>${lb('النوع||Kind')}</label><select id="fun_k">${Object.keys(UNITKIND).map(k=>`<option value="${k}" ${(u.kind||'apt')===k?'selected':''}>${UNITKIND[k]}</option>`).join('')}</select></div>
-    <div><label>${lb('المساحة م²||Area m²')}</label><input type="number" step="any" id="fun_a" value="${u.area??''}"></div>
-    <div><label>${lb('الحالة (دون مستأجر)||Status (when vacant)')}</label>
-    <select id="fun_st" ${(u.tenantId?'disabled':'')}>
-      <option value="vacant" ${(u.st||'vacant')==='vacant'?'selected':''}>${lb('شاغرة||Vacant')}</option>
-      <option value="maint" ${u.st==='maint'?'selected':''}>${lb('خارج الخدمة||Out of Service')}</option></select></div>
+    <div><label>${lb('كود الوحدة / الاسم *||Unit Code / Name *')}</label><input id="fun_c" value="${esc(u.code||'')}" placeholder="V14 / APT-101" aria-label="${lb('كود الوحدة||Unit code')}"></div>
+    <div><label>${lb('العقار / المبنى *||Parent Property *')}</label><select id="fun_b" onchange="unitFormRefresh()" aria-label="${lb('المبنى||Building')}"><option value="">—</option>${bOpts(u.buildingId)}</select></div>
+    <div><label>${lb('نوع الوحدة *||Unit Type *')}</label><select id="fun_k" onchange="unitFormRefresh()" aria-label="${lb('نوع الوحدة||Unit type')}">${kinds}</select></div>
   </div>
-  ${u.tenantId?`<p class="muted"> ${lb('هذه الوحدة مشغولة — الحالة «مشغولة» تلقائية.||Unit is occupied — status is automatic.')}</p>`:''}
+  <div id="fu_subdrow" style="display:none">
+    <h4 class="fsec">${lb('2) التقسيم||2) Partitioning')}</h4>
+    <label class="ckline"><input type="checkbox" id="fun_subd" ${u.subdivided?'checked':''}> ${lb('هل الفيلا/المبنى مقسّم إلى وحدات مستقلة؟||Is this villa/building subdivided into separate units?')}</label>
+    <p class="muted">${lb('عند التقسيم تُدار كل وحدة فرعية بعقد مستقل (مثال: V14-G) — ولا يُسمح بتأجير الفيلا كاملة.||When subdivided, each sub-unit gets its own lease (e.g. V14-G) — whole-villa leasing is blocked.')}</p>
+  </div>
+  <div id="fu_parentrow" style="display:none">
+    <h4 class="fsec">${lb('2) الوحدة الأم||2) Parent Unit')}</h4>
+    <div class="fg">
+      <div><label>${lb('الفيلا الأم *||Parent Villa *')}</label><select id="fun_p" onchange="unitSuggestCode()" aria-label="${lb('الفيلا الأم||Parent villa')}"><option value="">—</option>${villas.map(v=>`<option value="${v.id}" ${u.parentId===v.id?'selected':''}>${esc(v.code)} — ${esc(bName(v.buildingId))}</option>`).join('')}</select></div>
+      <div><label>${lb('لاحقة الكود||Code Suffix')}</label><div style="display:flex;gap:6px"><select id="fun_s" onchange="unitSuggestCode()" aria-label="${lb('لاحقة الكود||Code suffix')}">${SUB_SUFFIX.map(s=>`<option>${s}</option>`).join('')}</select><button type="button" class="btn ghost sm" onclick="unitSuggestCode()">${lb('اقتراح||Suggest')}</button></div></div>
+    </div>
+  </div>
+  <h4 class="fsec">${lb('3) المواصفات المكانية||3) Spatial Specs')}</h4>
+  <div class="fg">
+    <div id="fun_frow"><label>${lb('الدور||Floor')}</label><select id="fun_f" aria-label="${lb('الدور||Floor')}"></select></div>
+    <div><label>${lb('المساحة م²||Area (sqm)')}</label><input type="number" step="any" min="0" id="fun_a" value="${u.area??''}"></div>
+    <div><label>${lb('الغرف||Rooms')}</label><input type="number" min="0" id="fun_rm" value="${u.rooms??''}"></div>
+    <div><label>${lb('الحمامات||Bathrooms')}</label><input type="number" min="0" id="fun_bh" value="${u.baths??''}"></div>
+    <div><label>${lb('الإيجار السنوي المستهدف||Target Annual Rent')}</label><input type="number" step="any" min="0" id="fun_rt" value="${u.rent??''}"></div>
+  </div>
+  <h4 class="fsec">${lb('4) التشغيل والحالة||4) Operation & Status')}</h4>
+  <div class="fg"><div><label>${lb('حالة الوحدة||Unit Status')}</label><select id="fun_st" aria-label="${lb('حالة الوحدة||Unit status')}">
+    <option value="auto" ${!u.st||u.st==='auto'||u.st==='vacant'?'selected':''}>${lb('تلقائي (حسب الإشغال)||Auto (by occupancy)')}</option>
+    <option value="reserved" ${u.st==='reserved'?'selected':''}>${lb('محجوزة||Reserved')}</option>
+    <option value="maint" ${u.st==='maint'?'selected':''}>${lb('تحت الصيانة (تمنع التأجير الجديد)||Under Maintenance (blocks new leases)')}</option>
+    <option value="rented">${lb('مؤجرة — انتقال لربط مستأجر||Rented — go link a tenant')}</option>
+  </select></div></div>
+  ${u.tenantId?`<p class="muted">${lb('هذه الوحدة مشغولة حالياً — لتغيير المستأجر استخدم شاشة المستأجرين.||Currently occupied — use the Tenants screen to change occupancy.')}</p>`:''}
   <label>${lb('ملاحظات||Notes')}</label><textarea id="fun_no" rows="2">${esc(u.notes||'')}</textarea>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="saveUnit('${id||''}')">${lb('حفظ||Save')}</button></div>`);
-  uFloorsFill(u.floor||'');
+  unitFormRefresh(u.floor||'');
+}
+function unitFormRefresh(keepFloor){
+  if(!$('fun_k'))return;
+  const k=$('fun_k').value;
+  const isVilla=(k==='villa'),isLand=(k==='land'),isSub=(k==='subunit');
+  if($('fu_subdrow'))$('fu_subdrow').style.display=isVilla?'':'none';
+  if($('fu_parentrow'))$('fu_parentrow').style.display=isSub?'':'none';
+  if($('fun_frow'))$('fun_frow').style.display=(isVilla||isLand)?'none':'';
+  uFloorsFill(keepFloor||($('fun_f')?$('fun_f').value:''));
+}
+function unitSuggestCode(){
+  const pv=db.units.find(x=>x.id===($('fun_p')||{}).value);
+  if(!pv)return;
+  const s=($('fun_s')||{}).value||'G';
+  $('fun_c').value=(pv.code||'V')+'-'+s;
 }
 function uFloorsFill(sel){
   const fsel=$('fun_f');if(!fsel)return;
@@ -2060,14 +2122,37 @@ function uFloorsFill(sel){
 }
 function saveUnit(idStr){
   const c=$('fun_c').value.trim();if(!c)return toast(lb(' الكود مطلوب|| Code required'),'err');
-  const o={code:c,buildingId:$('fun_b').value,floor:$('fun_f').value,kind:$('fun_k').value,
-    area:+$('fun_a').value||0,st:$('fun_st')?$('fun_st').value:'vacant',notes:$('fun_no').value.trim()};
-  if(idStr){Object.assign(db.units.find(x=>x.id===idStr),o);}
+  const kind=$('fun_k').value;
+  const bid=$('fun_b').value;
+  if(kind!=='land'&&!bid)return toast(lb(' المبنى مطلوب لهذا النوع|| Building is required for this type'),'err');
+  let parentId='';
+  if(kind==='subunit'){
+    parentId=$('fun_p').value;
+    if(!parentId)return toast(lb(' اختر الفيلا الأم للوحدة الفرعية|| Select the parent villa for the sub-unit'),'err');
+    const pv=db.units.find(x=>x.id===parentId);
+    if(!pv||pv.kind!=='villa')return toast(lb(' الوحدة الأم يجب أن تكون فيلا|| Parent must be a villa unit'),'err');
+  }
+  const ex=idStr?db.units.find(x=>x.id===idStr):null;
+  const subd=(kind==='villa')?($('fun_subd')?$('fun_subd').checked:false):false;
+  if(ex&&ex.kind==='villa'&&ex.subdivided&&!subd){
+    const leased=db.units.filter(x=>x.parentId===ex.id&&x.tenantId);
+    if(leased.length)return toast(lb(' لا يمكن إلغاء التقسيم — توجد '+leased.length+' وحدات فرعية مؤجرة|| Cannot un-subdivide — '+leased.length+' sub-units are leased'),'err');
+  }
+  const stSel=$('fun_st')?$('fun_st').value:'auto';
+  let openTenant=false;
+  const o={code:c,buildingId:bid,
+    floor:(kind==='villa'||kind==='land')?'':$('fun_f').value,
+    kind,parentId,subdivided:subd,
+    area:+$('fun_a').value||0,rooms:Math.max(0,Math.floor(+$('fun_rm').value||0)),baths:Math.max(0,Math.floor(+$('fun_bh').value||0)),rent:+$('fun_rt').value||0,
+    st:(stSel==='rented')?'auto':stSel,notes:$('fun_no').value.trim()};
+  if(stSel==='rented')openTenant=true;
+  if(ex)Object.assign(ex,o);
   else{
-    if(db.units.some(x=>x.buildingId===o.buildingId&&x.code===c))return toast(lb(' الكود مستخدم في نفس المبنى|| Code already used in this building'),'err');
-    db.units.push(Object.assign({id:uid('UN'),tenantId:''},o));
+    if(db.units.some(x=>x.buildingId===o.buildingId&&x.code===c&&x.parentId===(o.parentId||'')))return toast(lb(' الكود مستخدم في نفس المبنى|| Code already used in this building'),'err');
+    const nu=Object.assign({id:uid('UN'),tenantId:''},o);db.units.push(nu);
   }
   persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
+  if(openTenant){const sv=db.units.find(x=>x.buildingId===o.buildingId&&x.code===c);if(sv)tenantForm(null,sv.id);}
 }
 function delUnit(id){
   const occ=db.tenants.find(x=>x.unitId===id);
@@ -2081,7 +2166,7 @@ function bulkUnitsForm(){
     <div><label>${lb('المبنى *||Building *')}</label><select id="fbk_b" onchange="bfkFloors()"><option value="">—</option>${bOpts('')}</select></div>
     <div><label>${lb('الدور||Floor')}</label><select id="fbk_f"></select></div>
     <div><label>${lb('بادئة الكود||Code Prefix')}</label><input id="fbk_p" placeholder="${lb('مثال: A-||e.g. A-')}"></div>
-    <div><label>${lb('النوع||Kind')}</label><select id="fbk_k">${Object.keys(UNITKIND).map(k=>`<option value="${k}" ${k==='apt'?'selected':''}>${UNITKIND[k]}</option>`).join('')}</select></div>
+    <div><label>${lb('النوع||Kind')}</label><select id="fbk_k">${UNITKIND_NEW.map(k=>`<option value="${k}" ${k==='apt'?'selected':''}>${UNITKIND[k]}</option>`).join('')}</select></div>
     <div><label>${lb('من رقم||From No.')}</label><input type="number" id="fbk_a" value="1" min="1"></div>
     <div><label>${lb('إلى رقم||To No.')}</label><input type="number" id="fbk_t2" value="4" min="1"></div>
   </div>
@@ -2096,12 +2181,14 @@ function bfkFloors(sel){
 }
 function doBulkUnits(){
   const bid=$('fbk_b').value;if(!bid)return toast(lb(' اختر المبنى|| Pick a building'),'err');
-  const fl=$('fbk_f').value,p=$('fbk_p').value.trim(),k=$('fbk_k').value;
+  const k=$('fbk_k').value;
+  if(k==='subunit')return toast(lb(' الوحدات الفرعية تُنشأ من نافذة الوحدة مع اختيار الفيلا الأم|| Sub-units must be created from the Unit form with a parent villa'),'err');
+  const fl=(k==='villa'||k==='land')?'':$('fbk_f').value,p=$('fbk_p').value.trim();
   const a=Math.max(1,+$('fbk_a').value||1),b=Math.max(1,+$('fbk_t2').value||1);let c=0;
   for(let i=Math.min(a,b);i<=Math.max(a,b);i++){
     const code=p+i;
     if(!db.units.some(x=>x.buildingId===bid&&x.code===code)){
-      db.units.push({id:uid('UN'),code,buildingId:bid,floor:fl,kind:k,area:0,st:'vacant',tenantId:'',notes:''});c++;}
+      db.units.push({id:uid('UN'),code,buildingId:bid,floor:fl,kind:k,area:0,st:'auto',tenantId:'',notes:'',parentId:'',subdivided:false,rooms:0,baths:0,rent:0});c++;}
   }
   persist();closeModal();paintTab();toast(lb('أُنشئت وحدات: ||Units created: ')+c,'ok');
 }
@@ -2109,10 +2196,19 @@ function tenantForm(id,presetUnit){
   if(!isEng())return;
   const t=id?db.tenants.find(x=>x.id===id):{};
   const cur=t.unitId||presetUnit||'';
+  const curU=cur?db.units.find(x=>x.id===cur):null;
+  const occInfo=(()=>{ // بيانات الشاغل الحالي عند الفحص
+    if(!curU||!curU.tenantId||curU.tenantId===(t.id||''))return '';
+    const o=db.tenants.find(x=>x.id===curU.tenantId);
+    if(!o)return '';
+    return `<div class="card" style="border-color:var(--amber);margin-bottom:10px"><b>${lb('شاغل حالي:||Current occupant:')}</b> ${esc(o.name)} · ${esc(o.phone||'—')} · ${lb('ينتهي:||Ends:')} ${fmtD(o.leaseEnd)}</div>`;
+  })();
   const opts='<option value="">'+lb('— بدون وحدة||— No unit —')+'</option>'+
-    cmpUnits().map(u=>{const occ=tenantOf(u);
-      return `<option value="${u.id}" ${cur===u.id?'selected':''}>${esc(u.code)} — ${esc(bName(u.buildingId))}${occ&&occ.id!==t.id?' ('+lb('مشغولة||occupied')+')':''}</option>`;}).join('');
+    cmpUnits().map(u=>{const occ=tenantOf(u);const stb=unitState(u);
+      const tag=u.st==='maint'?' ('+lb('صيانة||maintenance')+')':(u.kind==='villa'&&u.subdivided)?' ('+lb('مجزأة — اختر وحدة فرعية||subdivided — pick a sub-unit')+')':(occ&&occ.id!==t.id?' ('+lb('مشغولة||occupied')+')':'');
+      return `<option value="${u.id}" ${cur===u.id?'selected':''}>${esc(u.code)} — ${esc(bName(u.buildingId))}${tag}</option>`;}).join('');
   modal(`<h3>${id?lb('تعديل مستأجر||Edit Tenant'):lb('مستأجر جديد||New Tenant')}</h3>
+  ${occInfo}
   <div class="fg">
     <div><label>${lb('الاسم *||Name *')}</label><input id="ftn_n" value="${esc(t.name||'')}"></div>
     <div><label>${lb('الهاتف||Phone')}</label><input id="ftn_p" value="${esc(t.phone||'')}"></div>
@@ -2123,6 +2219,7 @@ function tenantForm(id,presetUnit){
     <div><label>${lb('بدء العقد||Lease Start')}</label><input type="date" id="ftn_ls" value="${t.leaseStart||todayISO()}"></div>
     <div><label>${lb('نهاية العقد||Lease End')}</label><input type="date" id="ftn_le" value="${t.leaseEnd||addDays(todayISO(),365)}"></div>
   </div>
+  <label class="ckline"><input type="checkbox" id="ftn_co" ${t.coTenant?'checked':''}> ${lb('عقد سكن مشترك (أكثر من مستأجر بنفس الوحدة)||Shared housing contract (co-tenancy)')}</label>
   <label>${lb('ملاحظات||Notes')}</label><textarea id="ftn_no" rows="2">${esc(t.notes||'')}</textarea>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="saveTenant('${id||''}')">${lb('حفظ||Save')}</button></div>`);
@@ -2130,27 +2227,39 @@ function tenantForm(id,presetUnit){
 function saveTenant(idStr){
   const n=$('ftn_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const unitId=$('ftn_u').value;
-  if(unitId){const nu=db.units.find(u=>u.id===unitId);
-    if(nu&&nu.tenantId&&nu.tenantId!==idStr){
-      const prev=db.tenants.find(x=>x.id===nu.tenantId);
+  const coTenant=$('ftn_co')?$('ftn_co').checked:false;
+  if(unitId){
+    const nu=db.units.find(u=>u.id===unitId);
+    if(!nu)return toast(lb(' الوحدة غير موجودة|| Unit not found'),'err');
+    if(nu.st==='maint')return toast(lb(' الوحدة تحت الصيانة — لا يمكن التأجير|| Unit is under maintenance — leasing blocked'),'err');
+    if(nu.kind==='villa'&&nu.subdivided)return toast(lb(' الفيلا مجزأة — اختر وحدة فرعية محددة|| Villa is subdivided — select a specific sub-unit'),'err');
+    const occId=nu.tenantId;
+    if(occId&&occId!==idStr){
+      const prev=db.tenants.find(x=>x.id===occId);
       const pn=prev?prev.name:'؟';
-      if(!confirm(lb(' الوحدة مشغولة بـ "'+pn+'" — سيتم إخلاؤها وإسنادها إلى "'+n+'". متابعة؟|| Unit is occupied by "'+pn+'" — it will be vacated and assigned to "'+n+'". Continue?')))return;
-    }}
+      if(!coTenant)return toast(lb(' الوحدة مؤجرة لـ "'+pn+'" — أخلها أولاً أو فعّل خيار السكن المشترك|| Unit is rented to "'+pn+'" — vacate it first or enable shared housing'),'err');
+    }
+    if(nu.st==='reserved'&&nu.tenantId!==idStr&&!coTenant){
+      if(!confirm(lb(' الوحدة محجوزة — تأكيد تجاوز الحجز والإسناد؟|| Unit is reserved — override and assign?')))return;
+    }
+  }
   let t;
   if(idStr)t=db.tenants.find(x=>x.id===idStr);
   else{t={id:uid('T')};db.tenants.push(t);}
   db.units.forEach(u=>{if(u.tenantId===t.id&&u.id!==unitId)u.tenantId='';});
   if(unitId){const nu=db.units.find(u=>u.id===unitId);
-    if(nu){if(nu.tenantId&&nu.tenantId!==t.id){const prev=db.tenants.find(x=>x.id===nu.tenantId);if(prev)prev.unitId='';}
+    if(nu){if(!coTenant&&nu.tenantId&&nu.tenantId!==t.id){const prev=db.tenants.find(x=>x.id===nu.tenantId);if(prev)prev.unitId='';}
       nu.tenantId=t.id;}}
   t.unitId=unitId;
   Object.assign(t,{name:n,phone:$('ftn_p').value.trim(),email:$('ftn_e').value.trim(),idNo:$('ftn_i').value.trim(),
+    coTenant:!!coTenant,
     leaseStart:$('ftn_ls').value||todayISO(),leaseEnd:$('ftn_le').value||'',rent:+$('ftn_r').value||0,
     notes:$('ftn_no').value.trim()});
   persist();closeModal();paintTab();toast(lb(' تم الحفظ|| Saved'),'ok');
 }
 function delTenant(id){if(!confirm(lb('حذف المستأجر؟ ستشغر وحدته.||Delete tenant? Unit becomes vacant.')))return;
-  const u=db.units.find(x=>x.tenantId===id);if(u)u.tenantId='';
+  const u=db.units.find(x=>x.tenantId===id);
+  if(u){const sib=db.tenants.find(x=>x.unitId===u.id&&x.id!==id);u.tenantId=sib?sib.id:'';}
   db.tenants=db.tenants.filter(t=>t.id!==id);persist();paintTab();}
 function unitsCsv(){
   const rows=cmpUnits().map(u=>{const t=tenantOf(u);const cls=uBadge(unitState(u));
