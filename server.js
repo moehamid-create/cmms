@@ -62,10 +62,11 @@ app.set('query parser', 'simple');   /* flat query parsing only — no qs nested
 const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins = new Set((process.env.ALLOWED_ORIGINS || '').split(',').map(v => v.trim()).filter(Boolean));
 const sessionCookie = process.env.SESSION_COOKIE || 'cmms_session';
-const sessionSecret = process.env.SESSION_SECRET || (!isProduction ? 'local-development-only-change-me' : '');
-if (isProduction && (!sessionSecret || sessionSecret.length < 32)) {
-  console.error('SESSION_SECRET must be set to at least 32 characters in production');
-  process.exit(1);
+let sessionSecret = process.env.SESSION_SECRET || '';
+if (!sessionSecret || sessionSecret.length < 32) {
+  /* لا توقيف قاسٍ: ولّد سراً مؤقتاً حتى لا يتعطل النشر — الجلسات تُصفَّر عند إعادة التشغيل فقط */
+  sessionSecret = crypto.randomBytes(32).toString('hex');
+  console.error('⚠️ SESSION_SECRET missing/short — using an ephemeral one (set a persistent 32+ char value in Render → Environment for stable sessions)');
 }
 
 /* ---- Baseline browser security; same-origin by default ---- */
