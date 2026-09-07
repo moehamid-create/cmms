@@ -605,6 +605,8 @@ window.addEventListener('error',e=>{
 });
 let FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:''};
 let PRIO,WSTAT,ASTAT,ROLES,VILLA_FLOORS,PRSTAT,POSTAT,FREQUNIT,PRJSTAT,SHIFTK,BTYPES,UNITKIND,CTRSC,CYCLEK;
+const UNITKIND_NEW=['apt','villa','subunit','office','shop','annex','land'];
+const SUB_SUFFIX=['G','F1','F2','ANX','R'];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=p=>p+Math.random().toString(36).slice(2,7)+Date.now().toString(36).slice(-3);
@@ -749,8 +751,6 @@ function initLangMaps(){
   VILLA_FLOORS=db.lang==='ar'?['الدور الأرضي','الدور الأول','الملحق']:['Ground Floor','First Floor','Annex'];
   BTYPES={villa:lb('فيلا||Villa'),tower:lb('مبنى سكني||Residential Bldg'),mall:lb('مبنى تجاري||Commercial Bldg'),area:lb('منطقة عامة||Common Area')};
   UNITKIND={apt:lb('شقة||Apartment'),villa:lb('فيلا كاملة||Full Villa'),subunit:lb('وحدة فرعية (جزء فيلا)||Sub-unit'),office:lb('مكتب||Office'),shop:lb('محل تجاري||Shop'),annex:lb('ملحق||Annex'),land:lb('أرض||Land'),clinic:lb('عيادة||Clinic'),store:lb('مستودع||Storage'),other:lb('أخرى||Other')};
-const UNITKIND_NEW=['apt','villa','subunit','office','shop','annex','land'];
-const SUB_SUFFIX=['G','F1','F2','ANX','R'];
   CTRSC={amc:lb('عقد صيانة شامل||Annual Maintenance (AMC)'),cleaning:lb('نظافة||Cleaning'),security:lb('أمن وحراسة||Security'),
     pest:lb('مكافحة حشرات||Pest Control'),lifts:lb('مصاعد||Elevators'),landscape:lb('حدائق وري||Landscaping'),other:lb('أخرى||Other')};
   CYCLEK={mo:lb('شهري||Monthly'),q:lb('ربعي||Quarterly'),yr:lb('سنوي||Yearly'),one:lb('دفعة واحدة||One-time')};
