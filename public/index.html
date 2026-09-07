@@ -583,13 +583,22 @@ html[dir="ltr"] .feature-item:hover{transform:translateX(3px)}
 /* ===== SERVER API (WEB EDITION) ===== */
 /* Production: same-origin /api on any hosted domain. Local file:// falls back to localhost. */
 const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:3000/api' : '/api';
-let AUTH={csrf:'',ver:0};
+let AUTH={csrf:'',ver:0,mustChange:false};
 async function api(pathname,opts={}){
   const headers=Object.assign({'Content-Type':'application/json'},AUTH.csrf?{'X-CSRF-Token':AUTH.csrf}: {}, opts.headers||{});
   return fetch(API_BASE+pathname,Object.assign({credentials:'same-origin',headers},opts));
 }
 
 let db=null,me=null,TAB='dash',PICK=false;
+/* تتبع أخطاء الواجهة (بدون بيانات شخصية) — تُرسل للسيرفر للمراقبة */
+window.addEventListener('error',e=>{
+  try{
+    const msg=String((e&&e.message)||'err').slice(0,200);
+    if(!msg||/Script error/.test(msg))return;
+    fetch(API_BASE+'/client-errors',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({msg,url:String(location.pathname||'/').slice(0,100)})}).catch(()=>{});
+  }catch(_){}
+});
 let FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:''};
 let PRIO,WSTAT,ASTAT,ROLES,VILLA_FLOORS,PRSTAT,POSTAT,FREQUNIT,PRJSTAT,SHIFTK,BTYPES,UNITKIND,CTRSC,CYCLEK;
 const $=id=>document.getElementById(id);
@@ -678,7 +687,8 @@ function compressImg(file){return new Promise(res=>{
       if(w>max||h>max){const k=Math.min(max/w,max/h);w=Math.round(w*k);h=Math.round(h*k);}
       const cv=document.createElement('canvas');cv.width=w;cv.height=h;
       cv.getContext('2d').drawImage(img,0,0,w,h);
-      res(cv.toDataURL('image/jpeg',0.72));};
+      const webp=cv.toDataURL('image/webp',0.72);
+      res(webp.indexOf('image/webp')===5?webp:cv.toDataURL('image/jpeg',0.72));};
     img.onerror=()=>res(null);
     img.src=e.target.result;};
   r.readAsDataURL(file);});}
@@ -710,7 +720,7 @@ function sigHasInk(){const cv=$('sigpad');if(!cv)return false;
     for(let i=3;i<d.length;i+=4)if(d[i]>0)return true;}catch(e){}
   return false;}
 function phTmpHTML(arr,key){return arr.map((p,i)=>
-  `<span class="phwrap"><img class="pthumb" src="${p.d}" onclick="lbShow('${phReg(p.d)}')">
+  `<span class="phwrap"><img class="pthumb" loading="lazy" src="${p.d}" onclick="lbShow('${phReg(p.d)}')">
   <button type="button" class="phdel" onclick="phTmpDel('${key}',${i})">${ic('x',12)}</button></span>`).join('')
   ||`<span class="muted">${lb('لا صور بعد||No photos yet')}</span>`;}
 function phTmpDel(key,i){const arr=key==='b'?window._woPhB:key==='a'?window._woPhA:window._faPh;
@@ -799,7 +809,7 @@ function migrate(d){
     d.users.forEach(u=>{if(u.role==='manager'){u.role=(u.u==='admin')?'admin':'engineer';}});
     [['eng','مهندس العمليات','engineer'],['sitemgr','مدير الموقع','sitemgr'],
      ['store','مسؤول المخزون','store'],['proc','مسؤول المشتريات','proc']]
-     .forEach(a=>{if(!d.users.some(x=>x.u===a[0]))d.users.push({id:uid('U'),u:a[0],p:'1234',name:a[1],role:a[2]});});
+     .forEach(a=>{if(!d.users.some(x=>x.u===a[0]))d.users.push({id:uid('U'),u:a[0],p:'1234',defaultPw:true,name:a[1],role:a[2]});});
   }
   if(d.ver<3){
     d.ver=3;
@@ -875,7 +885,7 @@ function migrate(d){
 async function boot(){
   try{
     const r=await api('/state');
-    if(r.status===401){AUTH.csrf='';db=freshDb();db=migrate(db);return;}
+    if(r.status===401){AUTH.csrf='';AUTH.mustChange=false;db=freshDb();db=migrate(db);return;}
     const j=await r.json();
     if(j.data){db=j.data;AUTH.ver=j.ver;db=migrate(db);
       me=db.users.find(x=>x.id===j.userId)||null;
@@ -887,13 +897,13 @@ async function boot(){
 function freshDb(){
   const d={lang:'ar',ver:6,seq:0,prSeq:0,poSeq:0,rnSeq:0,prjSeq:0,ctSeq:0,seeded:false,
   users:[
-    {id:uid('U'),u:'admin',p:'1234',name:'مدير النظام',role:'admin',phone:'',cmpIds:[],activeCmp:''},
-    {id:uid('U'),u:'eng',p:'1234',name:'مهندس العمليات',role:'engineer',phone:'',cmpIds:[],activeCmp:''},
-    {id:uid('U'),u:'sitemgr',p:'1234',name:'مدير الموقع',role:'sitemgr',phone:'',cmpIds:[],activeCmp:''},
-    {id:uid('U'),u:'sami',p:'1234',name:'سامي العتيبي',role:'tech',phone:'',cmpIds:[],activeCmp:''},
-    {id:uid('U'),u:'khalid',p:'1234',name:'خالد منصور',role:'tech',phone:'',cmpIds:[],activeCmp:''},
-    {id:uid('U'),u:'store',p:'1234',name:'مسؤول المخزون',role:'store',phone:'',cmpIds:[],activeCmp:''},
-    {id:uid('U'),u:'proc',p:'1234',name:'مسؤول المشتريات',role:'proc',phone:'',cmpIds:[],activeCmp:''}
+    {id:uid('U'),u:'admin',p:'1234',defaultPw:true,name:'مدير النظام',role:'admin',phone:'',cmpIds:[],activeCmp:''},
+    {id:uid('U'),u:'eng',p:'1234',defaultPw:true,name:'مهندس العمليات',role:'engineer',phone:'',cmpIds:[],activeCmp:''},
+    {id:uid('U'),u:'sitemgr',p:'1234',defaultPw:true,name:'مدير الموقع',role:'sitemgr',phone:'',cmpIds:[],activeCmp:''},
+    {id:uid('U'),u:'sami',p:'1234',defaultPw:true,name:'سامي العتيبي',role:'tech',phone:'',cmpIds:[],activeCmp:''},
+    {id:uid('U'),u:'khalid',p:'1234',defaultPw:true,name:'خالد منصور',role:'tech',phone:'',cmpIds:[],activeCmp:''},
+    {id:uid('U'),u:'store',p:'1234',defaultPw:true,name:'مسؤول المخزون',role:'store',phone:'',cmpIds:[],activeCmp:''},
+    {id:uid('U'),u:'proc',p:'1234',defaultPw:true,name:'مسؤول المشتريات',role:'proc',phone:'',cmpIds:[],activeCmp:''}
   ],
   categories:['تكييف سبليت','تكييف مركزي / دكت','سخان مياه','مضخة مياه',
    'مضخة / فلتر مسبح','نظام معالجة مياه','جاكوزي / سبا','أجهزة الجيم','لوحة كهرباء','إنارة داخلية',
@@ -1144,6 +1154,7 @@ function loginHtml(){
              ${document.documentElement.classList.contains('dark')?lb('الوضع النهاري||Light mode'):lb('الوضع الليلي||Night mode')}
           </button>
         </div>
+        <p class="muted" style="text-align:center;margin-top:10px;font-size:11px">${lb('يستخدم الموقع ملف ارتباط أساسياً لتسجيل الدخول فقط||This site uses an essential sign-in cookie only')} · <a href="/privacy.html" style="color:inherit">${lb('الخصوصية||Privacy')}</a></p>
       </div>
     </div>
 
@@ -1252,7 +1263,7 @@ async function doLogin(e){
     });
     if(r.ok){
       const j = await r.json();
-      AUTH.csrf = j.csrf || ''; AUTH.ver = j.ver;
+      AUTH.csrf = j.csrf || ''; AUTH.ver = j.ver; AUTH.mustChange = !!j.mustChange;
       const s = await(await api('/state')).json();
       db = s.data; AUTH.ver = s.ver; db = migrate(db);
       me = db.users.find(x => x.id === j.userId) || null;
@@ -1260,10 +1271,7 @@ async function doLogin(e){
     } else if(r.status === 401){
       return toast(lb(' اسم المستخدم أو كلمة المرور غير صحيحة|| Wrong username or password'), 'err');
     }
-  }catch(netErr){
-    console.warn('Backend server not reachable, using local database mode.');
-  }
-
+  }catch(netErr){/* server unreachable — fall back to local mode silently */}
     if(!serverOk){
     if(!db){ db = loadLocalDb(); db = migrate(db); }
     const rl = rawU.toLowerCase();
@@ -1338,6 +1346,7 @@ function render(){
   document.body.lang=db.lang==='ar'?'ar':'en';
   $('app').innerHTML = me ? (PICK?pickerHtml():shell()) : loginHtml();
   if(me&&!PICK)paintTab();
+  document.querySelectorAll('#app button[title]').forEach(b=>{if(!b.getAttribute('aria-label'))b.setAttribute('aria-label',b.title);});
 }
 function pickerHtml(){
   const list=myCmps();
@@ -1371,7 +1380,7 @@ function KINDL(){return {property:lb('عقار||Property'),residentialBuilding:l
 function PTYPEL(){return {residential:lb('سكني||Residential'),commercial:lb('تجاري||Commercial'),admin:lb('إداري||Administrative'),mixed:lb('مختلط||Mixed'),complex:lb('مجمع||Complex')};}
   async function logout(){
   try{await api('/logout',{method:'POST'});}catch(e){}
-  AUTH.csrf='';me=null;PICK=false;render();}
+  AUTH.csrf='';AUTH.mustChange=false;me=null;PICK=false;render();}
 function toggleLang(){db.lang=db.lang==='ar'?'en':'ar';initLangMaps();persist();render();}
 function toggleTheme(){const d=document.documentElement.classList.toggle('dark');try{localStorage.setItem('amlaki_theme',d?'dark':'light');}catch(e){}render();}
 
@@ -1693,6 +1702,8 @@ function vDash(){
   if(isEng())qa.push(`<button class="btn ghost" onclick="copyPortal()"> ${lb('رابط بوابة المستأجرين||Tenant Portal Link')}</button>`);
   if(isEng()&&!db.seeded&&!db.assets.length&&!db.wos.length)qa.push(`<button class="btn ghost" onclick="loadDemo()"> ${lb('بيانات تجريبية||Demo Data')}</button>`);
 
+  const pwBanner=((me&&me.defaultPw)||AUTH.mustChange)?`<div class="card" style="border:1.5px solid var(--red)"><b>${lb('حسابك يستخدم كلمة المرور الافتراضية — غيّرها الآن لحماية النظام||Your account still uses the default password — change it now to secure the system')}</b> <button class="btn sm" onclick="userForm('${me.id}')">${lb('تغيير كلمة المرور||Change password')}</button></div>`:'';
+
   const alertsCard=`<div class="card ${isTech()?'dg-6':'dg-7'}"><h2> ${lb('يحتاج انتباهك (اضغط للمعالجة)||Needs Attention (click to act)')}</h2>
     ${alerts.length?visA.map(a=>{const gi=alerts.indexOf(a);return `<div class="alert-li alrow" onclick="goAlert(${gi})">${a.ic} ${a.h}</div>`;}).join('')
       +(alerts.length>8?`<div style="text-align:center;margin-top:8px"><button class="btn ghost sm" onclick="window._alx=${showAll?'false':'true'};paintTab()">${showAll?lb('عرض أقل||Show less'):lb('عرض الكل||Show all')+' ('+alerts.length+')'}</button></div>`:'')
@@ -1710,7 +1721,7 @@ function vDash(){
 
   if(isTech()){
     return `<div class="stats">${stats}</div>
-    <div class="qa">${qa.join('')}</div>
+    ${pwBanner}<div class="qa">${qa.join('')}</div>
     <div class="dash-grid">
       <div class="card dg-6"><h2> ${lb('مهامي المفتوحة||My Open Tasks')}</h2>
         ${miniWoTable(scope.filter(w=>w.assigneeId===me.id&&w.status!=='closed'))}</div>
@@ -1718,7 +1729,7 @@ function vDash(){
     </div>`;
   }
   return `<div class="stats">${stats}</div>
-  <div class="qa">${qa.join('')}</div>
+  ${pwBanner}<div class="qa">${qa.join('')}</div>
   <div class="dash-grid">
     ${alertsCard}
     <div class="card dg-5"><h2> ${lb('صيانة قادمة خلال أسبوعين||Upcoming PM (≤2 weeks)')}</h2>${pmSoonCard(pmSoonList)}</div>
@@ -1869,7 +1880,7 @@ function assetPhotos(id){
   if(!a.photos)a.photos=[];
   modal(`<h3> ${lb('صور ومستندات||Photos & Documents')} — ${esc(a.name)}</h3>
   <div class="pgrid">${a.photos.length?a.photos.map((p,j)=>
-    `<span class="phwrap"><img class="pthumb" src="${p.d}" onclick="lbShow('${phReg(p.d)}')">
+    `<span class="phwrap"><img class="pthumb" loading="lazy" src="${p.d}" onclick="lbShow('${phReg(p.d)}')">
     ${isEng()?`<button class="phdel" onclick="assetPhotoDel('${id}',${j})">${ic('x',12)}</button>`:''}</span>`).join('')
     :`<span class="muted">${lb('لا صور بعد||No photos yet')}</span>`}</div>
   ${isEng()?`<button class="btn ghost sm" onclick="assetPhotoAdd('${id}')"> ${lb('إضافة صور||Add Photos')}</button>`:''}
@@ -2348,7 +2359,7 @@ function woView(i){
   <tr><td><span class="badge b-${w.priority}">${PRIO[w.priority]}</span></td>
   <td><span class="badge ${WSTAT[w.status][1]}">${WSTAT[w.status][0]}</span></td>
   <td>${esc(w.assigneeName||'—')}</td><td>${money(w.cost)}</td></tr></table>
-  ${(w.photos&&w.photos.length)?`<label> ${lb('صور التوثيق||Documentation Photos')}</label><div class="pgrid">${w.photos.map(p=>`<span class="phwrap"><img class="pthumb" src="${p.d}" onclick="lbShow('${phReg(p.d)}')"><span class="phtag">${p.tag==='before'?lb('قبل||BEFORE'):lb('بعد||AFTER')}</span></span>`).join('')}</div>`:''}
+  ${(w.photos&&w.photos.length)?`<label> ${lb('صور التوثيق||Documentation Photos')}</label><div class="pgrid">${w.photos.map(p=>`<span class="phwrap"><img class="pthumb" loading="lazy" src="${p.d}" onclick="lbShow('${phReg(p.d)}')"><span class="phtag">${p.tag==='before'?lb('قبل||BEFORE'):lb('بعد||AFTER')}</span></span>`).join('')}</div>`:''}
   ${w.sig?`<label> ${lb('توقيع المنفّذ||Technician Signature')}</label><br><img class="sigimg" src="${w.sig}">`:''}
   ${(w.parts&&w.parts.length)?`<label>${lb('قطع الغيار المستخدمة||Parts Used')}</label><ul style="padding-inline-start:18px">${w.parts.map(p=>`<li>${esc(p.name)} × ${p.qty}</li>`).join('')}</ul>`:''}
   ${(w.checklist&&w.checklist.length)?`<label>${lb('قائمة الفحص||Checklist')}</label><ul class="tl">${w.checklist.map(c=>`<li>${c.done?ic('check',12):'<span class="muted">–</span>'} ${esc(c.t)}${c.v?' — <b>'+esc(c.v)+'</b>':''}</li>`).join('')}</ul>`:''}
@@ -3249,9 +3260,10 @@ function saveUser(id){
   const phone=$('fu_ph').value.trim();
   if(id){const x=db.users.find(y=>y.id===id);
     const upd={name:n,u:un,email,role,phone,cmpIds,activeCmp:(x.activeCmp&&(cmpIds.includes(x.activeCmp)||role==='admin'))?x.activeCmp:''};
-    if(p)upd.p=p; /* فارغة = إبقاء كلمة المرور القديمة كما هي (قد تكون مشفّرة) */
-    Object.assign(x,upd);}
-  else db.users.push({id:uid('U'),name:n,u:un,p,email,role,phone,cmpIds,activeCmp:''});
+    if(p){upd.p=p;upd.defaultPw=(p==='1234');} /* فارغة = إبقاء القديمة؛ الجديدة الافتراضية تُعلَّم للتغيير */
+    Object.assign(x,upd);
+    if(id===me.id)AUTH.mustChange=false;}
+  else db.users.push({id:uid('U'),name:n,u:un,p,email,role,phone,cmpIds,activeCmp:'',defaultPw:(p==='1234')});
   persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
 function delUser(id){if(!confirm(lb('حذف المستخدم؟||Delete user?')))return;

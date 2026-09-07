@@ -5,12 +5,16 @@
      keeps data forever on Render's free plan (no disk needed)
    ============================================ */
 const express  = require('express');
+const compression = require('compression');
 const crypto   = require('crypto');
 const fs       = require('fs');
 const path     = require('path');
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
+const APP_VERSION = '1.1.0';
+const STARTED_AT = Date.now();
+let apiRequests = 0;
 
 const USE_PG = !!process.env.DATABASE_URL;
 let sqlite = null, pgPool = null, DB_LABEL = '';
@@ -54,6 +58,7 @@ async function pgInit() {
 
 const app = express();
 app.set('trust proxy', 1);
+app.set('query parser', 'simple');   /* flat query parsing only — no qs nested-object vectors */
 const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins = new Set((process.env.ALLOWED_ORIGINS || '').split(',').map(v => v.trim()).filter(Boolean));
 const sessionCookie = process.env.SESSION_COOKIE || 'cmms_session';
@@ -88,6 +93,17 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json({ limit: '40mb', strict: true }));   /* الصور تُحفظ داخل البيانات — حد كبير لصور قبل/بعد */
+app.use(compression({ threshold: 1024 }));   /* Gzip للنصوص فوق 1KB */
+/* سجل طلبات API (للمراقبة) + عدّاد — بدون تسجيل الأجساد أو الكوكيز */
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health' || req.path === '/healthz') return next();
+  const t0 = Date.now();
+  apiRequests++;
+  res.on('finish', () => {
+    console.log(`[api] ${req.method} ${req.path} ${res.statusCode} ${Date.now() - t0}ms`);
+  });
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
   /* الصور والملفات تُحفَظ مؤقتاً، لكن صفحة HTML دائماً طازجة (عشان التحديثات تظهر فوراً) */
@@ -96,7 +112,35 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 /* ---- Health check (no auth — for Render/Fly/UpTimeRobot) ---- */
 app.get('/healthz', (req, res) => res.status(200).send('ok'));
-app.get('/api/health', (req, res) => res.json({ ok: true, db: DB_LABEL, time: new Date().toISOString() }));
+app.get('/api/health', async (req, res) => {
+  let dbOk = true, dbError = '';
+  try {
+    if (USE_PG) await pgPool.query('SELECT 1');
+    else sqlite.prepare('SELECT 1').get();
+  } catch (e) { dbOk = false; dbError = String(e.message || e).slice(0, 120); }
+  res.status(dbOk ? 200 : 503).json({
+    ok: dbOk, db: DB_LABEL, version: APP_VERSION,
+    uptimeSec: Math.floor((Date.now() - STARTED_AT) / 1000),
+    apiRequests, time: new Date().toISOString(),
+    ...(dbOk ? {} : { dbError }),
+  });
+});
+
+/* ---- Client error reports (rate-limited, capped, no PII) ---- */
+const errHits = new Map();
+const errRing = [];
+app.post('/api/client-errors', (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'x';
+  if (!boundedHit(errHits, ip, 60 * 60 * 1000, 20)) return res.status(429).json({ error: 'TOO_MANY' });
+  const b = req.body || {};
+  const msg = String(b.msg || '').slice(0, 200);
+  const url = String(b.url || '').slice(0, 200);
+  if (!msg) return res.status(400).json({ error: 'MISSING' });
+  errRing.push({ at: new Date().toISOString(), ip: String(ip).slice(0, 40), msg, url });
+  if (errRing.length > 50) errRing.shift();
+  console.error(`[client-error] ${url} :: ${msg}`);
+  res.json({ ok: true });
+});
 
 /* ---- Simple login rate-limit: 20 attempts / 10 min per IP ---- */
 const loginHits = new Map();
@@ -145,7 +189,7 @@ function seedState(){
   const d={
     lang:'ar',ver:6,seq:0,prSeq:0,poSeq:0,rnSeq:0,prjSeq:0,ctSeq:0,seeded:false,
     users:[
-      U({u:'admin',  p:'1234',name:'مدير النظام',   role:'admin'})
+      U({u:'admin',  p:'1234',name:'مدير النظام',   role:'admin', defaultPw:true})
     ],
     categories:['تكييف سبليت','تكييف مركزي / دكت','سخان مياه','مضخة مياه',
      'مضخة / فلتر مسبح','نظام معالجة مياه','جاكوزي / سبا','أجهزة الجيم','لوحة كهرباء','إنارة داخلية',
@@ -252,6 +296,14 @@ function sanitizePasswords(data){
   });
   return data;
 }
+/* مقارنة ثابتة لمصفوفة المستخدمين (ترتيب المفاتيح لا يؤثر) */
+function canonUsers(users) {
+  return JSON.stringify((users || []).map(u => {
+    const o = {};
+    Object.keys(u || {}).sort().forEach(k => { o[k] = u[k]; });
+    return o;
+  }));
+}
 function getCookie(req, name) {
   const raw = String(req.headers.cookie || '');
   const item = raw.split(';').map(v => v.trim()).find(v => v.startsWith(name + '='));
@@ -285,6 +337,8 @@ app.post('/api/login', loginRateLimit, async (req,res)=>{
   try { st = await getState(); }
   catch (e) { console.error('DB error on /api/login:', e.message); return res.status(500).json({error:'DB'}); }
   const {u,p} = req.body || {};
+  if (String(u || '').length > 200 || String(p || '').length > 200)
+    return res.status(400).json({error:'BAD_LOGIN'});
   const rawU = String(u||'').trim().toLowerCase();
   const uname = rawU.includes('@') ? rawU.split('@')[0] : rawU;
   /* الدخول باسم المستخدم أو البريد الإلكتروني */
@@ -298,7 +352,7 @@ app.post('/api/login', loginRateLimit, async (req,res)=>{
   const csrf = csrfToken(token);
   sessions.set(token,{userId:user.id, role:user.role || 'viewer', at:Date.now()});
   res.cookie(sessionCookie, token, { httpOnly:true, secure:isProduction, sameSite:'lax', maxAge:SESSION_TTL, path:'/' });
-  res.json({userId:user.id, user:{id:user.id,name:user.name,role:user.role}, csrf, ver:st.ver});
+  res.json({userId:user.id, user:{id:user.id,name:user.name,role:user.role}, csrf, ver:st.ver, mustChange:!!user.defaultPw});
 });
 
 app.post('/api/logout',(req,res)=>{
@@ -318,16 +372,20 @@ app.get('/api/state', async (req,res)=>{
   res.json(cur.data ? { ...cur, userId: actor.session.userId, role: actor.session.role } : cur);
 });
 
-/* ---- حفظ الحالة (مع كشف تعارض التعديل المتزامن) ---- */
+/* ---- حفظ الحالة (مع كشف تعارض التعديل المتزامن + RBAC على المستخدمين) ---- */
 app.post('/api/state', async (req,res)=>{
   let cur;
   try { cur = await getState(); }
   catch (e) { console.error('DB error on POST /api/state:', e.message); return res.status(500).json({error:'DB'}); }
-  if(cur.data && !auth(req,res)) return;
+  const actor = cur.data ? auth(req,res) : null;
+  if(cur.data && !actor) return;
   const {baseVer,data} = req.body || {};
   if(!data) return res.status(400).json({error:'NO_DATA'});
   if(cur.data && Number(baseVer) !== cur.ver)
     return res.status(409).json({error:'CONFLICT', ver:cur.ver});
+  /* إدارة المستخدمين للمدير فقط — تُقارن بالمحتوى (تغيير لغتي/مجمعي مسموح للجميع) */
+  if (cur.data && canonUsers(data.users) !== canonUsers(cur.data.users) && actor.session.role !== 'admin')
+    return res.status(403).json({error:'USERS_FORBIDDEN'});
   try {
     const ver = await setState(data);
     res.json({ok:true, ver});
@@ -399,6 +457,9 @@ app.get('/api/public/requests', pubLimit, async (req, res) => {
     createdAt: w.createdAt, closedAt: w.closedAt || null,
   })));
 });
+
+/* ---- 404 لأي مسار API غير معروف (JSON) ---- */
+app.use('/api', (req, res) => res.status(404).json({ error: 'NOT_FOUND' }));
 
 /* ---- SPA fallback: أي مسار غير /api يرجع الواجهة ---- */
 app.get('*', (req, res, next) => {

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /request.html
+Allow: /logo.svg
+Allow: /logo-mark.svg
+Disallow: /api/
