@@ -78,6 +78,19 @@
 .dark input,.dark select,.dark textarea{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16);color:var(--ink)}
 .dark select option{background:#14242f;color:#e9f1f6}
 .dark input::placeholder,.dark textarea::placeholder{color:#7d93a3}
+/* ===== الوضع الليلي: قراءة نص الإدخال =====
+   قاعدة input:focus العامة تخلفية بخلفية #fff وبنفس الأولوية لكنها لاحقة،
+   فكان النص الفاتح يُرسم على خلفية بيضاء أثناء الكتابة. القواعد التالية أعلى أولوية. */
+.dark input,.dark select,.dark textarea{color:#f1f7fa;caret-color:#f1f7fa}
+.dark input:focus,.dark select:focus,.dark textarea:focus{background:#1c2f40;color:#f1f7fa;
+  border-color:#22b8cf;box-shadow:0 0 0 3px rgba(34,184,207,.22)}
+.dark input::placeholder,.dark textarea::placeholder{color:#93a9b8;opacity:1}
+.dark select option{background:#14242f;color:#f1f7fa}
+.dark input:disabled,.dark select:disabled,.dark textarea:disabled{color:#9db4c2;-webkit-text-fill-color:#9db4c2}
+.dark input:-webkit-autofill,.dark input:-webkit-autofill:hover,.dark input:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill{-webkit-text-fill-color:#f1f7fa;caret-color:#f1f7fa;
+  -webkit-box-shadow:0 0 0 1000px #1c2f40 inset;box-shadow:0 0 0 1000px #1c2f40 inset;
+  transition:background-color 9999s ease-out 0s}
 .dark .modal{background:linear-gradient(160deg,rgba(24,39,53,.97),rgba(15,27,39,.95))}
 .dark table th{border-color:rgba(255,255,255,.14)}
 .dark td{border-color:rgba(255,255,255,.07)}
@@ -94,7 +107,7 @@
 .dark .auth-divider::before,.dark .auth-divider::after{background:rgba(255,255,255,.14)}
 .dark .form-group label{color:#c7d6e0}
 .dark .input-icon-wrap input{background:#1c2f40;border-color:rgba(255,255,255,.14);color:#e9f1f6}
-.dark .input-icon-wrap input:focus{background:#24394d}
+.dark .input-icon-wrap input:focus{background:#24394d;color:#f1f7fa}
 .dark .input-icon-wrap .input-icon{color:#7d93a3}
 .dark .forgot-link,.dark .signup-link{color:#22b8cf}
 .dark .btn-lang{background:#1c2f40!important;color:#e9f1f6!important;border-color:rgba(255,255,255,.14)!important}
