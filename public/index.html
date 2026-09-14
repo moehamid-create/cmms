@@ -1876,10 +1876,10 @@ function paintTab(){
 function vCmps(){
   if(!isAdmin())return '';
   const act=activeCmp();
-  return `<div class="toolbar"><button class="btn" onclick="cmpForm()">＋ ${lb('مجمع جديد||New Compound')}</button></div>
-  <p class="muted"> ${lb('سير العمل: أنشئ المجمع ← أضف مبانيه ووحداته ← أضف أصوله ← أضف الفنيين واربطهم به من شاشة المستخدمين.||Workflow: create compound → add buildings & units → add assets → add technicians and assign them in Users.')}</p>
-  <div class="card"><h2> ${lb('المجمعات||Compounds')} (${myCmps().length})</h2><div class="tbl-wrap"><table>
-  <tr><th>${lb('المجمع||Compound')}</th><th>${lb('الموقع||Location')}</th><th>${lb('المباني||Bldgs')}</th><th>${lb('الأصول||Assets')}</th><th>${lb('أوامر مفتوحة||Open WOs')}</th><th>${lb('الفنيون||Techs')}</th><th></th></tr>
+  return `<div class="toolbar"><button class="btn" onclick="cmpForm()">＋ ${lb('عقار جديد||New Property')}</button></div>
+  <p class="muted"> ${lb('سير العمل: أنشئ العقار ← أضف مبانيه ووحداته ← أضف أصوله ← أضف الفنيين واربطهم به من شاشة المستخدمين.||Workflow: create property → add buildings & units → add assets → add technicians and assign them in Users.')}</p>
+  <div class="card"><h2> ${lb('العقارات||Properties')} (${myCmps().length})</h2><div class="tbl-wrap"><table>
+  <tr><th>${lb('العقار||Property')}</th><th>${lb('الموقع||Location')}</th><th>${lb('المباني||Bldgs')}</th><th>${lb('الأصول||Assets')}</th><th>${lb('أوامر مفتوحة||Open WOs')}</th><th>${lb('الفنيون||Techs')}</th><th></th></tr>
   ${myCmps().map(c=>{
     const bl=db.buildings.filter(b=>b.compoundId===c.id).length;
     const as=db.assets.filter(a=>a.compoundId===c.id).length;
@@ -1946,8 +1946,8 @@ function delCmp(cid){const c=db.compounds.find(x=>x.id===cid);if(!c)return;
   const used=db.buildings.some(b=>b.compoundId===c.id)||db.assets.some(a=>a.compoundId===c.id)||db.wos.some(w=>w.compoundId===c.id)
     ||db.pms.some(p=>p.compoundId===c.id)||db.projects.some(p=>p.compoundId===c.id)||db.contracts.some(p=>p.compoundId===c.id)
     ||db.employees.some(p=>p.compoundId===c.id)||db.units.some(u=>{const b=db.buildings.find(x=>x.id===u.buildingId);return b&&b.compoundId===c.id;});
-  if(used)return toast(lb(' لا يمكن الحذف — توجد بيانات مرتبطة بهذا المجمع|| Cannot delete — data is linked to this compound'),'err');
-  if(!confirm(lb('حذف هذا المجمع؟||Delete this compound?')))return;
+  if(used)return toast(lb(' لا يمكن الحذف — توجد بيانات مرتبطة بهذا العقار|| Cannot delete — data is linked to this property'),'err');
+  if(!confirm(lb('حذف هذا العقار؟||Delete this property?')))return;
   const di=db.compounds.findIndex(x=>x.id===c.id);if(di>=0)db.compounds.splice(di,1);
   db.users.forEach(u=>{u.cmpIds=(u.cmpIds||[]).filter(x=>x!==c.id);if(u.activeCmp===c.id)u.activeCmp='';});
   if(me.activeCmp===c.id)me.activeCmp='';
