@@ -1636,13 +1636,13 @@ function monthKey(msOrIso){const d=(typeof msOrIso==='string'&&msOrIso.length===
 function pmSoonCard(pmSoon){
   if(!pmSoon.length)return `<div class="empty"> ${lb('لا صيانة مستحقة قريباً||Nothing due soon')}</div>`;
   return pmSoon.slice(0,5).map(p=>{
-    const du=daysUntil(nextDueOf(p)),i=db.pms.indexOf(p);
+    const du=daysUntil(nextDueOf(p));
     return `<div class="pmrow ${du<0?'overdue':''}">
       <div style="flex:1;min-width:0"><b>${esc(p.name)}</b><br>
       <span class="muted">${du<0?`<span class="badge b-urgent">${lb('متأخرة||OVERDUE')} ${-du} ${lb('يوم||d')}</span>`
         :du<=3?`<span class="badge b-maint">${lb('بعد||in')} ${du} ${lb('يوم||d')}</span>`:fmtD(nextDueOf(p))}</span>
       ${p.assigneeName?` <span class="muted">·  ${esc(p.assigneeName)}</span>`:''}</div>
-      ${isEng()?`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" title="${lb('تسجيل إنجاز||Log done')}" onclick="pmDone(${i})">${ic('check',14)}</button>`:''}
+      ${isEng()?`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" title="${lb('تسجيل إنجاز||Log done')}" onclick="pmDone('${p.id}')">${ic('check',14)}</button>`:''}
     </div>`;}).join('');
 }
 function kpi(ic,num,lbl,tab,warn,extra){

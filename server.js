@@ -10,6 +10,26 @@ const crypto   = require('crypto');
 const fs       = require('fs');
 const path     = require('path');
 
+/* ---- Minimal .env loader (no dependency): reads .env from the app folder.
+   Real environment variables always win. .env.local is intentionally NOT loaded —
+   it is reserved for the Neon CLI, so local runs never silently target production. ---- */
+(function loadEnv(){
+  try {
+    const p = path.join(__dirname, '.env');
+    if (!fs.existsSync(p)) return;
+    for (const line of fs.readFileSync(p, 'utf8').split(/\r?\n/)) {
+      if (/^\s*(#|$)/.test(line)) continue;
+      const m = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+      if (!m) continue;
+      const key = m[1];
+      if (Object.prototype.hasOwnProperty.call(process.env, key)) continue;
+      let val = (m[2] || '').trim();
+      if (val.length >= 2 && ((val[0] === '"' && val.endsWith('"')) || (val[0] === "'" && val.endsWith("'")))) val = val.slice(1, -1);
+      process.env[key] = val;
+    }
+  } catch (e) { /* ignore malformed .env */ }
+})();
+
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const APP_VERSION = '1.1.0';
@@ -190,7 +210,13 @@ function seedState(){
   const d={
     lang:'ar',ver:6,seq:0,prSeq:0,poSeq:0,rnSeq:0,prjSeq:0,ctSeq:0,seeded:false,
     users:[
-      U({u:'admin',  p:'1234',name:'مدير النظام',   role:'admin', defaultPw:true})
+      U({u:'admin',  p:'1234',name:'مدير النظام',   role:'admin', defaultPw:true}),
+      U({u:'eng',    p:'1234',name:'مهندس العمليات', role:'engineer', defaultPw:true}),
+      U({u:'sitemgr',p:'1234',name:'مدير الموقع',    role:'sitemgr', defaultPw:true}),
+      U({u:'sami',   p:'1234',name:'سامي العتيبي',   role:'tech', defaultPw:true}),
+      U({u:'khalid', p:'1234',name:'خالد منصور',     role:'tech', defaultPw:true}),
+      U({u:'store',  p:'1234',name:'مسؤول المخزون',  role:'store', defaultPw:true}),
+      U({u:'proc',   p:'1234',name:'مسؤول المشتريات',role:'proc', defaultPw:true})
     ],
     categories:['تكييف سبليت','تكييف مركزي / دكت','سخان مياه','مضخة مياه',
      'مضخة / فلتر مسبح','نظام معالجة مياه','جاكوزي / سبا','أجهزة الجيم','لوحة كهرباء','إنارة داخلية',
@@ -218,29 +244,14 @@ async function pgGet() {
   const r = await pgPool.query('SELECT data, ver FROM appstate WHERE id=1');
   return r.rows[0] || null;
 }
-async function pgSet(json, ver) {
-  await pgPool.query(
-    `INSERT INTO appstate(id,data,ver,updated) VALUES(1,$1,$2,now())
-     ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data, ver=EXCLUDED.ver, updated=now()`,
-    [json, ver]);
-}
 function liteGet() {
   try { return sqlite.prepare('SELECT data, ver FROM appstate WHERE id=1').get() || null; }
   catch (e) { return null; }
-}
-function liteSet(json, ver) {
-  sqlite.prepare(`INSERT INTO appstate(id,data,ver,updated) VALUES(1,?,?,datetime('now'))
-    ON CONFLICT(id) DO UPDATE SET data=excluded.data, ver=excluded.ver, updated=excluded.updated`)
-    .run(json, ver);
 }
 
 async function readRow() {
   if (USE_PG) { try { return await pgGet(); } catch (e) { return { _dberr: e }; } }
   return liteGet();
-}
-async function writeRow(json, ver) {
-  if (USE_PG) await pgSet(json, ver);
-  else liteSet(json, ver);
 }
 
 async function getState() {
@@ -259,19 +270,36 @@ async function getState() {
     return { data: s, ver };
   }
 }
-async function setState(data) {
+/* Atomic write. With expectedVer it is a compare-and-swap: returns the new
+   version, or null if another writer bumped it first (caller → 409).
+   Without expectedVer (first seed) it upserts and starts at ver 1. */
+async function setState(data, expectedVer) {
   sanitizePasswords(data);   /* أي كلمة مرور بنص واضح تُشفَّر قبل التخزين */
-  let ver;
+  const json = JSON.stringify(data);
   if (USE_PG) {
-    const r = await pgPool.query('SELECT ver FROM appstate WHERE id=1');
-    ver = (r.rows[0] ? r.rows[0].ver : 0) + 1;
-    await pgSet(JSON.stringify(data), ver);
-  } else {
-    const cur = sqlite.prepare('SELECT ver FROM appstate WHERE id=1').get();
-    ver = (cur ? cur.ver : 0) + 1;
-    liteSet(JSON.stringify(data), ver);
+    if (expectedVer == null) {
+      const r = await pgPool.query(
+        `INSERT INTO appstate(id,data,ver,updated) VALUES(1,$1,1,now())
+         ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data, ver=appstate.ver+1, updated=now()
+         RETURNING ver`, [json]);
+      return r.rows[0].ver;
+    }
+    const r = await pgPool.query(
+      `UPDATE appstate SET data=$1, ver=ver+1, updated=now()
+       WHERE id=1 AND ver=$2 RETURNING ver`, [json, expectedVer]);
+    return r.rows[0] ? r.rows[0].ver : null;
   }
-  return ver;
+  if (expectedVer == null) {
+    const r = sqlite.prepare(
+      `INSERT INTO appstate(id,data,ver,updated) VALUES(1,?,1,datetime('now'))
+       ON CONFLICT(id) DO UPDATE SET data=excluded.data, ver=ver+1, updated=excluded.updated
+       RETURNING ver`).get(json);
+    return r.ver;
+  }
+  const r = sqlite.prepare(
+    `UPDATE appstate SET data=?, ver=ver+1, updated=datetime('now')
+     WHERE id=1 AND ver=? RETURNING ver`).get(json, expectedVer);
+  return r ? r.ver : null;
 }
 /* ---- تشفير كلمات المرور (PBKDF2-SHA256 — مدمج في Node، بلا مكتبات) ----
    التخزين بصيغة: pbkdf2$iterations$salt$hash — لا يمكن عكسها لكلمة المرور */
@@ -388,7 +416,10 @@ app.post('/api/state', async (req,res)=>{
   if (cur.data && canonUsers(data.users) !== canonUsers(cur.data.users) && actor.session.role !== 'admin')
     return res.status(403).json({error:'USERS_FORBIDDEN'});
   try {
-    const ver = await setState(data);
+    /* compare-and-swap: only writes if the version is still cur.ver, closing the
+       read→write race that two simultaneous editors could otherwise slip through */
+    const ver = await setState(data, cur.data ? cur.ver : null);
+    if (ver == null) return res.status(409).json({error:'CONFLICT', ver:cur.ver});
     res.json({ok:true, ver});
   } catch (e) { console.error('DB error on save:', e.message); return res.status(500).json({error:'DB'}); }
 });
@@ -434,10 +465,11 @@ app.post('/api/public/requests', pubLimit, async (req, res) => {
         cost: 0, closeNotes: '', parts: [], photos: [], sig: '',
       };
       st.data.wos.unshift(wo);
-      const ver = await setState(st.data);
+      const ver = await setState(st.data, st.ver);
+      if (ver == null) return { err: 409 };
       return { no: wo.no, token: wo.trackToken, ver };
     });
-    if (out.err) return res.status(out.err).json({ error: 'BAD_COMPOUND' });
+    if (out.err) return res.status(out.err).json({ error: out.err === 409 ? 'CONFLICT' : 'BAD_COMPOUND' });
     res.json({ ok: true, no: out.no, token: out.token });
   } catch (e) { console.error('DB error on POST /api/public/requests:', e.message); return res.status(500).json({ error: 'DB' }); }
 });
