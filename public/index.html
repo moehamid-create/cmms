@@ -293,6 +293,64 @@ label{font-size:11px;font-weight:800;color:var(--muted);display:block;margin:9px
 .dg-12{grid-column:span 12}.dg-8{grid-column:span 8}.dg-7{grid-column:span 7}
 .dg-6{grid-column:span 6}.dg-5{grid-column:span 5}.dg-4{grid-column:span 4}
 @media(max-width:1080px){.dg-8,.dg-7,.dg-6,.dg-5,.dg-4{grid-column:span 12}}
+/* ===== AMLAKI MODULE HUB — محفظة العقارات · الصيانة والمقاولون · المتتبع المالي ===== */
+.hub-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.hub-head b{font-family:var(--font-display);font-size:15px;font-weight:800}
+.hub-badge{font-size:10.5px;font-weight:800;color:var(--brand);background:rgba(14,116,144,.1);
+  border:1px solid rgba(14,116,144,.22);padding:3px 10px;border-radius:99px}
+.hub{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:16px}
+.pillar{border-radius:16px;padding:15px;display:flex;flex-direction:column;gap:11px;
+  background:linear-gradient(160deg,var(--glass-hi),var(--glass-lo));
+  backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
+  border:1px solid var(--line);box-shadow:var(--shadow);transition:.2s}
+.pillar:hover{transform:translateY(-2px);box-shadow:0 18px 40px -16px rgba(2,44,66,.3),inset 0 1px 0 rgba(255,255,255,.8)}
+.pillar-head{display:flex;align-items:center;gap:10px}
+.pillar-ic{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;flex:0 0 auto}
+.pillar-head .pt{display:block;font-family:var(--font-display);font-size:14.5px;font-weight:800;line-height:1.25}
+.pillar-head .ps{display:block;font-size:10.5px;color:var(--muted);font-weight:700}
+.pillar-head .pgo{margin-inline-start:auto}
+.psub{font-size:10.5px;color:var(--muted);font-weight:800;letter-spacing:.2px}
+.ic-bldg{background:linear-gradient(135deg,#0e7490,#0891b2);box-shadow:0 8px 18px -8px rgba(14,116,144,.75)}
+.ic-tool{background:linear-gradient(135deg,#b45309,#f59e0b);box-shadow:0 8px 18px -8px rgba(180,83,9,.75)}
+.ic-fin{background:linear-gradient(135deg,#047857,#22c55e);box-shadow:0 8px 18px -8px rgba(4,120,87,.75)}
+.pkpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px}
+.pkpi{background:rgba(255,255,255,.5);border:1px solid var(--line);border-radius:11px;padding:7px 9px}
+.pkpi .v{font-size:16px;font-weight:800;letter-spacing:-.4px;line-height:1.25}
+.pkpi .v small{font-size:9.5px;font-weight:700;color:var(--muted);letter-spacing:0}
+.pkpi .k{font-size:10px;color:var(--muted);font-weight:700;margin-top:2px}
+.pkpi.warn .v{color:var(--red)}.pkpi.ok .v{color:var(--green)}
+.donut{width:116px;height:116px;border-radius:50%;position:relative;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(255,255,255,.5)}
+.donut .hole{position:absolute;inset:15px;border-radius:50%;background:var(--glass-hi);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.donut .hole b{font-size:19px;font-weight:800;letter-spacing:-.5px;line-height:1}
+.donut .hole small{font-size:9.5px;color:var(--muted);font-weight:700}
+.hbar{display:grid;grid-template-columns:104px 1fr 66px;gap:8px;align-items:center;margin-bottom:8px;
+  font-size:12px;font-weight:700}
+.hbar>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar .hb{height:20px;border-radius:7px;background:rgba(2,44,66,.09);overflow:hidden}
+.hbar .hb i{display:block;height:100%;border-radius:7px;transition:width .5s}
+.hbar .hv{font-size:11.5px;color:var(--muted);text-align:end;white-space:nowrap}
+.hbar.click{cursor:pointer}
+.hbar.click:hover .hb i{filter:brightness(1.12)}
+.pillar-foot{margin-top:auto;display:flex;gap:6px;flex-wrap:wrap;padding-top:2px}
+.fchart{display:flex;gap:8px;align-items:flex-end;height:118px}
+.fcol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%}
+.fcol .fbars{display:flex;gap:3px;align-items:flex-end;justify-content:center;width:100%;height:100%}
+.fcol .fbars i{width:44%;max-width:22px;border-radius:6px 6px 2px 2px;transition:.3s}
+.fcol .fbars i.inc{background:linear-gradient(180deg,#22c55e,#047857)}
+.fcol .fbars i.exp{background:linear-gradient(180deg,#f87171,#dc2626)}
+.fcol .fl{font-size:9.5px;color:var(--muted);font-weight:700}
+.netline{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;
+  background:rgba(255,255,255,.5);border:1px solid var(--line);font-weight:800;font-size:12.5px}
+.netline .nv{font-size:16px}
+.netline.pos{border-color:rgba(21,153,87,.35)}.netline.pos .nv{color:var(--green)}
+.netline.neg{border-color:rgba(220,38,38,.35)}.netline.neg .nv{color:var(--red)}
+.dark .pillar .pkpi,.dark .pillar .netline,.dark .pillar .hbar .hb{background:rgba(255,255,255,.07)}
+.dark .donut .hole{background:#16242f}
+.dark .hub-badge{background:rgba(34,184,207,.14);border-color:rgba(34,184,207,.28)}
+.topbar .pname{background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff;padding:3px 10px;border-radius:9px;
+  font-size:12.5px;font-weight:800;box-shadow:0 6px 14px -6px rgba(14,116,144,.6)}
+@media(max-width:1080px){.hub{grid-template-columns:1fr}}
 .kpi{cursor:pointer}
 .kpi .khead{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px}
 .kpi .kico{font-size:19px;opacity:.9}
@@ -650,7 +708,9 @@ chat:'<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0
 alert:'<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',
 print:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
 moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
-sun:'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'
+sun:'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>',
+ coins:'<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18M7 6h1v4M16.71 13.88l.7.71-2.82 2.82"/>',
+ wallet:'<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>'
 };
 function ic(n,s){s=s||18;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]||''}</svg>`;}
 
@@ -1412,7 +1472,7 @@ function shell(){
   <div class="layout">
     <aside class="side">
       <div class="brand"><span class="logo"><img src="/logo-mark.svg" alt="أملاكي"></span>
-        <span class="brand-t">${lb('أملاكي||Amlaki')}<small>${lb('إدارة الأملاك والصيانة||Property Management')}</small></span>
+        <span class="brand-t">${lb('أملاكي||Amlaki')}<small>${lb('منصة إدارة الأملاك والصيانة والفواتير||Property, Maintenance & Billing')}</small></span>
       </div>
       ${cmpSel}
       <div class="sidediv"></div>
@@ -1435,7 +1495,7 @@ function shell(){
     </aside>
     <div class="content">
       <div class="topbar">
-        <span class="ttl">${(()=>{const c=nav.find(n=>n[0]===TAB);return c?c[2]:lb('الرئيسية||Dashboard')})()}</span>
+        <span class="ttl"><span class="pname">${lb('أملاكي||Amlaki')}</span>${(()=>{const c=nav.find(n=>n[0]===TAB);return c?c[2]:lb('الرئيسية||Dashboard')})()}</span>
         <span class="meta">
           <span title="${lb('المجمع الحالي||Current compound')}"> ${esc(cmpName(act))}</span>
           <span> ${fmtD(todayISO())}</span>
@@ -1663,6 +1723,197 @@ function goAlert(i){
   render();
 }
 function goWO(no){TAB='wos';FILT.wos=no;FILT.woStatus='all';render();}
+/* ===== AMLAKI MODULE HUB — محفظة العقارات · الصيانة والمقاولون · المتتبع المالي ===== */
+function moneyK(n){
+  n=Number(n||0);
+  const a=Math.abs(n);
+  if(a>=1e6)return (n/1e6).toFixed(a%1e6?1:0)+'M';
+  if(a>=1e3)return Math.round(n/1e3)+'K';
+  return String(Math.round(n));
+}
+function hubKpi(v,k,cls){return `<div class="pkpi ${cls||''}"><div class="v">${v}</div><div class="k">${k}</div></div>`;}
+function hubBar(label,val,max,color,onclick,valTxt){
+  const pct=max>0?Math.max(2,Math.round(val/max*100)):0;
+  return `<div class="hbar ${onclick?'click':''}" ${onclick?`onclick="${onclick}"`:''} title="${esc(label)}">
+    <span>${esc(label)}</span><span class="hb"><i style="width:${pct}%;background:${color}"></i></span>
+    <span class="hv">${valTxt!=null?valTxt:val}</span></div>`;
+}
+function hubDonut(segs,center,sub){
+  const tot=segs.reduce((s,x)=>s+Math.max(0,+x.v||0),0);
+  let a=0;
+  const stops=segs.filter(s=>+s.v>0).map(s=>{const d=(+s.v/(tot||1))*360;
+    const r=`${s.c} ${a.toFixed(2)}deg ${(a+d).toFixed(2)}deg`;a+=d;return r;}).join(',');
+  return `<div class="donut" style="background:conic-gradient(${stops||'rgba(148,163,184,.3) 0deg 360deg'})">
+    <div class="hole"><b>${center}</b><small>${sub||''}</small></div></div>`;
+}
+function hubUnitsAgg(){
+  const units=cmpUnits();
+  const rented=units.filter(u=>u.tenantId).length;
+  const maint=units.filter(u=>!u.tenantId&&u.st==='maint').length;
+  const reserved=units.filter(u=>!u.tenantId&&u.st==='reserved').length;
+  return {units,rented,maint,reserved,vacant:Math.max(0,units.length-rented-maint-reserved)};
+}
+/* --- 1) محفظة العقارات: الأصول العقارية والإشغال والإيجارات --- */
+function hubPortfolioCard(){
+  const act=activeCmp();
+  const agg=hubUnitsAgg(),units=agg.units;
+  const bldgs=db.buildings.filter(b=>b.compoundId===act);
+  const assets=db.assets.filter(a=>a.compoundId===act);
+  const tenants=cmpTenants();
+  const targetY=units.reduce((s,u)=>s+Number(u.rent||0),0);
+  const contractY=tenants.reduce((s,t)=>s+Number(t.rent||0),0);
+  const occ=units.length?Math.round(agg.rented/units.length*100):0;
+  const perB={};
+  tenants.forEach(t=>{const u=db.units.find(x=>x.id===t.unitId);if(!u)return;
+    perB[u.buildingId]=(perB[u.buildingId]||0)+Number(t.rent||0);});
+  const top=Object.entries(perB).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const maxT=top.length?Math.max(...top.map(x=>x[1])):1;
+  return `<div class="pillar">
+    <div class="pillar-head"><span class="pillar-ic ic-bldg">${ic('bldg',19)}</span>
+      <span><span class="pt">${lb('محفظة العقارات||Property Portfolio')}</span>
+      <span class="ps">${lb('الأصول العقارية · الإشغال · الإيجارات||Assets · occupancy · rent')}</span></span>
+      <button class="btn ghost sm pgo" onclick="goTab('units')">${lb('إدارة||Manage')}</button></div>
+    <div class="donut-wrap" style="justify-content:space-between">
+      ${hubDonut([{v:agg.rented,c:'#0891b2'},{v:agg.vacant,c:'#94a3b8'},{v:agg.maint,c:'#f59e0b'},{v:agg.reserved,c:'#7c3aed'}],occ+'%',lb('إشغال||Occupied'))}
+      <div class="pkpis" style="flex:1;min-width:180px">
+        ${hubKpi(bldgs.length,lb('المباني||Buildings'))}
+        ${hubKpi(units.length,lb('الوحدات||Units'))}
+        ${hubKpi(assets.length,lb('الأصول||Assets'))}
+        ${hubKpi(agg.vacant,lb('وحدات شاغرة||Vacant'),agg.vacant?'warn':'ok')}
+        ${hubKpi(moneyK(contractY)+' <small>'+lb('ر.س/سنة||SAR/yr')+'</small>',lb('إيجار متعاقد||Contracted rent'))}
+        ${hubKpi(moneyK(targetY)+' <small>'+lb('ر.س/سنة||SAR/yr')+'</small>',lb('إيجار مستهدف||Target rent'))}
+      </div></div>
+    <div class="legend">
+      <div class="li" onclick="goTab('units')"><span class="lft"><span class="dot" style="background:#0891b2"></span>${lb('وحدات مؤجرة||Rented units')}</span><b>${agg.rented}</b></div>
+      <div class="li" onclick="goTab('units')"><span class="lft"><span class="dot" style="background:#94a3b8"></span>${lb('وحدات شاغرة||Vacant units')}</span><b>${agg.vacant}</b></div>
+      <div class="li" onclick="goTab('units')"><span class="lft"><span class="dot" style="background:#f59e0b"></span>${lb('تحت الصيانة||Under maintenance')}</span><b>${agg.maint}</b></div>
+      <div class="li" onclick="goTab('units')"><span class="lft"><span class="dot" style="background:#7c3aed"></span>${lb('محجوزة||Reserved')}</span><b>${agg.reserved}</b></div>
+    </div>
+    ${top.length?top.map(kv=>hubBar(bName(kv[0]),kv[1],maxT,'linear-gradient(90deg,#0e7490,#22d3ee)',"goTab('units')",moneyK(kv[1]))).join(''):''}
+    <div class="pillar-foot">
+      ${isAdmin()?`<button class="btn ghost sm" onclick="goTab('cmps')">${lb('العقارات||Properties')}</button>`:''}
+      <button class="btn ghost sm" onclick="goTab('assets')">${lb('الأصول||Assets')}</button>
+      <button class="btn ghost sm" onclick="goTab('units')">${lb('الوحدات والمستأجرون||Units & tenants')}</button>
+    </div></div>`;
+}
+/* --- 2) الصيانة والمقاولون: أوامر الشغل والفنيون وعقود الخدمات --- */
+function hubMaintenanceCard(){
+  const act=activeCmp();
+  const scope=(isTech()?db.wos.filter(w=>w.assigneeId===me.id):db.wos).filter(w=>w.compoundId===act);
+  const open=scope.filter(w=>w.status!=='closed');
+  const urgent=open.filter(w=>w.priority==='urgent').length;
+  const overdue=open.filter(w=>w.dueDate&&daysUntil(w.dueDate)<0).length;
+  const ctrs=db.contracts.filter(c=>c.compoundId===act);
+  const actCtr=ctrs.filter(c=>daysUntil(c.end)>=0).length;
+  const soonCtr=ctrs.filter(c=>{const d=daysUntil(c.end);return d>=0&&d<=30;}).length;
+  const ctrVal=ctrs.filter(c=>daysUntil(c.end)>=0).reduce((s,c)=>s+Number(c.cost||0),0);
+  const pal=['#0891b2','#f59e0b','#7c3aed','#159957'];
+  const stRows=Object.keys(WSTAT).map((k,i)=>({k,n:scope.filter(w=>w.status===k).length,c:pal[i%pal.length]}));
+  const maxS=Math.max(1,...stRows.map(r=>r.n));
+  const techs=isTech()?[]:perfByTech(scope).slice(0,4);
+  const maxT=techs.length?Math.max(...techs.map(t=>t[1].c)):1;
+  return `<div class="pillar">
+    <div class="pillar-head"><span class="pillar-ic ic-tool">${ic('tool',19)}</span>
+      <span><span class="pt">${lb('الصيانة والمقاولون||Maintenance & Contractors')}</span>
+      <span class="ps">${lb('أوامر الشغل · الفنيون · عقود الخدمات||Work orders · technicians · service contracts')}</span></span>
+      <button class="btn ghost sm pgo" onclick="goTab('wos')">${lb('فتح||Open')}</button></div>
+    <div class="pkpis">
+      ${hubKpi(open.length,lb('بلاغات مفتوحة||Open reports'))}
+      ${hubKpi(urgent,lb('طارئة||Urgent'),urgent?'warn':'')}
+      ${hubKpi(overdue,lb('متجاوزة الاستحقاق||Overdue'),overdue?'warn':'')}
+      ${hubKpi(actCtr,lb('عقود سارية||Active contracts'))}
+      ${hubKpi(db.suppliers.length,lb('مقاولون وموردون||Contractors'))}
+      ${hubKpi(moneyK(ctrVal)+' <small>'+lb('ر.س||SAR')+'</small>',lb('قيمة العقود||Contracts value'))}
+    </div>
+    ${soonCtr?`<div class="alert-li alrow" onclick="goTab('contracts')">${lb('عقود تنتهي خلال 30 يوماً:||Contracts ending within 30 days:')} <b>${soonCtr}</b></div>`:''}
+    ${stRows.map(r=>hubBar(WSTAT[r.k][0],r.n,maxS,r.c,`dashStatus('${r.k}')`,r.n)).join('')}
+    ${techs.length?`<div class="psub">${lb('أعلى الفنيين إنجازاً||Top technicians')}</div>
+      ${techs.map(t=>hubBar(t[0],t[1].c,maxT,'linear-gradient(90deg,#b45309,#fbbf24)',"goTab('rep')",t[1].c)).join('')}`:''}
+    <div class="pillar-foot">
+      <button class="btn ghost sm" onclick="goTab('wos')">${lb('أوامر الشغل||Work orders')}</button>
+      <button class="btn ghost sm" onclick="goTab('pm')">${lb('الصيانة الدورية||Preventive')}</button>
+      <button class="btn ghost sm" onclick="goTab('contracts')">${lb('العقود والموردون||Contracts')}</button>
+    </div></div>`;
+}
+/* --- 3) المتتبع المالي: الإيرادات والفواتير والمصروفات --- */
+function hubFinance(){
+  const act=activeCmp();
+  const tenants=cmpTenants();
+  const income=tenants.reduce((s,t)=>s+Number(t.rent||0),0);
+  const wos=db.wos.filter(w=>w.compoundId===act);
+  const labor=wos.filter(w=>w.status==='closed'&&!w.projectId).reduce((s,w)=>s+Number(w.cost||0),0);
+  const pos=db.pos.filter(po=>!po.compoundId||po.compoundId===act);
+  const invs=pos.filter(po=>po.invApproved&&po.invoice&&!po.projectId);
+  const purch=invs.reduce((s,po)=>s+Number(po.invoice.total||0),0);
+  const projExp=db.projects.filter(p=>p.compoundId===act).reduce((s,p)=>s+projCosts(p).total,0);
+  const ctrs=db.contracts.filter(c=>c.compoundId===act&&daysUntil(c.end)>=0);
+  const ctrVal=ctrs.reduce((s,c)=>s+Number(c.cost||0),0);
+  const totalExp=labor+purch+projExp+ctrVal;
+  const net=income-totalExp;
+  const empty=!income&&!totalExp&&!invs.length;
+  const months=[];const now=new Date();
+  for(let k=5;k>=0;k--){const d=new Date(now.getFullYear(),now.getMonth()-k,1);
+    months.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}
+  const expM={},incM={};months.forEach(m=>{expM[m]=0;incM[m]=0;});
+  wos.forEach(w=>{if(w.status==='closed'&&w.closedAt&&!w.projectId){const k=monthKey(w.closedAt);if(k in expM)expM[k]+=Number(w.cost||0);}});
+  pos.forEach(po=>{if(po.invApproved&&po.invoice&&!po.projectId){const k=monthKey(po.invoice.date);if(k in expM)expM[k]+=Number(po.invoice.total||0);}});
+  tenants.forEach(t=>months.forEach(m=>{
+    const last=new Date(+m.slice(0,4),+m.slice(5,7),0);
+    const eIso=last.getFullYear()+'-'+String(last.getMonth()+1).padStart(2,'0')+'-'+String(last.getDate()).padStart(2,'0');
+    if((!t.leaseStart||t.leaseStart<=eIso)&&(!t.leaseEnd||t.leaseEnd>=m+'-01'))incM[m]+=Number(t.rent||0)/12;}));
+  const maxM=Math.max(1,...months.map(m=>Math.max(incM[m],expM[m])));
+  const mName=k=>{const p=k.split('-');return new Date(+p[0],+p[1]-1,1).toLocaleDateString(db.lang==='ar'?'ar-EG':'en-GB',{month:'short'});};
+  const rows=[
+    [lb('إيرادات الإيجار المتعاقدة||Contracted rental income'),income,'ok'],
+    [lb('تكلفة الصيانة (عمالة)||Maintenance labor'),labor,''],
+    [lb('فواتير المشتريات المعتمدة||Approved purchase invoices'),purch,''],
+    [lb('مصروفات المشاريع||Project expenses'),projExp,''],
+    [lb('عقود الخدمات السارية||Active service contracts'),ctrVal,'']
+  ];
+  return `<div class="pillar">
+    <div class="pillar-head"><span class="pillar-ic ic-fin">${ic('wallet',19)}</span>
+      <span><span class="pt">${lb('المتتبع المالي||Financial Tracker')}</span>
+      <span class="ps">${lb('الإيرادات · الفواتير · المصروفات||Income · invoices · expenses')}</span></span>
+      <button class="btn ghost sm pgo" onclick="goTab('rep')">${lb('التقارير||Reports')}</button></div>
+    ${empty?`<div class="empty">${lb('لا توجد بيانات مالية بعد — أضف وحدات ومستأجرين وأوامر شغل||No financial data yet — add units, tenants and work orders')}</div>`:''}
+    <div class="pkpis">
+      ${hubKpi(moneyK(income)+' <small>'+lb('ر.س||SAR')+'</small>',lb('الإيرادات (سنوي)||Income (year)'))}
+      ${hubKpi(moneyK(totalExp)+' <small>'+lb('ر.س||SAR')+'</small>',lb('إجمالي المصروفات||Total expenses'),totalExp?'warn':'')}
+      ${hubKpi((net<0?'-':'')+moneyK(Math.abs(net))+' <small>'+lb('ر.س||SAR')+'</small>',lb('الصافي||Net'),net<0?'warn':'ok')}
+      ${hubKpi(invs.length,lb('فواتير معتمدة||Approved invoices'))}
+    </div>
+    <div class="netline ${net>=0?'pos':'neg'}"><span>${lb('صافي الدخل المتوقع (سنوي)||Expected net income (year)')}</span>
+      <span class="nv">${net<0?'-':''}${money(Math.abs(net))}</span></div>
+    ${empty?'':`<div class="psub">${lb('الإيراد الشهري مقابل المصروفات — 6 أشهر||Monthly income vs expenses — 6 months')}</div>
+    <div class="fchart">${months.map(m=>`<div class="fcol" title="${mName(m)} — ${lb('إيراد||Income')}: ${money(incM[m])} · ${lb('مصروف||Expense')}: ${money(expM[m])}">
+      <span class="fbars"><i class="inc" style="height:${Math.round(incM[m]/maxM*100)}%"></i><i class="exp" style="height:${Math.round(expM[m]/maxM*100)}%"></i></span>
+      <span class="fl">${mName(m)}</span></div>`).join('')}</div>
+    <div class="legend" style="flex-direction:row;gap:14px">
+      <span class="li" style="justify-content:flex-start;gap:6px;padding:0"><span class="dot" style="background:#22c55e"></span>${lb('إيرادات||Income')}</span>
+      <span class="li" style="justify-content:flex-start;gap:6px;padding:0"><span class="dot" style="background:#dc2626"></span>${lb('مصروفات||Expenses')}</span></div>`}
+    <div class="tbl-wrap" style="margin-top:2px"><table>
+      <tr><th>${lb('البند||Item')}</th><th>${lb('المبلغ||Amount')}</th></tr>
+      ${rows.map(r=>`<tr><td>${r[0]}</td><td style="font-weight:800;${r[2]==='ok'?'color:var(--green)':''}">${money(r[1])}</td></tr>`).join('')}
+      <tr><td><b>${lb('إجمالي المصروفات||Total expenses')}</b></td><td><b style="color:var(--red)">${money(totalExp)}</b></td></tr>
+    </table></div>
+    <div class="pillar-foot">
+      <button class="btn ghost sm" onclick="goTab('proc')">${lb('المشتريات والفواتير||Procurement & invoices')}</button>
+      <button class="btn ghost sm" onclick="goTab('rep')">${lb('تقارير المصروفات||Expense reports')}</button>
+      <button class="btn ghost sm" onclick="goTab('proj')">${lb('المشاريع||Projects')}</button>
+    </div></div>`;
+}
+/* الوحدات الثلاث بلوحة واحدة — الصلاحيات تحدد ما يظهر لكل دور */
+function vHub(){
+  const cards=[];
+  if(!isTech())cards.push(hubPortfolioCard());
+  cards.push(hubMaintenanceCard());
+  if(isEng()||me.role==='sitemgr')cards.push(hubFinance());
+  return `<div class="hub-head">
+    <span><b>${lb('منصة أملاكي||Amlaki Platform')}</b>
+      <span class="muted">${lb('محفظة العقارات · الصيانة والمقاولون · المتتبع المالي||Property portfolio · Maintenance & contractors · Financial tracker')}</span></span>
+    <span class="hub-badge">${lb('لوحة إدارة الأملاك||Property management dashboard')}</span></div>
+  <div class="hub">${cards.join('')}</div>`;
+}
 function vDash(){
   const act=activeCmp();
   const scope=(isTech()?db.wos.filter(w=>w.assigneeId===me.id):db.wos).filter(w=>w.compoundId===act);
@@ -1736,6 +1987,7 @@ function vDash(){
   if(isTech()){
     return `<div class="stats">${stats}</div>
     ${pwBanner}<div class="qa">${qa.join('')}</div>
+    ${vHub()}
     <div class="dash-grid">
       <div class="card dg-6"><h2> ${lb('مهامي المفتوحة||My Open Tasks')}</h2>
         ${miniWoTable(scope.filter(w=>w.assigneeId===me.id&&w.status!=='closed'))}</div>
@@ -1744,6 +1996,7 @@ function vDash(){
   }
   return `<div class="stats">${stats}</div>
   ${pwBanner}<div class="qa">${qa.join('')}</div>
+  ${vHub()}
   <div class="dash-grid">
     ${alertsCard}
     <div class="card dg-5"><h2> ${lb('صيانة قادمة خلال أسبوعين||Upcoming PM (≤2 weeks)')}</h2>${pmSoonCard(pmSoonList)}</div>
