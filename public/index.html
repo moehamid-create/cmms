@@ -981,7 +981,7 @@ function migrate(d){
   }
   /* ---- شبكة أمان تُنفَّذ دائماً (حتى مع ver=6) لضمان بيانات قابلة للاستخدام ---- */
   ['compounds','buildings','units','tenants','contracts','assets','wos','inv','moves','pms',
-   'suppliers','prs','pos','projects','employees','shifts','notifs']
+   'suppliers','prs','pos','projects','employees','shifts','notifs','fuelLogs','utilityLogs','certs']
    .forEach(k=>{if(!Array.isArray(d[k]))d[k]=[];});
   ['seq','prSeq','poSeq','rnSeq','prjSeq','ctSeq'].forEach(k=>{if(d[k]==null)d[k]=0;});
   if(typeof d.lang!=='string')d.lang='ar';
@@ -1188,7 +1188,8 @@ function setCmp(id){
 const COMMON_ROLES={dash:['admin','engineer','sitemgr','tech','store','proc'],wos:['admin','engineer','sitemgr','tech'],
   pm:['admin','engineer','sitemgr'],proj:['admin','engineer','sitemgr'],assets:['admin','engineer','sitemgr'],
   units:['admin','engineer','sitemgr'],inv:['admin','engineer','store'],proc:['admin','engineer','sitemgr','proc'],
-  contracts:['admin','engineer','sitemgr'],hr:['admin','engineer'],rep:['admin','engineer','sitemgr'],users:['admin'],cmps:['admin']};
+  contracts:['admin','engineer','sitemgr'],hr:['admin','engineer'],rep:['admin','engineer','sitemgr'],users:['admin'],cmps:['admin'],
+  fuel:['admin','engineer','sitemgr'],utils:['admin','engineer','sitemgr'],certs:['admin','engineer','sitemgr']};
 function navDef(k){
   const d=domainOf();
   const L={
@@ -1205,15 +1206,18 @@ function navDef(k){
     contracts:['file',d==='fleet'?lb('التأمين والعقود||Insurance & contracts'):lb('العقود||Contracts')],
     hr:['briefcase',d==='fleet'?lb('السائقون والموظفون||Drivers & workforce'):lb('الموظفون||Workforce')],
     rep:['chart',lb('التقارير||Reports')],
-    users:['users',lb('المستخدمون||Users')]
+    users:['users',lb('المستخدمون||Users')],
+    fuel:['fuel',lb('سجل الوقود||Fuel log')],
+    utils:['zap',lb('استهلاك المرافق||Utilities')],
+    certs:['shield',lb('الامتثال والشهادات||Compliance & certificates')]
   };
   return L[k]||['home',k];
 }
 const DOMAIN_TABS={
-  realestate:['dash','wos','pm','proj','assets','units','inv','proc','contracts','hr','rep','users'],
-  fleet:['dash','wos','pm','assets','inv','proc','contracts','proj','hr','rep','users'],
-  industrial:['dash','wos','pm','assets','contracts','inv','proc','proj','hr','rep','users'],
-  generic:['dash','wos','pm','assets','contracts','inv','proc','proj','hr','rep','users']
+  realestate:['dash','wos','pm','proj','assets','units','utils','inv','proc','contracts','hr','rep','users'],
+  fleet:['dash','wos','pm','assets','fuel','inv','proc','contracts','proj','hr','rep','users'],
+  industrial:['dash','wos','pm','assets','utils','certs','contracts','inv','proc','proj','hr','rep','users'],
+  generic:['dash','wos','pm','assets','utils','contracts','inv','proc','proj','hr','rep','users']
 };
 /* شاشات إدارية لا تظهر في القائمة الجانبية — تُفتح من مبدّل الأصل في الهيدر */
 const HIDDEN_TABS=['cmps'];
@@ -1474,6 +1478,14 @@ function genSysNotifs(){
       const dd=daysUntil(x.leaseEnd);
       if(dd<=45)notify('',(dd<0?lb('عقد إيجار منتهٍ: ||Expired lease: '):lb('إيجار ينتهي قريباً: ||Lease expiring: '))+x.name+' ('+fmtD(x.leaseEnd)+')','units','lea-'+x.id+'-'+x.leaseEnd);});
   }
+  /* تنبيهات انتهاء وثائق المركبات وشهادات الامتثال */
+  db.assets.filter(a=>a.compoundId===act).forEach(a=>{
+    [['insExp',lb('تأمين مركبة||Vehicle insurance')],['regExp',lb('استمارة مركبة||Vehicle registration')]].forEach(kv=>{
+      const d=a[kv[0]];if(!d)return;const dd=daysUntil(d);
+      if(dd<=45)notify('',(dd<0?lb('منتهٍ: ||Expired: '):lb('ينتهي قريباً: ||Expiring soon: '))+kv[1]+' — '+a.name+' ('+fmtD(d)+')','assets','veh-'+a.id+'-'+kv[0]+'-'+d);});});
+  (db.certs||[]).filter(c=>c.compoundId===act).forEach(c=>{
+    if(!c.expires)return;const dd=daysUntil(c.expires);
+    if(dd<=45)notify('',(dd<0?lb('شهادة منتهية: ||Expired certificate: '):lb('شهادة تنتهي قريباً: ||Certificate expiring: '))+(CERTTL()[c.type||'other'])+' ('+fmtD(c.expires)+')','certs','cert-'+c.id+'-'+c.expires);});
   persist();
 }
 function unreadCount(){return db.notifs.filter(n=>!n.read).length;}
@@ -1686,6 +1698,9 @@ function paintTab(){
   else if(TAB==='proc'){v.innerHTML=vProc();paintProc();}
   else if(TAB==='rep')v.innerHTML=vRep();
   else if(TAB==='users')v.innerHTML=vUsers();
+  else if(TAB==='fuel')v.innerHTML=vFuel();
+  else if(TAB==='utils')v.innerHTML=vUtils();
+  else if(TAB==='certs')v.innerHTML=vCerts();
   v.classList.remove('vfade');void v.offsetWidth;v.classList.add('vfade');
 }
 
@@ -2100,6 +2115,17 @@ function hubFleetCard(){
   const soon=ctrs.filter(c=>(c.scope==='insurance'||c.scope==='registration')&&daysUntil(c.end)<=45);
   const pms=db.pms.filter(p=>p.compoundId===act);
   const pmDue=pms.filter(p=>pmIsLate(p)||daysUntil(nextDueOf(p))<=14).length;
+  /* بيانات الوقود ووثائق المركبات (تُدار من سجل الوقود وحقول المركبة) */
+  const fl=fuelLogsQ();
+  const fuelCost=fl.reduce((s,f)=>s+Number(f.cost||0),0);
+  const cut30=Date.now()-30*864e5;
+  const fuel30=fl.filter(f=>f.date&&new Date(f.date).getTime()>=cut30).reduce((s,f)=>s+Number(f.cost||0),0);
+  const effs=fuelEff(fl).filter(e=>e.kmpl!=null);
+  const avgKmL=effs.length?effs.reduce((s,e)=>s+e.kmpl,0)/effs.length:null;
+  const docs=[];
+  veh.forEach(v=>{if(v.insExp)docs.push({n:v.name,t:lb('تأمين||Insurance'),d:v.insExp});
+    if(v.regExp)docs.push({n:v.name,t:lb('استمارة||Registration'),d:v.regExp});});
+  const docsSoon=docs.filter(x=>daysUntil(x.d)<=45).sort((a,b)=>daysUntil(a.d)-daysUntil(b.d));
   const maxKm=meters.length?Math.max(...meters.map(a=>Number(a.meter||0))):1;
   const top=meters.slice().sort((a,b)=>Number(b.meter||0)-Number(a.meter||0)).slice(0,4);
   return `<div class="pillar">
@@ -2116,12 +2142,17 @@ function hubFleetCard(){
         ${hubKpi(maint,lb('تحت الصيانة||Under maintenance'),maint?'warn':'')}
         ${hubKpi(moneyK(totalKm)+' <small>'+lb('كم||km')+'</small>',lb('إجمالي العدّاد||Total odometer'))}
         ${hubKpi(pmDue,lb('صيانة مستحقة||Service due'),pmDue?'warn':'')}
+        ${hubKpi(moneyK(fuelCost)+' <small>'+lb('ر.س||SAR')+'</small>',lb('تكلفة الوقود||Fuel cost'))}
+        ${hubKpi(fuel30?moneyK(fuel30)+' <small>'+lb('ر.س||SAR')+'</small>':'—',lb('وقود آخر 30 يوماً||Fuel — 30 days'))}
+        ${hubKpi(avgKmL?avgKmL.toFixed(1)+' <small>'+lb('كم/لتر||km/L')+'</small>':'—',lb('متوسط الاستهلاك||Avg consumption'))}
       </div></div>
     ${soon.length?`<div class="alert-li alrow" onclick="goTab('contracts')">${lb('تأمين / استمارة تنتهي خلال 45 يوماً:||Insurance / registration expiring ≤45d:')} <b>${soon.length}</b></div>`:''}
+    ${docsSoon.length?`<div class="alert-li alrow" onclick="goTab('assets')">${lb('وثائق مركبات تنتهي قريباً:||Vehicle documents expiring:')} <b>${esc(docsSoon[0].n)}</b> — ${esc(docsSoon[0].t)} (${fmtD(docsSoon[0].d)})${docsSoon.length>1?` +${docsSoon.length-1}`:''}</div>`:''}
     ${top.length?top.map(a=>hubBar(a.name,Number(a.meter||0),maxKm,'linear-gradient(90deg,#7c3aed,#a78bfa)',"goTab('assets')",moneyK(a.meter)+' '+lb('كم||km'))).join(''):''}
     ${!veh.length?`<div class="empty">${lb('لا مركبات مسجّلة بعد — أضفها من شاشة المركبات.||No vehicles yet — add them from the Vehicles screen.')}</div>`:''}
     <div class="pillar-foot">
       <button class="btn ghost sm" onclick="goTab('assets')">${lb('المركبات||Vehicles')}</button>
+      <button class="btn ghost sm" onclick="goTab('fuel')">${lb('سجل الوقود||Fuel log')}</button>
       <button class="btn ghost sm" onclick="goTab('pm')">${lb('صيانة دورية||Scheduled service')}</button>
       <button class="btn ghost sm" onclick="goTab('contracts')">${lb('التأمين والعقود||Insurance & contracts')}</button>
     </div></div>`;
@@ -2141,9 +2172,16 @@ function hubFacilityCard(){
   const safetySoon=safety.filter(c=>daysUntil(c.end)<=45).length;
   const wos=db.wos.filter(w=>w.compoundId===act);
   const downtime=wos.reduce((s,w)=>s+Number(w.downtimeH||0),0);
-  const utilLogs=(db.utilityLogs||[]).filter(u=>u.compoundId===act);
+  const utilLogs=utilLogsQ();
   const utilQty=utilLogs.reduce((s,u)=>s+Number(u.qty||0),0);
-  const maxEq=eq.length?Math.max(...eq.map(a=>Number(a.meter||0)))||1:1;
+  const utilCost=utilLogs.reduce((s,u)=>s+Number(u.cost||0),0);
+  const certs=certsQ();
+  const certValid=certs.filter(c=>c.expires&&daysUntil(c.expires)>45).length;
+  const certSoon=certs.filter(c=>c.expires&&daysUntil(c.expires)>=0&&daysUntil(c.expires)<=45).length;
+  const certDead=certs.filter(c=>c.expires&&daysUntil(c.expires)<0).length;
+  const utilTop=Object.entries(utilLogs.reduce((m,u)=>{const k=u.type||'other';m[k]=(m[k]||0)+Number(u.cost||0);return m;},{}))
+    .sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const maxUT=utilTop.length?Math.max(...utilTop.map(x=>x[1])):1;
   return `<div class="pillar">
     <div class="pillar-head"><span class="pillar-ic ic-ind">${ic('factory',19)}</span>
       <span><span class="pt">${lb('المنشأة والمعدات||Facility & machinery')}</span>
@@ -2156,16 +2194,20 @@ function hubFacilityCard(){
         ${hubKpi(down,lb('متوقفة||Down'),down?'warn':'')}
         ${hubKpi(maint,lb('تحت الصيانة||Under maintenance'),maint?'warn':'')}
         ${hubKpi(amc,lb('عقود AMC سارية||Active AMC'))}
-        ${hubKpi(utilVal?moneyK(utilVal)+' <small>'+lb('ر.س||SAR')+'</small>':'—',lb('عقود المرافق||Utility contracts'))}
+        ${hubKpi(utilCost?moneyK(utilCost)+' <small>'+lb('ر.س||SAR')+'</small>':'—',lb('تكلفة المرافق||Utility cost'))}
+        ${hubKpi(certs.length?certValid+' / '+certs.length:'—',lb('شهادات سارية||Valid certificates'),(certSoon||certDead)?'warn':'')}
         ${hubKpi(downtime?moneyK(downtime)+' <small>'+lb('ساعة||h')+'</small>':'—',lb('زمن التوقف||Downtime'))}
       </div></div>
     ${safetySoon?`<div class="alert-li alrow" onclick="goTab('contracts')">${lb('فحوصات سلامة / دفاع مدني تنتهي ≤45 يوم:||Safety & civil-defence checks ≤45d:')} <b>${safetySoon}</b></div>`:''}
-    ${utilLogs.length?`<div class="psub">${lb('استهلاك المرافق المسجّل||Logged utility usage')}: <b>${moneyK(utilQty)}</b></div>`:''}
+    ${(certSoon||certDead)?`<div class="alert-li alrow" onclick="goTab('certs')">${lb('شهادات تنتهي أو منتهية:||Certificates expiring or expired:')} <b>${certSoon+certDead}</b></div>`:''}
+    ${utilTop.map(x=>hubBar(UTILTL()[x[0]]||x[0],x[1],maxUT,'linear-gradient(90deg,#b45309,#fbbf24)',"goTab('utils')",moneyK(x[1]))).join('')}
+    ${utilLogs.length?`<div class="psub">${lb('إجمالي الاستهلاك المسجّل||Logged usage total')}: <b>${moneyK(utilQty)}</b></div>`:''}
     ${!eq.length?`<div class="empty">${lb('لا معدات مسجّلة بعد — أضفها من شاشة المعدات.||No machinery yet — add it from the Machinery screen.')}</div>`:''}
     <div class="pillar-foot">
       <button class="btn ghost sm" onclick="goTab('assets')">${lb('المعدات||Machinery')}</button>
+      <button class="btn ghost sm" onclick="goTab('utils')">${lb('المرافق||Utilities')}</button>
+      <button class="btn ghost sm" onclick="goTab('certs')">${lb('الامتثال||Compliance')}</button>
       <button class="btn ghost sm" onclick="goTab('pm')">${lb('الصيانة الوقائية||Equipment PM')}</button>
-      <button class="btn ghost sm" onclick="goTab('contracts')">${lb('العقود والامتثال||Contracts & compliance')}</button>
     </div></div>`;
 }
 /* --- لوحة عامة للأملاك الأخرى --- */
@@ -2213,17 +2255,21 @@ function hubOnboarding(){
       ['سجّل عقد خدمة أو صيانة دورية||Add a service contract or PM','contracts']
     ]:dom==='fleet'?[
       ['أضف المركبات||Add vehicles','assets'],
+      ['وثّق التأمين والاستمارة لكل مركبة||Record insurance & registration per vehicle','assets'],
       ['حدّد صيانة دورية (زيت وفلاتر) لكل مركبة||Set scheduled service per vehicle','pm'],
-      ['أضف التأمين والاستمارة كعقود||Add insurance & registration contracts','contracts'],
+      ['سجّل تعبئات الوقود والعدّاد||Log fuel fill-ups & odometer','fuel'],
       ['أضف السائقين والموظفين||Add drivers & workforce','hr']
     ]:dom==='industrial'?[
       ['أضف الآلات والمعدات||Add machinery','assets'],
       ['خطط الصيانة الوقائية للمعدات||Create equipment PM plans','pm'],
       ['أضف عقود AMC والسلامة والمرافق||Add AMC, safety & utility contracts','contracts'],
+      ['سجّل قراءات المرافق||Log utility readings','utils'],
+      ['أضف شهادات الامتثال والسلامة||Add compliance & safety certificates','certs'],
       ['أضف الفنيين واربطهم||Add technicians','users']
     ]:[
       ['أضف الأصول||Add assets','assets'],
       ['خطط الصيانة الدورية||Create PM plans','pm'],
+      ['سجّل فواتير وقراءات المرافق||Log utility bills & readings','utils'],
       ['أضف عقود الخدمات||Add service contracts','contracts']
     ]).filter(s=>tabAllowed(s[1]));
   return `<div class="card onb-wrap">
@@ -2294,6 +2340,13 @@ function vDash(){
       const dd=daysUntil(x.leaseEnd);
       if(dd<=45)alerts.push({ic:'',h:`${dd<0?lb('إيجار منتهٍ:||Expired lease:'):lb('إيجار ينتهي قريباً:||Lease ending:')} <b>${esc(x.name)}</b> (${fmtD(x.leaseEnd)})`,tab:'units'});});
   }
+  /* انتهاء وثائق المركبات وشهادات الامتثال */
+  db.assets.filter(a=>a.compoundId===act).forEach(a=>{
+    [['insExp',lb('تأمين مركبة||Vehicle insurance')],['regExp',lb('استمارة مركبة||Vehicle registration')]].forEach(kv=>{
+      const d=a[kv[0]];if(!d)return;const dd=daysUntil(d);
+      if(dd<=45)alerts.push({ic:'',h:`${dd<0?lb('منتهٍ:||Expired:'):lb('ينتهي قريباً:||Expiring soon:')} <b>${esc(kv[1])}</b> — ${esc(a.name)} (${fmtD(d)})`,tab:'assets',q:a.name});});});
+  certsQ().forEach(c=>{if(!c.expires)return;const dd=daysUntil(c.expires);
+    if(dd<=45)alerts.push({ic:'',h:`${dd<0?lb('شهادة منتهية:||Expired certificate:'):lb('شهادة تنتهي قريباً:||Certificate expiring:')} <b>${CERTTL()[c.type||'other']}</b> (${fmtD(c.expires)})`,tab:'certs'});});
   low.forEach(i=>alerts.push({ic:'',h:`${lb('مخزون تحت الحد:||Low stock:')} <b>${esc(i.name)}</b> (${i.qty} ${esc(i.unit)})`,tab:'inv',q:i.name}));
   down.forEach(a=>alerts.push({ic:'',h:`${esc(a.name)} — ${lb('متوقف||Down')}`,tab:'assets',q:a.name}));
   window._alerts=alerts;
@@ -2436,8 +2489,11 @@ document.addEventListener('keydown',e=>{
 function assetForm(id){
   if(!isEng())return;
   const a=id?db.assets.find(x=>x.id===id):{};
-  modal(`<h3>${id?lb('تعديل أصل||Edit Asset'):lb('إضافة أصل||Add Asset')}</h3>
-  <label>${lb('اسم الأصل *||Asset Name *')}</label><input id="fa_n" value="${esc(a.name||'')}">
+  const dom=domainOf();
+  const domLbl=dom==='fleet'?lb('مركبة||Vehicle'):dom==='industrial'?lb('معدة / آلة||Equipment'):lb('أصل||Asset');
+  const empOpts=db.employees.filter(e=>e.compoundId===activeCmp()).map(e=>`<option value="${esc(e.name)}">`).join('');
+  modal(`<h3>${(id?lb('تعديل||Edit'):lb('إضافة||Add'))} ${domLbl}</h3>
+  <label>${dom==='fleet'?lb('اسم المركبة *||Vehicle name *'):lb('اسم الأصل *||Asset Name *')}</label><input id="fa_n" value="${esc(a.name||'')}">
   <div class="fg">
     <div><label>${lb('التصنيف||Category')}</label><select id="fa_c">${db.categories.map(c=>`<option ${a.category===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
     <div><label>${lb('المبنى/المنطقة||Building/Area')}</label><select id="fa_b" onchange="fillFloors()"><option value="">—</option>${bOpts(a.building)}</select></div>
@@ -2450,6 +2506,15 @@ function assetForm(id){
     <div><label>${lb('الحالة||Status')}</label><select id="fa_st">${Object.keys(ASTAT).map(k=>`<option value="${k}" ${(a.status||'ok')===k?'selected':''}>${ASTAT[k][0]}</option>`).join('')}</select></div>
     <div><label> ${lb('قراءة العداد الحالية||Current Meter Reading')}</label><input type="number" step="any" min="0" id="fa_mr" value="${a.meter??''}" placeholder="مثال: 1250"></div>
     <div><label>${lb('وحدة العداد||Meter Unit')}</label><select id="fa_mu"><option value="">—</option>${['ساعة','كم','دورة'].map(u=>`<option ${a.meterUnit===u?'selected':''}>${u}</option>`).join('')}</select></div>
+    ${dom==='fleet'?`
+    <div><label>${lb('لوحة المركبة||Plate No.')}</label><input id="fa_pl" value="${esc(a.plate||'')}" placeholder="أ ب ج 1234"></div>
+    <div><label>${lb('السائق||Driver')}</label><input id="fa_dr" list="fa_empdl" value="${esc(a.driver||'')}"><datalist id="fa_empdl">${empOpts}</datalist></div>
+    <div><label>${lb('انتهاء التأمين||Insurance expiry')}</label><input type="date" id="fa_ie" value="${a.insExp||''}"></div>
+    <div><label>${lb('انتهاء الاستمارة||Registration expiry')}</label><input type="date" id="fa_re" value="${a.regExp||''}"></div>`:''}
+    ${dom==='industrial'?`
+    <div><label>${lb('درجة الأهمية||Criticality')}</label><select id="fa_cr">
+      <option value="normal" ${(a.critical||'normal')==='normal'?'selected':''}>${lb('عادية||Normal')}</option>
+      <option value="critical" ${a.critical==='critical'?'selected':''}>${lb('حرجة — توقف خط الإنتاج||Critical')}</option></select></div>`:''}
   </div>
   <label> ${lb('صور ومستندات الأصل||Asset Photos & Documents')}</label>
   <div id="fa_photos" class="pgrid"></div>
@@ -2474,6 +2539,15 @@ function saveAsset(id){
     meter:$('fa_mr').value===''||$('fa_mr').value==null?null:+$('fa_mr').value,meterUnit:$('fa_mu').value};
   o.compoundId=activeCmp();
   o.photos=(window._faPh||[]).slice();
+  /* حقول خاصة بنوع الأصل النشط */
+  const dom=domainOf();
+  if(dom==='fleet'){
+    o.plate=$('fa_pl')?$('fa_pl').value.trim():'';
+    o.driver=$('fa_dr')?$('fa_dr').value.trim():'';
+    o.insExp=$('fa_ie')?$('fa_ie').value:'';
+    o.regExp=$('fa_re')?$('fa_re').value:'';
+  }
+  if(dom==='industrial')o.critical=$('fa_cr')?$('fa_cr').value:'normal';
   if(id)Object.assign(db.assets.find(x=>x.id===id),o);
   else db.assets.push(Object.assign({id:uid('A'),projectId:''},o));
   persist();closeModal();paintTab();toast(lb(' تم الحفظ|| Saved'),'ok');
@@ -3913,6 +3987,250 @@ function repMonthCsv(){
     db.pos.forEach(po=>{if(po.invApproved&&po.invoice&&monthKey(po.invoice.date)===m)p+=Number(po.invoice.total||0);});
     return [m,l.toFixed(2),p.toFixed(2),(l+p).toFixed(2)];});
   csvExport('monthly-expenses',[lb('الشهر||Month'),lb('عمالة||Labor'),lb('مشتريات||Purchases'),lb('الإجمالي||Total')],rows);
+}
+
+/* ===== سجل الوقود (الأسطول) ===== */
+function fuelLogsQ(){return (db.fuelLogs||[]).filter(f=>f.compoundId===activeCmp());}
+function assetLabel(id){const a=db.assets.find(x=>x.id===id);return a?a.name:lb('غير محدد||Unspecified');}
+/* استهلاك تقديري لكل مركبة: (أقصى عدّاد − أدنى عدّاد) ÷ اللترات المسجّلة */
+function fuelEff(list){
+  const per={};
+  list.forEach(f=>{if(!f.assetId)return;
+    const o=per[f.assetId]=per[f.assetId]||{liters:0,cost:0,odos:[]};
+    o.liters+=Number(f.liters||0);o.cost+=Number(f.cost||0);
+    if(f.odo!=null&&f.odo!=='')o.odos.push(Number(f.odo));});
+  return Object.entries(per).map(kv=>{
+    const o=kv[1],os=o.odos.slice().sort((a,b)=>a-b);
+    const dist=os.length>1?os[os.length-1]-os[0]:0;
+    return {id:kv[0],name:assetLabel(kv[0]),liters:o.liters,cost:o.cost,dist,
+      kmpl:(o.liters>0&&dist>0)?dist/o.liters:null};}).sort((a,b)=>b.cost-a.cost);
+}
+function vFuel(){
+  const list=fuelLogsQ().slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const totalL=list.reduce((s,f)=>s+Number(f.liters||0),0);
+  const totalC=list.reduce((s,f)=>s+Number(f.cost||0),0);
+  const avgP=totalL?totalC/totalL:0;
+  const cut=Date.now()-30*864e5;
+  const c30=list.filter(f=>f.date&&new Date(f.date).getTime()>=cut).reduce((s,f)=>s+Number(f.cost||0),0);
+  const eff=fuelEff(list);
+  const maxC=eff.length?Math.max(...eff.map(e=>e.cost)):1;
+  return `<div class="toolbar">
+    ${isEng()?`<button class="btn" onclick="fuelForm()">＋ ${lb('تعبئة وقود||Add fill-up')}</button>`:''}
+    <button class="btn ghost" onclick="fuelCsv()">${lb('Excel||Excel')}</button>
+    <button class="btn ghost" onclick="window.print()">${lb('طباعة||Print')}</button></div>
+  <div class="stats">
+    <div class="stat"><div class="num">${moneyK(totalL)}</div><div class="lbl">${lb('إجمالي اللترات||Total liters')}</div></div>
+    <div class="stat"><div class="num" style="font-size:19px">${money(totalC)}</div><div class="lbl">${lb('إجمالي التكلفة||Total cost')}</div></div>
+    <div class="stat"><div class="num">${avgP?avgP.toFixed(2):'—'}</div><div class="lbl">${lb('متوسط سعر اللتر||Avg price / litre')}</div></div>
+    <div class="stat ${c30?'':'ok'}"><div class="num" style="font-size:19px">${money(c30)}</div><div class="lbl">${lb('تكلفة آخر 30 يوماً||Last 30 days')}</div></div>
+  </div>
+  ${eff.length?`<div class="card"><h2>${lb('التكلفة والاستهلاك لكل مركبة (تقديري)||Cost & consumption per vehicle (est.)')}</h2>
+    ${eff.map(e=>hubBar(e.name,e.cost,maxC,'linear-gradient(90deg,#7c3aed,#a78bfa)',"goTab('assets')",
+      (e.kmpl?e.kmpl.toFixed(1)+' '+lb('كم/لتر||km/L')+' · ':'')+moneyK(e.cost))).join('')}
+    <p class="muted">${lb('الاستهلاك يُحسب من فرق قراءات العدّاد المسجّلة مع التعبئات — سجّل العدّاد مع كل تعبئة لدقة أعلى.||Consumption uses odometer readings captured with fill-ups — log the odometer each time for accuracy.')}</p></div>`:''}
+  <div class="card"><h2>${lb('سجل التعبئات||Fill-up log')} (${list.length})</h2><div class="tbl-wrap"><table>
+  <tr><th>${lb('التاريخ||Date')}</th><th>${lb('المركبة||Vehicle')}</th><th>${lb('اللترات||Liters')}</th><th>${lb('التكلفة||Cost')}</th><th>${lb('العدّاد||Odometer')}</th><th>${lb('المحطة||Station')}</th><th></th></tr>
+  ${list.length?list.map(f=>{const i=(db.fuelLogs||[]).indexOf(f);
+    return `<tr><td>${fmtD(f.date)}</td><td><b>${esc(assetLabel(f.assetId))}</b></td><td>${f.liters||'—'}</td>
+    <td>${money(f.cost)}</td><td>${f.odo!=null&&f.odo!==''?moneyK(f.odo)+' '+lb('كم||km'):'—'}</td><td>${esc(f.station||'—')}</td>
+    <td nowrap>${isEng()?`<button class="btn sm ghost" onclick="fuelForm('${i}')">${ic('edit',13)}</button>
+    <button class="btn sm danger" onclick="fuelDel(${i})">${ic('del',13)}</button>`:''}</td></tr>`;}).join('')
+    :`<tr><td colspan="7"><div class="empty">${lb('لا تعبئات مسجّلة بعد||No fill-ups yet')}</div></td></tr>`}
+  </table></div></div>`;
+}
+function fuelForm(i){
+  if(!isEng())return;
+  const f=(i!=null&&i!=='')?(db.fuelLogs||[])[i]||{}:{};
+  const veh=db.assets.filter(a=>a.compoundId===activeCmp());
+  if(!veh.length)return toast(lb(' أضف مركبة أولاً من شاشة المركبات|| Add a vehicle first'),'err');
+  modal(`<h3>${(i!=null&&i!=='')?lb('تعديل تعبئة||Edit fill-up'):lb('تعبئة وقود جديدة||New fill-up')}</h3>
+  <div class="fg">
+    <div><label>${lb('المركبة *||Vehicle *')}</label><select id="ff_a">${veh.map(v=>`<option value="${v.id}" ${f.assetId===v.id?'selected':''}>${esc(v.name)}${v.plate?' — '+esc(v.plate):''}</option>`).join('')}</select></div>
+    <div><label>${lb('التاريخ||Date')}</label><input type="date" id="ff_d" value="${f.date||todayISO()}"></div>
+    <div><label>${lb('اللترات *||Liters *')}</label><input type="number" step="any" min="0" id="ff_l" value="${f.liters??''}"></div>
+    <div><label>${lb('التكلفة (ر.س)||Cost (SAR)')}</label><input type="number" step="any" min="0" id="ff_c" value="${f.cost??''}"></div>
+    <div><label>${lb('قراءة العدّاد||Odometer')}</label><input type="number" step="any" min="0" id="ff_o" value="${f.odo??''}"></div>
+    <div><label>${lb('المحطة||Station')}</label><input id="ff_s" value="${esc(f.station||'')}"></div>
+  </div>
+  <label>${lb('ملاحظات||Notes')}</label><textarea id="ff_n" rows="2">${esc(f.notes||'')}</textarea>
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" onclick="fuelSave(${(i!=null&&i!=='')?i:'null'})">${lb('حفظ||Save')}</button></div>`);
+}
+function fuelSave(i){
+  const liters=+$('ff_l').value||0;
+  if(!liters)return toast(lb(' أدخل عدد اللترات|| Enter liters'),'err');
+  if(!db.fuelLogs)db.fuelLogs=[];
+  const o={compoundId:activeCmp(),assetId:$('ff_a').value,date:$('ff_d').value||todayISO(),liters,
+    cost:+$('ff_c').value||0,odo:$('ff_o').value===''?null:+$('ff_o').value,
+    station:$('ff_s').value.trim(),notes:$('ff_n').value.trim(),by:me.name};
+  if(i!=null&&i!=='null')Object.assign(db.fuelLogs[i],o);
+  else db.fuelLogs.unshift(Object.assign({id:uid('F'),createdAt:Date.now()},o));
+  /* مزامنة عدّاد المركبة مع أعلى قراءة — يشغّل محفّزات الصيانة بالعدّاد تلقائياً */
+  if(o.odo!=null&&o.assetId){const a=db.assets.find(x=>x.id===o.assetId);
+    if(a&&(a.meter==null||a.meter===''||Number(o.odo)>Number(a.meter))){a.meter=o.odo;if(!a.meterUnit)a.meterUnit='كم';}}
+  persist();closeModal();paintTab();toast(lb(' تم الحفظ|| Saved'),'ok');
+}
+function fuelDel(i){if(!confirm(lb('حذف التعبئة؟||Delete fill-up?')))return;
+  db.fuelLogs.splice(i,1);persist();paintTab();}
+function fuelCsv(){
+  const rows=fuelLogsQ().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)))
+    .map(f=>[f.date,assetLabel(f.assetId),Number(f.liters||0).toFixed(2),Number(f.cost||0).toFixed(2),
+      f.odo==null?'':Number(f.odo),f.station||'',f.notes||'']);
+  csvExport('fuel-log',[lb('التاريخ||Date'),lb('المركبة||Vehicle'),lb('اللترات||Liters'),lb('التكلفة||Cost'),
+    lb('العدّاد||Odometer'),lb('المحطة||Station'),lb('ملاحظات||Notes')],rows);
+}
+/* ===== استهلاك المرافق ===== */
+function utilLogsQ(){return (db.utilityLogs||[]).filter(u=>u.compoundId===activeCmp());}
+function UTILTL(){return {elec:lb('كهرباء||Electricity'),water:lb('مياه||Water'),gas:lb('غاز||Gas'),
+  diesel:lb('ديزل||Diesel'),other:lb('أخرى||Other')};}
+function UTILUL(){return {elec:lb('kWh||kWh'),water:lb('م³||m³'),gas:lb('م³||m³'),diesel:lb('لتر||L'),
+  other:lb('وحدة||unit')};}
+function vUtils(){
+  const list=utilLogsQ().slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const tot=list.reduce((s,u)=>s+Number(u.cost||0),0);
+  const cut=Date.now()-30*864e5;
+  const c30=list.filter(u=>u.date&&new Date(u.date).getTime()>=cut).reduce((s,u)=>s+Number(u.cost||0),0);
+  const byType={};
+  list.forEach(u=>{const k=u.type||'other';byType[k]=(byType[k]||0)+Number(u.cost||0);});
+  const types=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+  const maxT=types.length?Math.max(...types.map(t=>t[1])):1;
+  return `<div class="toolbar">
+    ${isEng()?`<button class="btn" onclick="utilForm()">＋ ${lb('قراءة جديدة||New reading')}</button>`:''}
+    <button class="btn ghost" onclick="utilCsv()">${lb('Excel||Excel')}</button>
+    <button class="btn ghost" onclick="window.print()">${lb('طباعة||Print')}</button></div>
+  <div class="stats">
+    <div class="stat"><div class="num" style="font-size:19px">${money(tot)}</div><div class="lbl">${lb('إجمالي تكلفة المرافق||Total utility cost')}</div></div>
+    <div class="stat"><div class="num" style="font-size:19px">${money(c30)}</div><div class="lbl">${lb('آخر 30 يوماً||Last 30 days')}</div></div>
+    <div class="stat"><div class="num">${list.length}</div><div class="lbl">${lb('عدد القراءات||Readings')}</div></div>
+    <div class="stat ${types.length&&types[0][1]>tot*0.6?'warn':''}"><div class="num" style="font-size:15px">${types.length?UTILTL()[types[0][0]]||types[0][0]:'—'}</div><div class="lbl">${lb('أعلى بند تكلفة||Top cost item')}</div></div>
+  </div>
+  ${types.length?`<div class="card"><h2>${lb('التكلفة حسب نوع المرفق||Cost by utility type')}</h2>
+    ${types.map(t=>hubBar(UTILTL()[t[0]]||t[0],t[1],maxT,'linear-gradient(90deg,#b45309,#fbbf24)',"goTab('utils')",moneyK(t[1]))).join('')}</div>`:''}
+  <div class="card"><h2>${lb('قراءات المرافق||Utility readings')} (${list.length})</h2><div class="tbl-wrap"><table>
+  <tr><th>${lb('التاريخ||Date')}</th><th>${lb('النوع||Type')}</th><th>${lb('الاستهلاك||Usage')}</th><th>${lb('التكلفة||Cost')}</th><th>${lb('قراءة العدّاد||Meter')}</th><th>${lb('المزوّد||Provider')}</th><th></th></tr>
+  ${list.length?list.map(u=>{const i=(db.utilityLogs||[]).indexOf(u);
+    return `<tr><td>${fmtD(u.date)}</td><td><b>${UTILTL()[u.type||'other']||'—'}</b></td>
+    <td>${u.qty!=null&&u.qty!==''?moneyK(u.qty)+' '+(u.unit||UTILUL()[u.type||'other']||''):'—'}</td>
+    <td>${money(u.cost)}</td><td>${u.meter!=null&&u.meter!==''?moneyK(u.meter):'—'}</td><td>${esc(u.provider||'—')}</td>
+    <td nowrap>${isEng()?`<button class="btn sm ghost" onclick="utilForm('${i}')">${ic('edit',13)}</button>
+    <button class="btn sm danger" onclick="utilDel(${i})">${ic('del',13)}</button>`:''}</td></tr>`;}).join('')
+    :`<tr><td colspan="7"><div class="empty">${lb('لا قراءات بعد||No readings yet')}</div></td></tr>`}
+  </table></div></div>`;
+}
+function utilForm(i){
+  if(!isEng())return;
+  const u=(i!=null&&i!=='')?(db.utilityLogs||[])[i]||{}:{};
+  modal(`<h3>${(i!=null&&i!=='')?lb('تعديل قراءة||Edit reading'):lb('قراءة مرافق جديدة||New utility reading')}</h3>
+  <div class="fg">
+    <div><label>${lb('النوع *||Type *')}</label><select id="fu_t">${Object.keys(UTILTL()).map(k=>`<option value="${k}" ${(u.type||'elec')===k?'selected':''}>${UTILTL()[k]}</option>`).join('')}</select></div>
+    <div><label>${lb('التاريخ||Date')}</label><input type="date" id="fu_d" value="${u.date||todayISO()}"></div>
+    <div><label>${lb('الاستهلاك||Usage')}</label><input type="number" step="any" min="0" id="fu_q" value="${u.qty??''}"></div>
+    <div><label>${lb('وحدة القياس||Unit')}</label><input id="fu_u" value="${esc(u.unit||'')}" placeholder="${UTILUL()[u.type||'elec']}"></div>
+    <div><label>${lb('التكلفة (ر.س)||Cost (SAR)')}</label><input type="number" step="any" min="0" id="fu_c" value="${u.cost??''}"></div>
+    <div><label>${lb('قراءة العدّاد||Meter reading')}</label><input type="number" step="any" id="fu_m" value="${u.meter??''}"></div>
+    <div><label>${lb('المزوّد||Provider')}</label><input id="fu_p" value="${esc(u.provider||'')}"></div>
+  </div>
+  <label>${lb('ملاحظات||Notes')}</label><textarea id="fu_no" rows="2">${esc(u.notes||'')}</textarea>
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" onclick="utilSave(${(i!=null&&i!=='')?i:'null'})">${lb('حفظ||Save')}</button></div>`);
+}
+function utilSave(i){
+  const cost=+$('fu_c').value||0,qty=$('fu_q').value===''?null:+$('fu_q').value;
+  if(!cost&&qty==null)return toast(lb(' أدخل الاستهلاك أو التكلفة|| Enter usage or cost'),'err');
+  if(!db.utilityLogs)db.utilityLogs=[];
+  const t=$('fu_t').value;
+  const o={compoundId:activeCmp(),type:t,date:$('fu_d').value||todayISO(),qty,cost,
+    unit:$('fu_u').value.trim()||UTILUL()[t]||'',meter:$('fu_m').value===''?null:+$('fu_m').value,
+    provider:$('fu_p').value.trim(),notes:$('fu_no').value.trim(),by:me.name};
+  if(i!=null&&i!=='null')Object.assign(db.utilityLogs[i],o);
+  else db.utilityLogs.unshift(Object.assign({id:uid('U'),createdAt:Date.now()},o));
+  persist();closeModal();paintTab();toast(lb(' تم الحفظ|| Saved'),'ok');
+}
+function utilDel(i){if(!confirm(lb('حذف القراءة؟||Delete reading?')))return;
+  db.utilityLogs.splice(i,1);persist();paintTab();}
+function utilCsv(){
+  const rows=utilLogsQ().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)))
+    .map(u=>[u.date,UTILTL()[u.type||'other']||'',u.qty==null?'':Number(u.qty),u.unit||'',
+      Number(u.cost||0).toFixed(2),u.meter==null?'':Number(u.meter),u.provider||'']);
+  csvExport('utility-readings',[lb('التاريخ||Date'),lb('النوع||Type'),lb('الاستهلاك||Usage'),lb('الوحدة||Unit'),
+    lb('التكلفة||Cost'),lb('العدّاد||Meter'),lb('المزوّد||Provider')],rows);
+}
+/* ===== الامتثال والشهادات (منشآت صناعية / عامة) ===== */
+function certsQ(){return (db.certs||[]).filter(c=>c.compoundId===activeCmp());}
+function CERTTL(){return {safety:lb('سلامة وصحة مهنية||Occupational safety'),civil:lb('دفاع مدني||Civil defence'),
+  env:lb('بيئة||Environmental'),iso:lb('ISO / جودة||ISO / quality'),
+  operator:lb('رخصة تشغيل||Operating licence'),other:lb('أخرى||Other')};}
+function certState(c){
+  const d=daysUntil(c.expires);
+  if(!c.expires)return [lb('بلا تاريخ||No date'),'b-normal'];
+  if(d<0)return [lb('منتهية||Expired'),'b-low'];
+  if(d<=45)return [lb('تنتهي قريباً||Expiring'),'b-maint'];
+  return [lb('سارية||Valid'),'b-ok'];
+}
+function vCerts(){
+  const list=certsQ().slice().sort((a,b)=>String(a.expires||'9999').localeCompare(String(b.expires||'9999')));
+  const valid=list.filter(c=>c.expires&&daysUntil(c.expires)>45).length;
+  const soon=list.filter(c=>c.expires&&daysUntil(c.expires)>=0&&daysUntil(c.expires)<=45).length;
+  const dead=list.filter(c=>c.expires&&daysUntil(c.expires)<0).length;
+  return `<div class="toolbar">
+    ${isEng()?`<button class="btn" onclick="certForm()">＋ ${lb('شهادة جديدة||New certificate')}</button>`:''}
+    <button class="btn ghost" onclick="certCsv()">${lb('Excel||Excel')}</button>
+    <button class="btn ghost" onclick="window.print()">${lb('طباعة||Print')}</button></div>
+  <div class="stats">
+    <div class="stat ok"><div class="num">${valid}</div><div class="lbl">${lb('سارية||Valid')}</div></div>
+    <div class="stat ${soon?'warn':''}"><div class="num">${soon}</div><div class="lbl">${lb('تنتهي خلال 45 يوماً||Expiring ≤45d')}</div></div>
+    <div class="stat ${dead?'warn':''}"><div class="num">${dead}</div><div class="lbl">${lb('منتهية||Expired')}</div></div>
+    <div class="stat"><div class="num">${list.length}</div><div class="lbl">${lb('إجمالي الشهادات||Total certificates')}</div></div>
+  </div>
+  <div class="card"><h2>${lb('سجل الامتثال||Compliance register')} (${list.length})</h2><div class="tbl-wrap"><table>
+  <tr><th>${lb('النوع||Type')}</th><th>${lb('الرقم||No.')}</th><th>${lb('الجهة المُصدِرة||Issuer')}</th><th>${lb('الربط||Linked to')}</th><th>${lb('الإصدار||Issued')}</th><th>${lb('الانتهاء||Expires')}</th><th>${lb('الحالة||Status')}</th><th></th></tr>
+  ${list.length?list.map(c=>{const i=(db.certs||[]).indexOf(c);const st=certState(c);
+    return `<tr class="${st[1]==='b-low'?'overdue':''}"><td><b>${CERTTL()[c.type||'other']||'—'}</b></td><td>${esc(c.no||'—')}</td>
+    <td>${esc(c.issuer||'—')}</td><td>${c.assetId?esc(assetLabel(c.assetId)):'—'}</td>
+    <td>${fmtD(c.issued)}</td><td>${c.expires?fmtD(c.expires):'—'}</td>
+    <td><span class="badge ${st[1]}">${st[0]}</span></td>
+    <td nowrap>${isEng()?`<button class="btn sm ghost" onclick="certForm('${i}')">${ic('edit',13)}</button>
+    <button class="btn sm danger" onclick="certDel(${i})">${ic('del',13)}</button>`:''}</td></tr>`;}).join('')
+    :`<tr><td colspan="8"><div class="empty">${lb('لا شهادات مسجّلة بعد||No certificates yet')}</div></td></tr>`}
+  </table></div>
+  <p class="muted">${lb('يصلك تنبيه على اللوحة والإشعارات قبل 45 يوماً من انتهاء أي شهادة.||You get a dashboard and notification alert 45 days before any certificate expires.')}</p></div>`;
+}
+function certForm(i){
+  if(!isEng())return;
+  const c=(i!=null&&i!=='')?(db.certs||[])[i]||{}:{};
+  const eq=db.assets.filter(a=>a.compoundId===activeCmp());
+  modal(`<h3>${(i!=null&&i!=='')?lb('تعديل شهادة||Edit certificate'):lb('شهادة امتثال جديدة||New compliance certificate')}</h3>
+  <div class="fg">
+    <div><label>${lb('النوع *||Type *')}</label><select id="fc_t">${Object.keys(CERTTL()).map(k=>`<option value="${k}" ${(c.type||'safety')===k?'selected':''}>${CERTTL()[k]}</option>`).join('')}</select></div>
+    <div><label>${lb('رقم الشهادة||Certificate No.')}</label><input id="fc_no" value="${esc(c.no||'')}"></div>
+    <div><label>${lb('الجهة المُصدِرة||Issuer')}</label><input id="fc_is" value="${esc(c.issuer||'')}"></div>
+    <div><label>${lb('الربط بمعدة (اختياري)||Link to equipment (optional)')}</label><select id="fc_a"><option value="">—</option>${eq.map(a=>`<option value="${a.id}" ${c.assetId===a.id?'selected':''}>${esc(a.name)}</option>`).join('')}</select></div>
+    <div><label>${lb('تاريخ الإصدار||Issued')}</label><input type="date" id="fc_i" value="${c.issued||todayISO()}"></div>
+    <div><label>${lb('تاريخ الانتهاء *||Expires *')}</label><input type="date" id="fc_e" value="${c.expires||addDays(todayISO(),365)}"></div>
+  </div>
+  <label>${lb('ملاحظات||Notes')}</label><textarea id="fc_n" rows="2">${esc(c.notes||'')}</textarea>
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" onclick="certSave(${(i!=null&&i!=='')?i:'null'})">${lb('حفظ||Save')}</button></div>`);
+}
+function certSave(i){
+  const exp=$('fc_e').value;
+  if(!exp)return toast(lb(' تاريخ الانتهاء مطلوب|| Expiry date required'),'err');
+  if(!db.certs)db.certs=[];
+  const o={compoundId:activeCmp(),type:$('fc_t').value,no:$('fc_no').value.trim(),
+    issuer:$('fc_is').value.trim(),assetId:$('fc_a').value,issued:$('fc_i').value||todayISO(),
+    expires:exp,notes:$('fc_n').value.trim()};
+  if(i!=null&&i!=='null')Object.assign(db.certs[i],o);
+  else db.certs.unshift(Object.assign({id:uid('Q'),createdAt:Date.now()},o));
+  persist();closeModal();paintTab();toast(lb(' تم الحفظ|| Saved'),'ok');
+}
+function certDel(i){if(!confirm(lb('حذف الشهادة؟||Delete certificate?')))return;
+  db.certs.splice(i,1);persist();paintTab();}
+function certCsv(){
+  const rows=certsQ().slice().sort((a,b)=>String(a.expires||'').localeCompare(String(b.expires||'')))
+    .map(c=>[CERTTL()[c.type||'other']||'',c.no||'',c.issuer||'',c.assetId?assetLabel(c.assetId):'',
+      c.issued||'',c.expires||'',certState(c)[0]]);
+  csvExport('compliance-certificates',[lb('النوع||Type'),lb('الرقم||No.'),lb('الجهة||Issuer'),lb('المعدة||Equipment'),
+    lb('الإصدار||Issued'),lb('الانتهاء||Expires'),lb('الحالة||Status')],rows);
 }
 
 /* ===== USERS ===== */
