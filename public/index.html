@@ -695,6 +695,55 @@ html[dir="ltr"] .feature-item:hover{transform:translateX(3px)}
 .printhead{display:none}
 /* Kept from security pass: focus visibility + layout cap (responsive nav lives in the 1180px/760px blocks above) */
 :focus-visible{outline:3px solid rgba(14,116,144,.55);outline-offset:2px}.btn:disabled,.nbtn:disabled{cursor:not-allowed;opacity:.55;transform:none!important}.content{max-width:1600px}
+/* ===== AMLAKI MARKETPLACE (بوابة الملاك والمقدّمين) ===== */
+.mkt-role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:8px 0 4px}
+.mkt-role-card{display:flex;flex-direction:column;align-items:flex-start;gap:7px;text-align:start;cursor:pointer;font:inherit;
+  background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:15px;padding:15px;transition:.18s;color:var(--ink)}
+.mkt-role-card:hover{transform:translateY(-3px);border-color:rgba(14,116,144,.5);background:#fff;
+  box-shadow:0 16px 34px -16px rgba(2,44,66,.35)}
+.mkt-role-ic{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#fff;
+  background:linear-gradient(135deg,#0e7490,#0891b2);box-shadow:0 8px 18px -8px rgba(14,116,144,.7)}
+.mkt-role-card b{font-size:14.5px;font-family:var(--font-display)}
+.mkt-role-card .muted{font-size:11.5px;line-height:1.55}
+.mkt-role-pts{font-size:10.5px;font-weight:800;color:var(--brand);background:rgba(14,116,144,.08);border:1px solid rgba(14,116,144,.18);
+  padding:3px 9px;border-radius:99px;margin-top:auto}
+.mkt-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.mkt-filters .f{min-width:150px}
+.mkt-filters input,.mkt-filters select{width:auto;min-width:150px}
+.mkt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.mkt-provider{display:flex;flex-direction:column;gap:9px;padding:15px;border-radius:15px;
+  background:linear-gradient(160deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--line);box-shadow:var(--shadow);transition:.18s}
+.mkt-provider:hover{transform:translateY(-2px);box-shadow:0 18px 40px -16px rgba(2,44,66,.3),inset 0 1px 0 rgba(255,255,255,.8)}
+.mkt-provider .ph{display:flex;align-items:center;gap:10px}
+.mkt-provider .av{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;flex:0 0 auto}
+.mkt-provider .nm{font-weight:800;font-size:14px;font-family:var(--font-display)}
+.mkt-provider .sm{font-size:11px;color:var(--muted);font-weight:600;margin-top:1px}
+.mkt-tags{display:flex;flex-wrap:wrap;gap:5px}
+.mkt-tag{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:99px;background:rgba(14,116,144,.1);color:var(--brand);border:1px solid rgba(14,116,144,.18)}
+.mkt-rfq{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:14px;margin-bottom:12px;
+  background:linear-gradient(160deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--line);box-shadow:var(--shadow)}
+.mkt-rfq .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.mkt-rfq .ttl{font-weight:800;font-size:14.5px;font-family:var(--font-display)}
+.mkt-rfq .meta{font-size:11.5px;color:var(--muted);font-weight:600;display:flex;gap:10px;flex-wrap:wrap}
+.mkt-bid{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 11px;border-radius:11px;
+  background:rgba(255,255,255,.5);border:1px solid var(--line);margin-top:7px}
+.mkt-bid .amt{font-weight:800;font-size:14px}
+.mkt-bid.won{border-color:rgba(21,153,87,.4);background:var(--greenbg)}
+.mkt-empty{color:var(--muted);text-align:center;padding:28px;font-style:italic}
+.mkt-statrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.mkt-kpi{display:flex;align-items:center;gap:12px;border-radius:14px;padding:14px;cursor:pointer;
+  background:linear-gradient(160deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--line);box-shadow:var(--shadow);transition:.18s}
+.mkt-kpi:hover{transform:translateY(-2px)}
+.mkt-kpi .ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;flex:0 0 auto}
+.mkt-kpi .num{font-size:22px;font-weight:800;font-family:var(--font-display);line-height:1.1}
+.mkt-kpi .lbl{font-size:11px;color:var(--muted);font-weight:700}
+.mkt-pill{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:99px;border:1px solid rgba(255,255,255,.7)}
+.dark .mkt-provider,.dark .mkt-rfq,.dark .mkt-kpi{background:rgba(255,255,255,.07)}
+.dark .mkt-bid{background:rgba(255,255,255,.06)}
+.dark .mkt-provider .av{box-shadow:none}
+.dark .mkt-tag{background:rgba(34,184,207,.14);border-color:rgba(34,184,207,.28)}
+.dark .mkt-role-pts{background:rgba(34,184,207,.14);border-color:rgba(34,184,207,.28)}
+@media(max-width:600px){.mkt-filters{flex-direction:column}.mkt-filters .f,.mkt-filters input,.mkt-filters select{width:100%}}
 </style>
 </head>
 <body>
@@ -874,7 +923,10 @@ function initLangMaps(){
   ASTAT={ok:[lb('يعمل||Operational'),'b-ok'],down:[lb('متوقف||Down'),'b-down'],maint:[lb('تحت الصيانة||Under Maintenance'),'b-maint']};
   ROLES={admin:lb('مدير النظام||System Admin'),engineer:lb('مهندس / مدير عمليات||Engineer'),
     sitemgr:lb('مدير موقع||Site Manager'),tech:lb('فني||Technician'),
-    store:lb('مسؤول مخزون||Store Keeper'),proc:lb('مسؤول مشتريات||Procurement')};
+    store:lb('مسؤول مخزون||Store Keeper'),proc:lb('مسؤول مشتريات||Procurement'),
+    owner:lb('مالك عقار / أصول||Property / Asset Owner'),
+    contractor:lb('مقاول / مزوّد خدمة||Contractor / Service Provider'),
+    supplier:lb('مورّد مواد / قطع غيار||Supplier / Material Vendor')};
   VILLA_FLOORS=db.lang==='ar'?['الدور الأرضي','الدور الأول','الملحق']:['Ground Floor','First Floor','Annex'];
   BTYPES={villa:lb('فيلا||Villa'),tower:lb('مبنى سكني||Residential Bldg'),mall:lb('مبنى تجاري||Commercial Bldg'),area:lb('منطقة عامة||Common Area')};
   UNITKIND={apt:lb('شقة||Apartment'),villa:lb('فيلا كاملة||Full Villa'),subunit:lb('وحدة فرعية (جزء فيلا)||Sub-unit'),office:lb('مكتب||Office'),shop:lb('محل تجاري||Shop'),annex:lb('ملحق||Annex'),land:lb('أرض||Land'),clinic:lb('عيادة||Clinic'),store:lb('مستودع||Storage'),other:lb('أخرى||Other')};
@@ -1065,11 +1117,18 @@ function migrate(d){
     ['inv','prs','pos','moves','suppliers','notifs'].forEach(k=>{
       d[k].forEach(r=>{if(!r.compoundId)r.compoundId=defC;});});
   }
+  /* ---- v8: السوق — منصة الملاك والمقدّمين (providers + rfqs) ---- */
+  if(d.ver<8){
+    d.ver=8;
+    if(!Array.isArray(d.providers))d.providers=[];
+    if(!Array.isArray(d.rfqs))d.rfqs=[];
+    if(d.rfqSeq==null)d.rfqSeq=0;
+  }
   /* ---- شبكة أمان تُنفَّذ دائماً (حتى مع ver=7) لضمان بيانات قابلة للاستخدام ---- */
   ['compounds','buildings','units','tenants','contracts','assets','wos','inv','moves','pms',
-   'suppliers','prs','pos','projects','employees','shifts','notifs','fuelLogs','utilityLogs','certs']
+   'suppliers','prs','pos','projects','employees','shifts','notifs','fuelLogs','utilityLogs','certs','providers','rfqs']
    .forEach(k=>{if(!Array.isArray(d[k]))d[k]=[];});
-  ['seq','prSeq','poSeq','rnSeq','prjSeq','ctSeq'].forEach(k=>{if(d[k]==null)d[k]=0;});
+  ['seq','prSeq','poSeq','rnSeq','prjSeq','ctSeq','rfqSeq'].forEach(k=>{if(d[k]==null)d[k]=0;});
   if(typeof d.lang!=='string')d.lang='ar';
   if(!d.compounds.length)
     d.compounds.push({id:uid('C'),name:'مجمع الخير السكني - حي الروضة',loc:'',notes:'',createdAt:Date.now()});
@@ -1083,7 +1142,7 @@ function migrate(d){
     if(u.phone==null)u.phone='';
     if(u.email==null)u.email='';
     if(!Array.isArray(u.cmpIds))u.cmpIds=(u.role==='admin')?[]:[defC];
-    if(u.role!=='admin'&&!u.cmpIds.some(x=>d.compounds.some(c=>c.id===x)))
+    if(u.role!=='admin'&&!['owner','contractor','supplier'].includes(u.role)&&!u.cmpIds.some(x=>d.compounds.some(c=>c.id===x)))
       u.cmpIds=d.compounds.map(c=>c.id);
     if(u.activeCmp==null)u.activeCmp='';
   });
@@ -1104,7 +1163,10 @@ async function boot(){
     const r=await api('/state');
     if(r.status===401){AUTH.csrf='';AUTH.mustChange=false;db=freshDb();db=migrate(db);return;}
     const j=await r.json();
-    if(j.data){db=j.data;AUTH.ver=j.ver;db=migrate(db);
+    if(j.data){
+      db=j.data;AUTH.ver=j.ver;
+      if(j.marketplace){ me = { id:j.userId, role:j.role, name:(j.data.users[0]||{}).name||'' }; await marketBootstrap(); return; }
+      db=migrate(db);
       me=db.users.find(x=>x.id===j.userId)||null;
       if(me){const L=myCmps();if(!L.length)me=null;else if(!me.activeCmp||!L.some(c=>c.id===me.activeCmp))me.activeCmp=L[0].id;}
     } else {db=freshDb();db=migrate(db);}
@@ -1112,7 +1174,7 @@ async function boot(){
 }
 
 function freshDb(){
-  const d={lang:'ar',ver:6,seq:0,prSeq:0,poSeq:0,rnSeq:0,prjSeq:0,ctSeq:0,seeded:false,
+  const d={lang:'ar',ver:8,seq:0,prSeq:0,poSeq:0,rnSeq:0,prjSeq:0,ctSeq:0,rfqSeq:0,seeded:false,
   users:[
     {id:uid('U'),u:'admin',p:'1234',defaultPw:true,name:'مدير النظام',role:'admin',phone:'',cmpIds:[],activeCmp:''},
     {id:uid('U'),u:'eng',p:'1234',defaultPw:true,name:'مهندس العمليات',role:'engineer',phone:'',cmpIds:[],activeCmp:''},
@@ -1127,7 +1189,7 @@ function freshDb(){
    'إنارة خارجية','مولد احتياطي','بوابة أوتوماتيكية','مصعد','نظام إنذار حريق','كاشف دخان',
    'طفاية حريق','شبكة إطفاء / رشاشات','سباكة وصنابير','أخرى'],
    compounds:[],buildings:[],units:[],tenants:[],contracts:[],assets:[],wos:[],inv:[],moves:[],pms:[],suppliers:[],prs:[],pos:[],
-   projects:[],employees:[],shifts:[],notifs:[]};
+   projects:[],employees:[],shifts:[],notifs:[],providers:[],rfqs:[]};
   const addB=(name,type,floors)=>d.buildings.push({id:uid('B'),name,type,floors:floors.slice()});
   for(let i=1;i<=34;i++)addB('فيلا '+i,'villa',['الدور الأرضي','الدور الأول','الملحق']);
   addB('المسبح','area',['حمام السباحة','غرفة الفلاتر والمعدات']);
@@ -1249,6 +1311,12 @@ const canInv=()=>me&&['admin','engineer','store'].includes(me.role);
 const canProc=()=>me&&['admin','engineer','proc'].includes(me.role);
 const isTech=()=>me&&me.role==='tech';
 
+/* ===== أدوار السوق (مالك / مقاول / مورّد) ===== */
+const MARKET_ROLES_FE=['owner','contractor','supplier'];
+const isMarketRole=()=>me&&MARKET_ROLES_FE.includes(me.role);
+const isOwner=()=>me&&me.role==='owner';
+const isProvider=()=>me&&(me.role==='contractor'||me.role==='supplier');
+
 /* ===== COMPOUNDS ===== */
 function myCmps(){
   if(!me)return [];
@@ -1275,7 +1343,8 @@ const COMMON_ROLES={dash:['admin','engineer','sitemgr','tech','store','proc'],wo
   pm:['admin','engineer','sitemgr'],proj:['admin','engineer','sitemgr'],assets:['admin','engineer','sitemgr'],
   units:['admin','engineer','sitemgr'],inv:['admin','engineer','store'],proc:['admin','engineer','sitemgr','proc'],
   contracts:['admin','engineer','sitemgr'],hr:['admin','engineer'],rep:['admin','engineer','sitemgr'],users:['admin'],cmps:['admin'],
-  fuel:['admin','engineer','sitemgr'],utils:['admin','engineer','sitemgr'],certs:['admin','engineer','sitemgr']};
+  fuel:['admin','engineer','sitemgr'],utils:['admin','engineer','sitemgr'],certs:['admin','engineer','sitemgr'],
+  market:['admin','engineer']};
 function navDef(k){
   const d=domainOf();
   const L={
@@ -1293,6 +1362,7 @@ function navDef(k){
     hr:['briefcase',d==='fleet'?lb('السائقون والموظفون||Drivers & workforce'):lb('الموظفون||Workforce')],
     rep:['chart',lb('التقارير||Reports')],
     users:['users',lb('المستخدمون||Users')],
+    market:['cart',lb('سوق المقدّمين||Provider Market')],
     fuel:['fuel',lb('سجل الوقود||Fuel log')],
     utils:['zap',lb('استهلاك المرافق||Utilities')],
     certs:['shield',lb('الامتثال والشهادات||Compliance & certificates')]
@@ -1300,10 +1370,10 @@ function navDef(k){
   return L[k]||['home',k];
 }
 const DOMAIN_TABS={
-  realestate:['dash','wos','pm','proj','assets','units','utils','inv','proc','contracts','hr','rep','users'],
-  fleet:['dash','wos','pm','assets','fuel','inv','proc','contracts','proj','hr','rep','users'],
-  industrial:['dash','wos','pm','assets','utils','certs','contracts','inv','proc','proj','hr','rep','users'],
-  generic:['dash','wos','pm','assets','utils','contracts','inv','proc','proj','hr','rep','users']
+  realestate:['dash','wos','pm','proj','assets','units','utils','inv','proc','contracts','hr','rep','users','market'],
+  fleet:['dash','wos','pm','assets','fuel','inv','proc','contracts','proj','hr','rep','users','market'],
+  industrial:['dash','wos','pm','assets','utils','certs','contracts','inv','proc','proj','hr','rep','users','market'],
+  generic:['dash','wos','pm','assets','utils','contracts','inv','proc','proj','hr','rep','users','market']
 };
 /* شاشات إدارية لا تظهر في القائمة الجانبية — تُفتح من مبدّل الأصل في الهيدر */
 const HIDDEN_TABS=['cmps'];
@@ -1385,7 +1455,7 @@ function loginHtml(){
 
         <div class="auth-card-footer">
           <span>${lb('ليس لديك حساب؟||Don\'t have an account?')}</span>
-          <a href="javascript:void(0)" onclick="toast('${lb('يرجى التواصل مع إدارة النظام لإنشاء حساب جديد||Contact administrator to create an account')}', 'ok')" class="signup-link">${lb('أنشئ حساباً||Create account')}</a>
+          <a href="javascript:void(0)" onclick="signup()" class="signup-link">${lb('أنشئ حساباً||Create account')}</a>
         </div>
 
         <div class="lang-switch-wrap">
@@ -1507,7 +1577,9 @@ async function doLogin(e){
       const j = await r.json();
       AUTH.csrf = j.csrf || ''; AUTH.ver = j.ver; AUTH.mustChange = !!j.mustChange;
       const s = await(await api('/state')).json();
-      db = s.data; AUTH.ver = s.ver; db = migrate(db);
+      db = s.data; AUTH.ver = s.ver;
+      if(s.marketplace){ me = { id:j.userId, role:j.role, name:(s.data.users[0]||{}).name||'' }; await marketBootstrap(); render(); return; }
+      db = migrate(db);
       me = db.users.find(x => x.id === j.userId) || null;
       serverOk = true;
     } else if(r.status === 401){
@@ -1528,9 +1600,11 @@ async function doLogin(e){
     }
     me = localUser;
     AUTH.csrf = '';
+    if(isMarketRole()){ await marketBootstrap(); render(); return; }
   }
 
   if(!me){ AUTH.csrf = ''; return toast(lb(' حساب غير موجود|| Account not found'), 'err'); }
+  if(isMarketRole()){ await marketBootstrap(); render(); return; }
   TAB = 'dash'; FILT = { assets: '', wos: '', inv: '', woStatus: 'all', procTab: 'pr', units: '' };
   const L = myCmps();
   if(!L.length){
@@ -1595,6 +1669,12 @@ function markAllRead(){notifsQ().forEach(n=>n.read=true);persist();closeModal();
 function render(){
   document.body.dir=db.lang==='ar'?'rtl':'ltr';
   document.body.lang=db.lang==='ar'?'ar':'en';
+  /* بوابة السوق (مالك / مقاول / مورّد) — واجهة مستقلة ومعزولة */
+  if(me&&isMarketRole()){
+    $('app').innerHTML=marketShell();
+    paintMarketTab();
+    return;
+  }
   /* عزل السياق: لو التبويب الحالي غير منطبق على نوع الأصل النشط نرجع للوحة */
   if(me&&!tabAllowed(TAB))TAB='dash';
   $('app').innerHTML = me ? (PICK?pickerHtml():shell()) : loginHtml();
@@ -1788,6 +1868,7 @@ function paintTab(){
   else if(TAB==='fuel')v.innerHTML=vFuel();
   else if(TAB==='utils')v.innerHTML=vUtils();
   else if(TAB==='certs')v.innerHTML=vCerts();
+  else if(TAB==='market')v.innerHTML=vMarket();
   v.classList.remove('vfade');void v.offsetWidth;v.classList.add('vfade');
 }
 
@@ -4402,6 +4483,557 @@ function saveUser(id){
 }
 function delUser(id){if(!confirm(lb('حذف المستخدم؟||Delete user?')))return;
   db.users=db.users.filter(u=>u.id!==id);persist();paintTab();}
+
+/* ============================================================
+   سوق أملاكي — منصة الملاك والمقدّمين (Owner / Contractor / Supplier)
+   بياناته تُقرأ وتُكتب عبر مسارات /api/market/* المعزولة حسب الدور.
+   ============================================================ */
+let MKT=null, MKT_TAB='dash';
+const SPEC_L={hvac:['تكييف وتبريد','HVAC'],electrical:['كهرباء','Electrical'],plumbing:['سباكة','Plumbing'],
+  general:['مقاولات عامة','General Construction'],carpentry:['نجارة','Carpentry'],painting:['دهانات','Painting'],
+  landscape:['تنسيق حدائق','Landscaping'],lifts:['مصاعد','Elevators'],security:['أنظمة أمن وسلامة','Security Systems'],other:['أخرى','Other']};
+const PRODL={building:['مواد بناء','Building Materials'],spareparts:['قطع غيار','Spare Parts'],
+  industrial:['معدات صناعية','Industrial Equipment'],electrical:['لوازم كهربائية','Electrical Supplies'],
+  plumbing:['لوازم سباكة','Plumbing Supplies'],hvac:['قطع تكييف','HVAC Parts'],safety:['معدات سلامة','Safety Equipment'],
+  tools:['عدد وأدوات','Tools'],other:['أخرى','Other']};
+const JOBSTAT={pending:['بانتظار البدء','Pending'],inprogress:['قيد التنفيذ','In Progress'],completed:['مكتمل','Completed'],paid:['مدفوع','Paid']};
+const RFQTYPE={maintenance:['صيانة','Maintenance'],material:['تزويد مواد','Material']};
+const PTYPE_L={contractor:['مقاول / مزوّد خدمة','Contractor / Service Provider'],supplier:['مورّد مواد','Supplier / Vendor']};
+function specL(k){const e=SPEC_L[k]||SPEC_L.other;return lb(e[0]+'||'+e[1]);}
+function prodL(k){const e=PRODL[k]||PRODL.other;return lb(e[0]+'||'+e[1]);}
+function jobL(k){const e=JOBSTAT[k]||JOBSTAT.pending;return lb(e[0]+'||'+e[1]);}
+function rfqTypeL(k){const e=RFQTYPE[k]||RFQTYPE.maintenance;return lb(e[0]+'||'+e[1]);}
+function ptypeL(k){const e=PTYPE_L[k]||PTYPE_L.contractor;return lb(e[0]+'||'+e[1]);}
+function jobBadge(js){const map={pending:'b-wait',inprogress:'b-prog',completed:'b-done',paid:'b-ok'};return `<span class="badge ${map[js]||'b-wait'}">${jobL(js)}</span>`;}
+function ratingStr(r){return (Number(r)||0).toFixed(1)+' / 5';}
+
+async function marketBootstrap(){
+  try{ const r=await api('/market/me'); if(r.ok){ MKT=await r.json(); MKT_TAB=(MKT_TAB==='dash')?'dash':MKT_TAB; } else { MKT=null; } }
+  catch(e){ MKT=null; }
+}
+async function marketRefresh(){ await marketBootstrap(); render(); }
+
+function marketNav(){
+  if(isOwner()) return [
+    ['dash','home',lb('الرئيسية||Dashboard')],
+    ['directory','users',lb('دليل المقدّمين||Provider Directory')],
+    ['rfqs','file',lb('طلباتي وأوامري||My Requests & RFQs')],
+    ['assets','bldg',lb('أصولي||My Assets')]];
+  return [
+    ['dash','home',lb('الرئيسية||Dashboard')],
+    ['requests','tool',lb('الطلبات المتاحة||Available Requests')],
+    ['jobs','briefcase',lb('أعمالي||My Jobs')],
+    ['profile','gear',lb('ملفي التجاري||My Profile')]];
+}
+function marketShell(){
+  if(!MKT) return `<div class="login-wrap"><div class="login-card property-picker"><h1>${lb('أملاكي||Amlaki')}</h1><div class="empty">${lb('جارِ تحميل مساحة العمل…||Loading your workspace…')}</div>
+    <div style="text-align:center;margin-top:14px"><button class="btn ghost sm" onclick="logout()">${lb('خروج||Logout')}</button></div></div></div>`;
+  const nav=marketNav();
+  const initials=(MKT.user&&MKT.user.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('');
+  const cur=nav.find(n=>n[0]===MKT_TAB)||nav[0];
+  const roleBadge = isProvider() && MKT.profile && MKT.profile.status==='pending'
+    ? `<span class="badge b-wait">${lb('بانتظار الاعتماد||Pending approval')}</span>` : '';
+  return `<div class="layout">
+    <aside class="side">
+      <div class="brand"><span class="logo"><img src="/logo-mark.svg" alt="أملاكي"></span>
+        <span class="brand-t">${lb('أملاكي||Amlaki')}<small>${lb('سوق الأملاك والمقدّمين||Property & Provider Market')}</small></span></div>
+      <div class="sidediv"></div>
+      <div class="slabel">${lb('مساحة العمل||Workspace')}</div>
+      ${nav.map(n=>`<button class="nbtn ${MKT_TAB===n[0]?'active':''}" title="${n[2]}" onclick="MKT_TAB='${n[0]}';render()"><span class="ic">${ic(n[1],20)}</span><span class="nt">${n[2]}</span></button>`).join('')}
+      <div class="sidefoot">
+        <div class="ucard"><span class="av">${esc(initials)}</span>
+          <span class="uinfo"><span class="nm">${esc(MKT.user.name)}</span><br><span class="rl">${ROLES[MKT.user.role]||MKT.user.role}</span></span></div>
+        <div class="sideacts">
+          <button class="btn ghost sm" title="${lb('اللغة||Language')}" onclick="toggleLang()">${db.lang==='ar'?'EN':'ع'}</button>
+          <button class="btn ghost sm" title="${lb('الوضع الليلي||Night mode')}" onclick="toggleTheme()">${ic(document.documentElement.classList.contains('dark')?'sun':'moon',14)}</button>
+          <button class="btn ghost sm" title="${lb('خروج||Logout')}" onclick="logout()">${lb('خروج||Exit')}</button>
+        </div>
+      </div>
+    </aside>
+    <div class="content">
+      <div class="topbar"><span class="ttl"><span class="pname">${lb('أملاكي||Amlaki')}</span>${cur[2]}${roleBadge}</span>
+        <span class="meta"><span>${fmtD(todayISO())}</span></span></div>
+      <main id="view"></main>
+      <footer>${lb('أملاكي||Amlaki')} — ${lb('سوق الأملاك والمقدّمين||Property & Provider Market')}</footer>
+    </div>
+  </div>`;
+}
+function paintMarketTab(){
+  const v=$('view'); if(!v)return;
+  if(MKT_TAB==='dash')v.innerHTML=mktDash();
+  else if(MKT_TAB==='directory')v.innerHTML=mktDirectory();
+  else if(MKT_TAB==='rfqs')v.innerHTML=mktRfqs();
+  else if(MKT_TAB==='assets')v.innerHTML=mktAssets();
+  else if(MKT_TAB==='requests')v.innerHTML=mktRequests();
+  else if(MKT_TAB==='jobs')v.innerHTML=mktJobs();
+  else if(MKT_TAB==='profile')v.innerHTML=mktProfile();
+}
+
+/* ---------- لوحة المالك ---------- */
+function mktDash(){
+  if(isProvider())return mktProviderDash();
+  const rfqs=MKT.rfqs||[];
+  const open=rfqs.filter(r=>r.status==='open').length;
+  const awarded=rfqs.filter(r=>r.status==='awarded'||r.status==='closed').length;
+  const assets=(MKT.assets||[]).length;
+  const providers=(MKT.directory||[]).length;
+  return `<div class="mkt-statrow">
+    <div class="mkt-kpi" onclick="MKT_TAB='rfqs';render()"><span class="ic" style="background:linear-gradient(135deg,#0e7490,#0891b2)">${ic('file',20)}</span><div><div class="num">${rfqs.length}</div><div class="lbl">${lb('إجمالي طلباتي||Total requests')}</div></div></div>
+    <div class="mkt-kpi" onclick="MKT_TAB='rfqs';render()"><span class="ic" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">${ic('tool',20)}</span><div><div class="num">${open}</div><div class="lbl">${lb('طلبات مفتوحة||Open requests')}</div></div></div>
+    <div class="mkt-kpi" onclick="MKT_TAB='rfqs';render()"><span class="ic" style="background:linear-gradient(135deg,#047857,#22c55e)">${ic('check',20)}</span><div><div class="num">${awarded}</div><div class="lbl">${lb('مرساة / مكتملة||Awarded / done')}</div></div></div>
+    <div class="mkt-kpi" onclick="MKT_TAB='assets';render()"><span class="ic" style="background:linear-gradient(135deg,#b45309,#f59e0b)">${ic('bldg',20)}</span><div><div class="num">${assets}</div><div class="lbl">${lb('أصولي||My assets')}</div></div></div>
+    <div class="mkt-kpi" onclick="MKT_TAB='directory';render()"><span class="ic" style="background:linear-gradient(135deg,#6d28d9,#a78bfa)">${ic('users',20)}</span><div><div class="num">${providers}</div><div class="lbl">${lb('مقدّمو خدمة معتمدون||Verified providers')}</div></div></div>
+  </div>
+  <div class="card"><h2>${lb('إجراءات سريعة||Quick actions')}</h2><div class="toolbar">
+    <button class="btn" onclick="mktRfqForm()">＋ ${lb('طلب صيانة / عرض أسعار||New maintenance / RFQ')}</button>
+    <button class="btn ghost" onclick="MKT_TAB='directory';render()">${lb('تصفّح دليل المقدّمين||Browse directory')}</button>
+    <button class="btn ghost" onclick="mktCompoundForm()">＋ ${lb('عقار جديد||New property')}</button>
+  </div></div>
+  <div class="card"><h2>${lb('أحدث طلباتي||My latest requests')} (${rfqs.length})</h2>
+    ${rfqs.slice(0,8).map(r=>mktRfqRow(r)).join('')||`<div class="mkt-empty">${lb('لا طلبات بعد — أنشئ أول طلب صيانة أو عرض أسعار||No requests yet — create your first one')}</div>`}
+  </div>`;
+}
+function mktProviderDash(){
+  const all=MKT.rfqs||[];
+  const rfqs=all.filter(r=>!r.myBid);
+  const myJobs=MKT.myJobs||[];
+  const myBids=all.filter(r=>r.myBid).length;
+  const done=myJobs.filter(j=>j.jobStatus==='completed'||j.jobStatus==='paid').length;
+  return `<div class="mkt-statrow">
+    <div class="mkt-kpi" onclick="MKT_TAB='requests';render()"><span class="ic" style="background:linear-gradient(135deg,#0e7490,#0891b2)">${ic('tool',20)}</span><div><div class="num">${rfqs.length}</div><div class="lbl">${lb('طلبات متاحة||Available requests')}</div></div></div>
+    <div class="mkt-kpi" onclick="MKT_TAB='jobs';render()"><span class="ic" style="background:linear-gradient(135deg,#2563eb,#60a5fa)">${ic('briefcase',20)}</span><div><div class="num">${myJobs.length}</div><div class="lbl">${lb('أعمالي||My jobs')}</div></div></div>
+    <div class="mkt-kpi" onclick="MKT_TAB='requests';render()"><span class="ic" style="background:linear-gradient(135deg,#047857,#22c55e)">${ic('check',20)}</span><div><div class="num">${myBids}</div><div class="lbl">${lb('عروضي المقدّمة||My bids')}</div></div></div>
+    <div class="mkt-kpi"><span class="ic" style="background:linear-gradient(135deg,#159957,#34d399)">${ic('coins',20)}</span><div><div class="num">${done}</div><div class="lbl">${lb('مكتملة / مدفوعة||Completed / paid')}</div></div></div>
+  </div>
+  ${MKT.profile&&MKT.profile.status==='pending'?`<div class="card"><p class="muted">${lb('ملفك قيد المراجعة — ستظهر في الدليل بعد اعتماده من الإدارة. يمكنك الاستجابة للطلبات العامة الآن.||Your profile is under review — it will appear in the directory once approved. You can still respond to public requests.')}</p></div>`:''}
+  <div class="card"><h2>${lb('أحدث الطلبات المتاحة||Latest available requests')} (${rfqs.length})</h2>
+    ${rfqs.slice(0,8).map(r=>mktRfqRow(r)).join('')||`<div class="mkt-empty">${lb('لا طلبات متاحة حالياً تناسب تخصصك||No matching requests right now')}</div>`}
+  </div>`;
+}
+
+/* ---------- دليل المقدّمين (للمالك) ---------- */
+let MKT_DIR_FILT={q:'',type:'',spec:''};
+function mktDirectory(){
+  const dir=MKT.directory||[];
+  const q=MKT_DIR_FILT.q.toLowerCase();
+  const list=dir.filter(p=>{
+    if(MKT_DIR_FILT.type&&p.type!==MKT_DIR_FILT.type)return false;
+    if(MKT_DIR_FILT.spec&&p.specialty!==MKT_DIR_FILT.spec&&!(p.productLines||[]).includes(MKT_DIR_FILT.spec))return false;
+    if(q){
+      const hay=(p.bizName+' '+(p.contactName||'')+' '+(p.city||'')).toLowerCase();
+      if(!hay.includes(q))return false;
+    }
+    return true;
+  });
+  const specOpts=isOwner()?Object.keys(SPEC_L).map(k=>`<option value="${k}">${specL(k)}</option>`).join('')
+    :Object.keys(PRODL).map(k=>`<option value="${k}">${prodL(k)}</option>`).join('');
+  return `<div class="mkt-filters">
+    <input class="f" placeholder="${lb('ابحث باسم الشركة أو المدينة…||Search company or city…')}" value="${esc(MKT_DIR_FILT.q)}" oninput="MKT_DIR_FILT.q=this.value;mktDirRe()">
+    <select class="f" onchange="MKT_DIR_FILT.type=this.value;mktDirRe()">
+      <option value="">${lb('كل الأنواع||All types')}</option>
+      <option value="contractor" ${MKT_DIR_FILT.type==='contractor'?'selected':''}>${ptypeL('contractor')}</option>
+      <option value="supplier" ${MKT_DIR_FILT.type==='supplier'?'selected':''}>${ptypeL('supplier')}</option>
+    </select>
+    <select class="f" onchange="MKT_DIR_FILT.spec=this.value;mktDirRe()">
+      <option value="">${lb('كل التخصصات / الخطوط||All specialties / lines')}</option>${specOpts}
+    </select>
+  </div>
+  <div class="mkt-grid">${list.map(p=>{
+    const icn=p.type==='supplier'?'box':'tool';
+    const col=p.type==='supplier'?'linear-gradient(135deg,#6d28d9,#a78bfa)':'linear-gradient(135deg,#0e7490,#0891b2)';
+    return `<div class="mkt-provider">
+      <div class="ph"><span class="av" style="background:${col}">${ic(icn,20)}</span>
+        <div><div class="nm">${esc(p.bizName||p.contactName)}</div><div class="sm">${ptypeL(p.type)}${p.city?' · '+esc(p.city):''}</div></div></div>
+      <div class="mkt-tags">
+        ${p.type==='contractor'?`<span class="mkt-tag">${specL(p.specialty)}</span>`:''}
+        ${(p.productLines||[]).map(l=>`<span class="mkt-tag">${prodL(l)}</span>`).join('')}
+        ${p.coverage?`<span class="mkt-tag">${esc(p.coverage)}</span>`:''}
+      </div>
+      <div class="mkt-tags">
+        <span class="mkt-pill b-ok" style="color:var(--green)">${lb('معتمد||Verified')} · ${ratingStr(p.rating)}</span>
+        ${p.crNo||p.tradeLicense?`<span class="mkt-pill" style="color:var(--muted)">${p.crNo?lb('س.ت: ||CR: ')+esc(p.crNo):lb('رخصة: ||License: ')+esc(p.tradeLicense)}</span>`:''}
+      </div>
+      ${(p.portfolio||[]).length?`<div class="mkt-tags">${p.portfolio.slice(0,3).map(f=>`<span class="mkt-tag">${esc(f.name)}</span>`).join('')}</div>`:''}
+      ${p.catalogUrl?`<a href="${esc(p.catalogUrl)}" target="_blank" rel="noopener" style="font-size:11.5px;font-weight:700;color:var(--brand)">${lb('الكتالوج / قائمة الأسعار ←||Catalog / price list →')}</a>`:''}
+      ${isOwner()?`<div style="margin-top:auto;display:flex;gap:6px"><button class="btn sm" onclick="mktRfqForm('${p.type}','${p.id}')">${lb('إرسال طلب||Send request')}</button></div>`:''}
+    </div>`;}).join('')||`<div class="mkt-empty">${lb('لا مقدّمين مطابقين لبحثك||No matching providers')}</div>`}</div>`;
+}
+function mktDirRe(){MKT_TAB='directory';render();}
+
+/* ---------- طلباتي (للمالك) ---------- */
+function mktRfqs(){
+  const rfqs=MKT.rfqs||[];
+  return `<div class="toolbar"><button class="btn" onclick="mktRfqForm()">＋ ${lb('طلب صيانة / عرض أسعار||New maintenance / RFQ')}</button>
+    <button class="btn ghost" onclick="marketRefresh()">${lb('تحديث||Refresh')}</button></div>
+  <div class="card"><h2>${lb('طلباتي وأوامري||My requests & RFQs')} (${rfqs.length})</h2>
+    ${rfqs.map(r=>mktRfqRow(r,true)).join('')||`<div class="mkt-empty">${lb('لا طلبات بعد||No requests yet')}</div>`}</div>`;
+}
+function mktRfqRow(r,ownerView){
+  const bids=(r.bids||[]).sort((a,b)=>a.amount-b.amount);
+  const bidLines = ownerView || r.bids ? bids.map(b=>`<div class="mkt-bid ${b.id===r.awardedBidId?'won':''}">
+      <div><b class="amt">${money(b.amount)}</b><br><span class="muted">${esc(b.providerName)} · ${b.note?esc(b.note):''}</span></div>
+      <div style="text-align:end">
+        ${b.id===r.awardedBidId?'<span class="badge b-ok">'+lb('مرسى||Awarded')+'</span>':(ownerView&&r.status==='open'?`<button class="btn sm" onclick="mktAward('${r.id}','${b.id}')">${lb('ترسية||Award')}</button>`:'')}
+      </div></div>`).join('') : '';
+  const badgeMap={open:['b-open',lb('مفتوح||Open')],awarded:['b-prog',lb('مرسى||Awarded')],closed:['b-done',lb('مغلق||Closed')]};
+  const st=badgeMap[r.status]||badgeMap.open;
+  const astTxt=[r.compoundName,r.assetName].filter(Boolean).join(' · ');
+  return `<div class="mkt-rfq">
+    <div class="top"><div><div class="ttl">${esc(r.no)} — ${esc(r.title)}</div>
+      <div class="meta"><span class="badge ${st[0]}">${st[1]}</span>
+      <span class="mkt-pill" style="color:var(--brand)">${rfqTypeL(r.type)}</span>
+      ${astTxt?`<span>${esc(astTxt)}</span>`:''}
+      ${r.targetDate?`<span>${lb('المطلوب:||Due: ')}${fmtD(r.targetDate)}</span>`:''}
+      ${r.visibility==='direct'?`<span class="badge b-wait">${lb('توجيه مباشر||Direct')}</span>`:''}</div></div>
+      ${r.jobStatus?`<div>${jobBadge(r.jobStatus)}</div>`:''}</div>
+    ${r.desc?`<div class="muted">${esc(r.desc)}</div>`:''}
+    ${ownerView&&r.status==='open'&&bids.length?`<div><div class="muted" style="margin:6px 0 2px;font-weight:800">${lb('العروض المستلمة||Received bids')} (${bids.length})</div>${bidLines}</div>`:''}
+    ${ownerView&&r.status==='open'&&!bids.length?`<div class="muted" style="margin-top:6px">${lb('لا عروض بعد||No bids yet')}</div>`:''}
+    ${ownerView&&r.status==='open'?`<div class="ma" style="justify-content:flex-start"><button class="btn sm danger" onclick="mktClose('${r.id}')">${lb('إغلاق||Close')}</button></div>`:''}
+  </div>`;
+}
+
+/* ---------- الطلبات المتاحة (للمقاول/المورّد) ---------- */
+function mktRequests(){
+  const mine=MKT.rfqs||[];
+  return `<div class="toolbar"><button class="btn ghost" onclick="marketRefresh()">${lb('تحديث||Refresh')}</button></div>
+  <div class="card"><h2>${lb('الطلبات المتاحة لتخصصك||Requests available for you')} (${mine.length})</h2>
+    ${mine.map(r=>{
+      const bids=(r.bids||[]);
+      const myBid=r.myBid;
+      return `<div class="mkt-rfq">
+        <div class="top"><div><div class="ttl">${esc(r.no)} — ${esc(r.title)}</div>
+          <div class="meta"><span class="badge b-open">${lb('مفتوح||Open')}</span>
+          <span class="mkt-pill" style="color:var(--brand)">${rfqTypeL(r.type)}</span>
+          <span>${esc(r.assetName||r.compoundName||'')}</span>
+          ${r.targetDate?`<span>${lb('المطلوب:||Due: ')}${fmtD(r.targetDate)}</span>`:''}
+          ${r.visibility==='direct'?`<span class="badge b-wait">${lb('توجيه مباشر لك||Direct to you')}</span>`:''}</div></div>
+        <div class="muted">${lb('مالك الطلب:||Owner: ')}${esc(r.ownerName)} · ${lb('عدد العروض:||Bids: ')}${r.bidCount||0}</div></div>
+        ${r.desc?`<div class="muted">${esc(r.desc)}</div>`:''}
+        ${myBid?`<div class="mkt-bid won"><div><span class="badge b-ok">${lb('قدّمت عرضاً||You bid')}</span> <b class="amt">${money(myBid.amount)}</b></div>
+          <button class="btn sm ghost" onclick="mktBidForm('${r.id}')">${lb('تعديل العرض||Edit bid')}</button></div>`
+        :`<div class="ma" style="justify-content:flex-start"><button class="btn sm" onclick="mktBidForm('${r.id}')">${lb('تقديم عرض||Submit a bid')}</button></div>`}
+      </div>`;}).join('')||`<div class="mkt-empty">${lb('لا طلبات متاحة حالياً||No available requests right now')}</div>`}</div>`;
+}
+
+/* ---------- أعمالي (للمقاول/المورّد) ---------- */
+function mktJobs(){
+  const jobs=MKT.myJobs||[];
+  return `<div class="card"><h2>${lb('أعمالي المرساة||My awarded jobs')} (${jobs.length})</h2>
+    ${jobs.map(r=>{
+      const myBid=(r.bids||[]).find(b=>b.id===r.awardedBidId);
+      const next=['pending','inprogress','completed','paid'];
+      const curIdx=next.indexOf(r.jobStatus);
+      const nextOpts=next.slice(curIdx+1);
+      return `<div class="mkt-rfq">
+        <div class="top"><div><div class="ttl">${esc(r.no)} — ${esc(r.title)}</div>
+          <div class="meta"><span class="mkt-pill" style="color:var(--brand)">${rfqTypeL(r.type)}</span>
+          <span>${esc(r.assetName||r.compoundName||'')}</span><span>${lb('المالك:||Owner: ')}${esc(r.ownerName)}</span></div></div>
+        ${jobBadge(r.jobStatus)}</div>
+        ${myBid?`<div class="mkt-bid won"><b class="amt">${money(myBid.amount)}</b></div>`:''}
+        ${nextOpts.length?`<div class="ma" style="justify-content:flex-start">
+          ${nextOpts.map(js=>`<button class="btn sm ${js==='completed'?'ghost':''}" onclick="mktStatus('${r.id}','${js}')">${js==='inprogress'?lb('بدء التنفيذ||Start')+'' : js==='completed'?lb('إنجاز العمل||Mark completed') : lb('وضعية مدفوعة||Mark paid')}</button>`).join('')}
+        </div>`:''}
+      </div>`;}).join('')||`<div class="mkt-empty">${lb('لا أعمال مرساة لك بعد||No awarded jobs yet')}</div>`}</div>`;
+}
+
+/* ---------- الملف التجاري (للمقاول/المورّد) ---------- */
+function mktProfile(){
+  const p=MKT.profile; if(!p)return `<div class="mkt-empty">${lb('لا ملف تجاري بعد||No business profile yet')}</div>`;
+  const col=p.type==='supplier'?'linear-gradient(135deg,#6d28d9,#a78bfa)':'linear-gradient(135deg,#0e7490,#0891b2)';
+  return `<div class="card">
+    <div class="mkt-provider" style="box-shadow:none">
+      <div class="ph"><span class="av" style="background:${col}">${ic(p.type==='supplier'?'box':'tool',22)}</span>
+        <div><div class="nm">${esc(p.bizName)}</div>
+        <div class="sm">${ptypeL(p.type)} · ${ratingStr(p.rating)}</div>
+        <div><span class="badge ${p.status==='active'?'b-ok':p.status==='pending'?'b-wait':'b-low'}">${p.status==='active'?lb('معتمد||Approved'):p.status==='pending'?lb('قيد المراجعة||Pending review'):lb('موقوف||Suspended')}</span></div></div></div>
+      <div class="fg">
+        <div><label>${lb('جهة الاتصال||Contact')}</label><div class="muted">${esc(p.contactName||'—')}</div></div>
+        <div><label>${lb('الجوال||Mobile')}</label><div class="muted" dir="ltr">${esc(p.phone||'—')}</div></div>
+        <div><label>${lb('البريد||Email')}</label><div class="muted" dir="ltr">${esc(p.email||'—')}</div></div>
+        <div><label>${lb('المدينة||City')}</label><div class="muted">${esc(p.city||'—')}</div></div>
+      </div>
+      ${p.type==='contractor'?`<div class="fg">
+        <div><label>${lb('التخصص||Specialty')}</label><div class="muted">${specL(p.specialty)}</div></div>
+        <div><label>${lb('السجل التجاري||CR No.')}</label><div class="muted" dir="ltr">${esc(p.crNo||'—')}</div></div>
+        <div><label>${lb('نطاق التغطية||Coverage')}</label><div class="muted">${esc(p.coverage||'—')}</div></div>
+      </div>`:`<div class="fg">
+        <div><label>${lb('خطوط المنتجات||Product lines')}</label><div class="mkt-tags">${(p.productLines||[]).map(l=>`<span class="mkt-tag">${prodL(l)}</span>`).join('')}</div></div>
+        <div><label>${lb('نطاق التوصيل||Delivery scope')}</label><div class="muted">${esc(p.deliveryScope||'—')}</div></div>
+        <div><label>${lb('الرخصة التجارية||Trade license')}</label><div class="muted" dir="ltr">${esc(p.tradeLicense||'—')}</div></div>
+      </div>`}
+      ${p.catalogUrl?`<div><label>${lb('الكتالوج / قائمة الأسعار||Catalog / price list')}</label><a href="${esc(p.catalogUrl)}" target="_blank" rel="noopener" style="color:var(--brand);font-weight:700">${esc(p.catalogUrl)}</a></div>`:''}
+      ${(p.portfolio||[]).length?`<div><label>${lb('الأعمال والشهادات||Portfolio & certifications')}</label><div class="mkt-tags">${p.portfolio.map(f=>`<span class="mkt-tag">${esc(f.name)}</span>`).join('')}</div></div>`:''}
+    </div>
+  </div>`;
+}
+
+/* ---------- أصول المالك ---------- */
+function mktAssets(){
+  const comps=MKT.compounds||[], assets=MKT.assets||[];
+  return `<div class="toolbar">
+    <button class="btn" onclick="mktCompoundForm()">＋ ${lb('عقار جديد||New property')}</button>
+    <button class="btn ghost" onclick="mktAssetForm()">＋ ${lb('أصل جديد||New asset')}</button>
+    <button class="btn ghost" onclick="marketRefresh()">${lb('تحديث||Refresh')}</button></div>
+  <div class="card"><h2>${lb('عقاراتي||My properties')} (${comps.length})</h2>
+    <div class="mkt-grid">${comps.map(c=>`<div class="mkt-provider"><div class="ph"><span class="av" style="background:linear-gradient(135deg,#0e7490,#0891b2)">${ic('bldg',20)}</span>
+      <div><div class="nm">${esc(c.name)}</div><div class="sm">${assets.filter(a=>a.compoundId===c.id).length} ${lb('أصل||assets')}</div></div></div></div>`).join('')||`<div class="mkt-empty">${lb('لا عقارات||No properties')}</div>`}</div></div>
+  <div class="card"><h2>${lb('أصولي||My assets')} (${assets.length})</h2><div class="tbl-wrap"><table>
+    <tr><th>${lb('الأصل||Asset')}</th><th>${lb('التصنيف||Category')}</th><th>${lb('العقار||Property')}</th></tr>
+    ${assets.map(a=>`<tr><td><b>${esc(a.name)}</b></td><td>${esc(a.category||'—')}</td><td>${esc(a.compoundName||'—')}</td></tr>`).join('')||`<tr><td colspan="3"><div class="mkt-empty">${lb('لا أصول بعد||No assets yet')}</div></td></tr>`}</table></div>
+  <p class="muted">${lb('اربط طلبات الصيانة وعروض الأسعار بأصل محدد (فيلا 9، مصنع أ، مركبة 3…) لتتبع أدق.||Link maintenance & RFQs to a specific asset for precise tracking.')}</p></div>`;
+}
+
+/* ---------- نماذج وأفعال السوق ---------- */
+function mktRfqForm(preType,preProviderId){
+  const isMat=(preType||'maintenance')==='material';
+  const comps=MKT.compounds||[];
+  const compOpts=comps.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  const assetOpts=(MKT.assets||[]).map(a=>`<option value="${a.id}">${esc(a.name)} (${esc(a.compoundName||'')})</option>`).join('');
+  const catOpts=isMat?Object.keys(PRODL).map(k=>`<option value="${k}">${prodL(k)}</option>`).join('')
+    :Object.keys(SPEC_L).map(k=>`<option value="${k}">${specL(k)}</option>`).join('');
+  modal(`<h3>${lb('طلب صيانة / عرض أسعار جديد||New maintenance / RFQ')}</h3>
+  <div class="fg">
+    <div><label>${lb('نوع الطلب||Request type')}</label><select id="rfq_type" onchange="mktRfqTypeSwap()">
+      <option value="maintenance" ${!isMat?'selected':''}>${rfqTypeL('maintenance')}</option>
+      <option value="material" ${isMat?'selected':''}>${rfqTypeL('material')}</option></select></div>
+    <div><label>${lb('عنوان الطلب *||Title *')}</label><input id="rfq_title" placeholder="${lb('مثال: صيانة مكيف السبليت||e.g. Split AC repair')}"></div>
+    <div><label>${lb('العقار||Property')}</label><select id="rfq_compound"><option value="">—</option>${compOpts}</select></div>
+    <div><label>${lb('الأصل (اختياري)||Asset (optional)')}</label><select id="rfq_asset"><option value="">—</option>${assetOpts}</select></div>
+    <div><label>${lb('التصنيف / التخصص||Category / specialty')}</label><select id="rfq_cat"><option value="">—</option>${catOpts}</select></div>
+    <div><label>${lb('التاريخ المستهدف||Target date')}</label><input type="date" id="rfq_due" value="${addDays(todayISO(),7)}"></div>
+  </div>
+  <div class="fg" id="rfq_qty_wrap" style="display:${isMat?'grid':'none'}">
+    <div><label>${lb('الكمية||Quantity')}</label><input type="number" min="1" id="rfq_qty" value="1"></div>
+    <div><label>${lb('الوحدة||Unit')}</label><input id="rfq_unit" placeholder="${lb('قطعة / كرتون…||pc / box…')}"></div>
+  </div>
+  <label>${lb('وصف الطلب||Description')}</label><textarea id="rfq_desc" rows="3"></textarea>
+  <div class="fg">
+    <div><label>${lb('طريقة الإرسال||Dispatch mode')}</label><select id="rfq_vis">
+      <option value="public">${lb('طلب عام (يتنافس عليه الجميع)||Open request (all eligible can bid)')}</option>
+      <option value="direct">${lb('توجيه مباشر لمقدّم محدد||Direct to a specific provider')}</option></select></div>
+    <div id="rfq_inv_wrap" style="display:none"><label>${lb('اختر المقدّم||Choose provider')}</label><select id="rfq_inv"><option value="">—</option>
+      ${(MKT.directory||[]).map(p=>`<option value="${p.id}" ${p.id===preProviderId?'selected':''}>${esc(p.bizName||p.contactName)} (${ptypeL(p.type)})</option>`).join('')}</select></div>
+  </div>
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" onclick="mktRfqSave()">${lb('إرسال الطلب||Submit request')}</button></div>`);
+  if($('rfq_vis'))$('rfq_vis').addEventListener('change',e=>{$('rfq_inv_wrap').style.display=e.target.value==='direct'?'block':'none';});
+}
+function mktRfqTypeSwap(){
+  const t=$('rfq_type').value; const isMat=t==='material';
+  $('rfq_qty_wrap').style.display=isMat?'grid':'none';
+  const opts=isMat?Object.keys(PRODL).map(k=>`<option value="${k}">${prodL(k)}</option>`).join('')
+    :Object.keys(SPEC_L).map(k=>`<option value="${k}">${specL(k)}</option>`).join('');
+  $('rfq_cat').innerHTML=`<option value="">—</option>${opts}`;
+}
+async function mktRfqSave(){
+  const title=$('rfq_title').value.trim(); if(!title)return toast(lb(' العنوان مطلوب|| Title required'),'err');
+  const vis=$('rfq_vis').value;
+  const body={type:$('rfq_type').value,title,compoundId:$('rfq_compound').value,assetId:$('rfq_asset').value,
+    assetName:'',category:$('rfq_cat').value,qty:$('rfq_qty').value,unit:$('rfq_unit').value.trim(),
+    targetDate:$('rfq_due').value,desc:$('rfq_desc').value.trim(),visibility:vis};
+  if(vis==='direct'){ if(!$('rfq_inv').value)return toast(lb(' اختر المقدّم للتوجيه المباشر|| Choose a provider for direct dispatch'),'err'); body.invitedProviderIds=[$('rfq_inv').value]; }
+  const r=await api('/market/rfqs',{method:'POST',body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)return toast(lb(' تعذر الإرسال|| Submit failed')+' ('+(j.error||'')+')','err');
+  closeModal();await marketBootstrap();render();toast(lb(' أُرسل الطلب: ||Request sent: ')+j.no,'ok');
+}
+function mktBidForm(rfqId){
+  modal(`<h3>${lb('تقديم عرض سعر||Submit a bid')}</h3>
+  <label>${lb('قيمة العرض *||Bid amount *')}</label><input type="number" min="0" id="bid_amt" placeholder="0.00">
+  <label>${lb('مدة التنفيذ / ملاحظات||Lead time / notes')}</label><input id="bid_note" placeholder="${lb('مثال: التنفيذ خلال 3 أيام||e.g. done in 3 days')}">
+  <label>${lb('فاتورة مبدئية / رابط (اختياري)||Proforma invoice / link (optional)')}</label><input id="bid_inv" placeholder="https://…">
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" onclick="mktBidSave('${rfqId}')">${lb('إرسال العرض||Submit bid')}</button></div>`);
+}
+async function mktBidSave(rfqId){
+  const amount=Number($('bid_amt').value); if(!(amount>0))return toast(lb(' أدخل قيمة صحيحة|| Enter a valid amount'),'err');
+  const r=await api('/market/rfqs/'+rfqId+'/bid',{method:'POST',body:JSON.stringify({amount,note:$('bid_note').value.trim(),invoice:$('bid_inv').value.trim()})});
+  if(!r.ok)return toast(lb(' تعذر إرسال العرض|| Bid failed'),'err');
+  closeModal();await marketBootstrap();render();toast(lb(' أُرسل عرضك|| Bid submitted'),'ok');
+}
+async function mktAward(rfqId,bidId){
+  if(!confirm(lb('ترسية هذا العرض؟ ستصبح الطلب مغلقاً أمام باقي العروض.||Award this bid? The request will close to other bids.')))return;
+  const r=await api('/market/rfqs/'+rfqId+'/award',{method:'POST',body:JSON.stringify({bidId})});
+  if(!r.ok)return toast(lb(' تعذرت الترسية|| Award failed'),'err');
+  await marketBootstrap();render();toast(lb(' تمت الترسية|| Awarded'),'ok');
+}
+async function mktStatus(rfqId,js){
+  const r=await api('/market/rfqs/'+rfqId+'/status',{method:'POST',body:JSON.stringify({jobStatus:js})});
+  if(!r.ok)return toast(lb(' تعذر تحديث الحالة|| Status update failed'),'err');
+  await marketBootstrap();render();toast(lb(' حُدّثت الحالة|| Status updated'),'ok');
+}
+async function mktClose(rfqId){
+  if(!confirm(lb('إغلاق هذا الطلب؟||Close this request?')))return;
+  const r=await api('/market/rfqs/'+rfqId+'/close',{method:'POST'});
+  if(!r.ok)return toast(lb(' تعذر الإغلاق|| Close failed'),'err');
+  await marketBootstrap();render();toast(lb(' أُغلق الطلب|| Request closed'),'ok');
+}
+function mktCompoundForm(){
+  modal(`<h3>${lb('عقار جديد||New property')}</h3>
+  <label>${lb('اسم العقار *||Property name *')}</label><input id="mcp_n" placeholder="${lb('مثال: فيلا 9 — حي النرجس||e.g. Villa 9')}">
+  <label>${lb('الموقع||Location')}</label><input id="mcp_l">
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" onclick="mktCompoundSave()">${lb('حفظ||Save')}</button></div>`);
+}
+async function mktCompoundSave(){
+  const name=$('mcp_n').value.trim(); if(!name)return toast(lb(' الاسم مطلوب|| Name required'),'err');
+  const r=await api('/market/compounds',{method:'POST',body:JSON.stringify({name,loc:$('mcp_l').value.trim()})});
+  if(!r.ok)return toast(lb(' تعذر الحفظ|| Save failed'),'err');
+  closeModal();await marketBootstrap();render();toast(lb(' أُضيف العقار|| Property added'),'ok');
+}
+function mktAssetForm(){
+  const compOpts=(MKT.compounds||[]).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  modal(`<h3>${lb('أصل جديد||New asset')}</h3>
+  <label>${lb('العقار *||Property *')}</label><select id="mas_c">${compOpts}</select>
+  <label>${lb('اسم الأصل *||Asset name *')}</label><input id="mas_n" placeholder="${lb('مثال: مكيف صالة — فيلا 9||e.g. Hall AC — Villa 9')}">
+  <label>${lb('التصنيف||Category')}</label><input id="mas_cat" placeholder="${lb('تكييف / سباكة / كهرباء…||HVAC / plumbing…')}">
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" onclick="mktAssetSave()">${lb('حفظ||Save')}</button></div>`);
+}
+async function mktAssetSave(){
+  const compoundId=$('mas_c').value, name=$('mas_n').value.trim();
+  if(!compoundId||!name)return toast(lb(' أكمل الحقول|| Fill all fields'),'err');
+  const r=await api('/market/assets',{method:'POST',body:JSON.stringify({compoundId,name,category:$('mas_cat').value.trim()})});
+  if(!r.ok)return toast(lb(' تعذر الحفظ|| Save failed'),'err');
+  closeModal();await marketBootstrap();render();toast(lb(' أُضيف الأصل|| Asset added'),'ok');
+}
+
+/* ---------- إشراف المدير/المهندس على السوق ---------- */
+function vMarket(){
+  if(!isAdmin()&&!isEng())return '';
+  const provs=db.providers||[];
+  const pending=provs.filter(p=>!p.verified||p.status==='pending');
+  const active=provs.filter(p=>p.verified&&p.status!=='suspended');
+  const suspended=provs.filter(p=>p.status==='suspended');
+  const rfqs=db.rfqs||[];
+  return `<div class="stats">
+    <div class="stat ok"><div class="num">${active.length}</div><div class="lbl">${lb('مقدّمون معتمدون||Verified providers')}</div></div>
+    <div class="stat warn"><div class="num">${pending.length}</div><div class="lbl">${lb('بانتظار الاعتماد||Pending approval')}</div></div>
+    <div class="stat"><div class="num">${suspended.length}</div><div class="lbl">${lb('موقوفون||Suspended')}</div></div>
+    <div class="stat"><div class="num">${rfqs.length}</div><div class="lbl">${lb('طلبات السوق||Market requests')}</div></div>
+  </div>
+  <div class="card"><h2>${lb('مقدّمو الخدمة بانتظار الاعتماد||Providers pending approval')} (${pending.length})</h2>
+    <div class="mkt-grid">${pending.map(p=>providerCard(p,true)).join('')||`<div class="mkt-empty">${lb('لا طلبات اعتماد||None pending')}</div>`}</div></div>
+  <div class="card"><h2>${lb('جميع المقدّمين||All providers')} (${provs.length})</h2>
+    <div class="mkt-grid">${provs.map(p=>providerCard(p,false)).join('')||`<div class="mkt-empty">${lb('لا مقدّمين بعد||No providers yet')}</div>`}</div></div>
+  <div class="card"><h2>${lb('طلبات السوق||Market RFQs')} (${rfqs.length})</h2>
+    ${rfqs.map(r=>mktRfqRow(r,true)).join('')||`<div class="mkt-empty">${lb('لا طلبات بعد||No requests yet')}</div>`}</div>`;
+}
+function providerCard(p,withActions){
+  const col=p.type==='supplier'?'linear-gradient(135deg,#6d28d9,#a78bfa)':'linear-gradient(135deg,#0e7490,#0891b2)';
+  return `<div class="mkt-provider">
+    <div class="ph"><span class="av" style="background:${col}">${ic(p.type==='supplier'?'box':'tool',20)}</span>
+      <div><div class="nm">${esc(p.bizName||p.contactName)}</div><div class="sm">${ptypeL(p.type)} · ${esc(p.contactName||'')}${p.city?' · '+esc(p.city):''}</div></div></div>
+    <div class="mkt-tags">
+      ${p.type==='contractor'?`<span class="mkt-tag">${specL(p.specialty)}</span>`:''}
+      ${(p.productLines||[]).map(l=>`<span class="mkt-tag">${prodL(l)}</span>`).join('')}
+    </div>
+    <div><span class="badge ${p.status==='active'?'b-ok':p.status==='pending'?'b-wait':'b-low'}">${p.status==='active'?lb('معتمد||Approved'):p.status==='pending'?lb('قيد المراجعة||Pending'):lb('موقوف||Suspended')}</span></div>
+    ${withActions?`<div class="ma" style="justify-content:flex-start"><button class="btn sm" onclick="mktVerify('${p.id}','approve')">${lb('اعتماد||Approve')}</button>
+    <button class="btn sm danger" onclick="mktVerify('${p.id}','suspend')">${lb('رفض / تعليق||Reject / Suspend')}</button></div>`:''}
+  </div>`;
+}
+async function mktVerify(pid,action){
+  const r=await api('/market/providers/'+pid+'/verify',{method:'POST',body:JSON.stringify({action})});
+  if(!r.ok)return toast(lb(' تعذر التحديث|| Update failed'),'err');
+  const s=await(await api('/state')).json(); db=s.data; AUTH.ver=s.ver; db=migrate(db); paintTab();
+  toast(lb(' تم التحديث|| Updated'),'ok');
+}
+
+/* ============================================================
+   التسجيل الذاتي (Role Selection Gate + Dynamic Onboarding)
+   ============================================================ */
+function signup(){ $('app').innerHTML=signupGateHtml(); }
+function signupGateHtml(){
+  const card=(key,icon,title,sub,pts)=>`<button class="mkt-role-card" onclick="signupForm('${key}')">
+    <span class="mkt-role-ic">${ic(icon,22)}</span><b>${title}</b><span class="muted">${sub}</span>
+    <span class="mkt-role-pts">${pts}</span></button>`;
+  return `<div class="login-wrap"><div class="login-card property-picker" style="max-width:820px">
+    <div class="onb-hero"><span class="onb-logo"><img src="/logo-mark.svg" alt="أملاكي"></span>
+      <h1>${lb('أنشئ حسابك في أملاكي||Create your Amlaki account')}</h1>
+      <p class="sub">${lb('اختر نوع حسابك لتحصل على مساحة عمل مخصّصة لدورك.||Choose your account type to get a workspace tailored to your role.')}</p></div>
+    <div class="mkt-role-grid">
+      ${card('owner','bldg',lb('مالك عقار / أصول||Property / Asset Owner'),lb('أدِر أملاكك وأصولك وأرسل أوامر الصيانة وطلبات العروض للمقدّمين المعتمدين.||Manage properties & assets; dispatch maintenance and RFQs to verified providers.'),lb('أوامر صيانة · طلبات عروض · دليل مقدّمين||Maintenance · RFQs · Directory'))}
+      ${card('contractor','tool',lb('مقاول / مزوّد خدمة||Contractor / Service Provider'),lb('استقبل طلبات العمل، قدّم عروض أسعار وفواتير، وتابع حالات التنفيذ.||Receive job requests, quote, invoice and track job status.'),lb('تخصصات · سجل تجاري · شهادات||Specialties · CR · Certifications'))}
+      ${card('supplier','box',lb('مورّد مواد / قطع غيار||Supplier / Material Vendor'),lb('اعرض منتجاتك واستجب لطلبات التوريد وعروض الأسعار.||List products and respond to material RFQs and quotes.'),lb('خطوط منتجات · كتالوج · توصيل||Product lines · Catalog · Delivery'))}
+    </div>
+    <div style="text-align:center;margin-top:20px"><a href="javascript:void(0)" onclick="render()" class="signup-link">${lb('لديك حساب؟ سجّل الدخول||Have an account? Sign in')}</a></div>
+  </div></div>`;
+}
+function signupForm(role){
+  const T={owner:lb('مالك عقار / أصول||Property / Asset Owner'),contractor:lb('مقاول / مزوّد خدمة||Contractor / Service Provider'),supplier:lb('مورّد مواد||Supplier / Material Vendor')}[role];
+  const common=`<div class="fg">
+    <div><label>${lb('الاسم الكامل *||Full name *')}</label><input id="su_name" autocomplete="name"></div>
+    <div><label>${lb('البريد الإلكتروني *||Email *')}</label><input id="su_email" type="email" dir="ltr" autocomplete="email"></div>
+    <div><label>${lb('الجوال *||Mobile *')}</label><input id="su_phone" inputmode="tel" dir="ltr" placeholder="05xxxxxxxx"></div>
+    <div><label>${lb('كلمة المرور *||Password *')}</label><input id="su_pw" type="password" autocomplete="new-password" placeholder="${lb('6 أحرف على الأقل||At least 6 characters')}"></div>
+  </div>`;
+  let extra='';
+  if(role==='owner'){
+    extra=`<div class="fg"><div><label>${lb('نوع الحساب||Account type')}</label><select id="su_otype">
+      <option value="company">${lb('شركة / مؤسسة||Company')}</option>
+      <option value="individual">${lb('فرد||Individual')}</option></select></div>
+      <div><label>${lb('اسم الشركة (اختياري)||Company name (optional)')}</label><input id="su_company"></div></div>`;
+  } else if(role==='contractor'){
+    extra=`<div class="fg">
+      <div><label>${lb('اسم المنشأة / الجهة *||Business entity name *')}</label><input id="su_biz"></div>
+      <div><label>${lb('التخصص *||Specialty *')}</label><select id="su_spec">${Object.keys(SPEC_L).map(k=>`<option value="${k}">${specL(k)}</option>`).join('')}</select></div>
+      <div><label>${lb('رقم السجل التجاري||CR number')}</label><input id="su_cr" dir="ltr"></div>
+      <div><label>${lb('المدينة / النطاق الجغرافي||City / coverage')}</label><input id="su_city" placeholder="${lb('مثال: الرياض — تغطية كاملة||e.g. Riyadh — full coverage')}"></div>
+    </div>
+    <label>${lb('الأعمال / الشهادات (اسم = رابط، سطر لكل بند)||Portfolio / certifications (name = url, one per line)')}</label>
+    <textarea id="su_port" rows="3" placeholder="${lb('شهادة السلامة = https://…\nمشروع مكتمل — فيلا 5||Safety cert = https://…')}"></textarea>`;
+  } else {
+    extra=`<div class="fg">
+      <div><label>${lb('اسم الشركة *||Company name *')}</label><input id="su_biz"></div>
+      <div><label>${lb('المدينة||City')}</label><input id="su_city"></div>
+      <div><label>${lb('نطاق التوصيل||Delivery scope')}</label><input id="su_deliv" placeholder="${lb('مثال: توصيل داخل المدينة||e.g. City-wide delivery')}"></div>
+      <div><label>${lb('رقم الرخصة التجارية||Trade license No.')}</label><input id="su_tl" dir="ltr"></div>
+    </div>
+    <label>${lb('خطوط المنتجات *||Product lines *')}</label>
+    <div class="chips" id="su_pl">${Object.keys(PRODL).map(k=>`<span class="chip" data-k="${k}" onclick="this.classList.toggle('on')">${prodL(k)}</span>`).join('')}</div>
+    <label>${lb('رابط الكتالوج / قائمة الأسعار||Catalog / price list link')}</label><input id="su_cat" dir="ltr" placeholder="https://…">`;
+  }
+  $('app').innerHTML=`<div class="login-wrap"><div class="login-card property-picker" style="max-width:820px">
+    <div class="onb-hero"><span class="onb-logo"><img src="/logo-mark.svg" alt="أملاكي"></span>
+      <h1>${lb('إنشاء حساب||Create account')} — ${T}</h1>
+      <p class="sub">${lb('املأ بياناتك الأساسية ثم بيانات النشاط التجاري.||Fill in your basic details then your business info.')}</p></div>
+    <div class="mkt-role-card" style="margin-bottom:14px;border-color:rgba(14,116,144,.35)"><div style="display:flex;gap:8px;align-items:center">
+      <span class="mkt-role-ic" style="width:32px;height:32px;border-radius:10px">${ic(role==='owner'?'bldg':role==='contractor'?'tool':'box',18)}</span>
+      <b style="font-size:13px">${T}</b>
+      <button class="btn ghost sm" onclick="signup()" style="margin-inline-start:auto">${lb('تغيير||Change')}</button></div></div>
+    <form onsubmit="return false">
+    ${common}${extra}
+    <div class="ma"><button class="btn ghost" onclick="signup()">${lb('رجوع||Back')}</button>
+    <button class="btn" onclick="signupSubmit('${role}')">${lb('إنشاء الحساب||Create account')}</button></div>
+    <div class="muted" style="margin-top:8px">${lb('بإنشائك الحساب فأنت توافق على سياسة الخصوصية.||By creating an account you agree to the privacy policy.')}</div>
+    </form>
+  </div></div>`;
+}
+async function signupSubmit(role){
+  const body={role, name:$('su_name').value.trim(), email:$('su_email').value.trim(), phone:$('su_phone').value.trim(), password:$('su_pw').value};
+  if(!body.name||!body.email||body.phone.replace(/\D/g,'').length<9||!body.password||body.password.length<6)
+    return toast(lb(' أكمل الحقول الأساسية بشكل صحيح|| Complete the basic fields correctly'),'err');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email))return toast(lb(' البريد الإلكتروني غير صحيح|| Invalid email'),'err');
+  if(role==='owner'){ body.company=$('su_company').value.trim(); }
+  else if(role==='contractor'){
+    body.bizName=$('su_biz').value.trim(); body.specialty=$('su_spec').value; body.crNo=$('su_cr').value.trim(); body.city=$('su_city').value.trim();
+    body.portfolio=($('su_port').value||'').split('\n').map(l=>{const i=l.indexOf('=');return i>=0?{name:l.slice(0,i).trim(),url:l.slice(i+1).trim()}:{name:l.trim()};}).filter(x=>x.name);
+    if(!body.bizName)return toast(lb(' اسم المنشأة مطلوب|| Business name required'),'err');
+  } else {
+    body.bizName=$('su_biz').value.trim(); body.city=$('su_city').value.trim(); body.deliveryScope=$('su_deliv').value.trim();
+    body.tradeLicense=$('su_tl').value.trim(); body.catalogUrl=$('su_cat').value.trim();
+    body.productLines=[...document.querySelectorAll('#su_pl .chip.on')].map(c=>c.getAttribute('data-k'));
+    if(!body.bizName)return toast(lb(' اسم الشركة مطلوب|| Company name required'),'err');
+    if(!body.productLines.length)return toast(lb(' اختر خط منتجات واحداً على الأقل|| Select at least one product line'),'err');
+  }
+  let r; try{ r=await fetch(API_BASE+'/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }catch(e){ return toast(lb(' تعذر الاتصال بالخادم|| Cannot reach server'),'err'); }
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){ const msg=j.error==='EMAIL_TAKEN'?lb(' البريد مستخدم لحساب آخر|| Email already used'):lb(' تعذر إنشاء الحساب|| Account creation failed'); return toast(msg,'err'); }
+  toast(lb(' تم إنشاء حسابك — سجّل الدخول الآن|| Account created — sign in now'),'ok');
+  $('app').innerHTML=loginHtml();
+}
 
 /* ===== BOOT ===== */
 boot().then(()=>{initLangMaps();render();});

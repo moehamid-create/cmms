@@ -208,7 +208,7 @@ function seedState(){
   const C=rid('C');
   const U=o=>Object.assign({id:rid('U'),phone:'',email:'',cmpIds:null,activeCmp:''},o);
   const d={
-    lang:'ar',ver:6,seq:0,prSeq:0,poSeq:0,rnSeq:0,prjSeq:0,ctSeq:0,seeded:false,
+    lang:'ar',ver:8,seq:0,prSeq:0,poSeq:0,rnSeq:0,prjSeq:0,ctSeq:0,rfqSeq:0,seeded:false,
     users:[
       U({u:'admin',  p:'1234',name:'مدير النظام',   role:'admin', defaultPw:true}),
       U({u:'eng',    p:'1234',name:'مهندس العمليات', role:'engineer', defaultPw:true}),
@@ -224,7 +224,8 @@ function seedState(){
      'طفاية حريق','شبكة إطفاء / رشاشات','سباكة وصنابير','أخرى'],
     compounds:[{id:C,name:'مجمع الخير السكني - حي الروضة',loc:'',notes:'',createdAt:Date.now()}],
     buildings:[],units:[],tenants:[],contracts:[],assets:[],wos:[],inv:[],moves:[],
-    pms:[],suppliers:[],prs:[],pos:[],projects:[],employees:[],shifts:[],notifs:[]
+    pms:[],suppliers:[],prs:[],pos:[],projects:[],employees:[],shifts:[],notifs:[],
+    providers:[],rfqs:[]
   };
   const addB=(name,type,floors)=>d.buildings.push({id:rid('B'),name,type,floors:floors.slice(),compoundId:C});
   for(let i=1;i<=34;i++)addB('فيلا '+i,'villa',['الدور الأرضي','الدور الأول','الملحق']);
@@ -254,18 +255,30 @@ async function readRow() {
   return liteGet();
 }
 
+/* يضمن وجود مصفوفات السوق والعدادات حتى في قواعد البيانات القديمة */
+function normalizeState(d){
+  if(!d) return d;
+  ['providers','rfqs'].forEach(k=>{ if(!Array.isArray(d[k])) d[k]=[]; });
+  if(d.rfqSeq==null) d.rfqSeq=0;
+  ['seq','prSeq','poSeq','rnSeq','prjSeq','ctSeq'].forEach(k=>{ if(d[k]==null) d[k]=0; });
+  if(!Array.isArray(d.users)) d.users=[];
+  if(!Array.isArray(d.compounds)) d.compounds=[];
+  if(!Array.isArray(d.assets)) d.assets=[];
+  return d;
+}
+
 async function getState() {
   const row = await readRow();
   if (row && row._dberr) throw row._dberr;   /* Postgres down → 500, never silent reset */
   if (!row) {
-    const s = seedState();
+    const s = normalizeState(seedState());
     const ver = await setState(s);
     return { data: s, ver };
   }
   try {
-    return { data: JSON.parse(row.data), ver: row.ver };
+    return { data: normalizeState(JSON.parse(row.data)), ver: row.ver };
   } catch (e) {                                   /* بيانات تالفة → إعادة تهيئة */
-    const s = seedState();
+    const s = normalizeState(seedState());
     const ver = await setState(s);
     return { data: s, ver };
   }
@@ -360,6 +373,96 @@ function auth(req,res, options = {}) {
   return { token, session: s };
 }
 
+/* ============================================================
+   السوق / منصة الملاك والمقدّمين (Marketplace)
+   أدوار جديدة: owner (مالك) · contractor (مقاول/مزوّد خدمة) · supplier (مورّد)
+   ============================================================ */
+const MARKET_ROLES = ['owner','contractor','supplier'];
+const SPECIALTIES = ['hvac','electrical','plumbing','general','carpentry','painting','landscape','lifts','security','other'];
+const PRODUCT_LINES = ['building','spareparts','industrial','electrical','plumbing','hvac','safety','tools','other'];
+function roleGuard(roles){
+  return (req,res,next)=>{
+    const a = auth(req,res,{silent:true});
+    if(!a) return res.status(401).json({error:'AUTH'});
+    if(!roles.includes(a.session.role)) return res.status(403).json({error:'FORBIDDEN'});
+    req.auth = a;
+    next();
+  };
+}
+function pubProvider(p){
+  return {
+    id:p.id, type:p.type, bizName:p.bizName, contactName:p.contactName,
+    phone:p.phone, email:p.email, city:p.city,
+    specialty:p.specialty, coverage:p.coverage, productLines:p.productLines,
+    deliveryScope:p.deliveryScope, crNo:p.crNo, tradeLicense:p.tradeLicense,
+    catalogUrl:p.catalogUrl, portfolio:p.portfolio||[], rating:p.rating||0,
+    verified:!!p.verified, status:p.status, createdAt:p.createdAt
+  };
+}
+/* يبني ملف مقدّم خدمة من بيانات التسجيل */
+function buildProvider(role, userId, b){
+  const p = {
+    id:'V'+crypto.randomBytes(6).toString('hex'),
+    type: role,
+    userId,
+    bizName: String(b.bizName||'').trim().slice(0,120),
+    contactName: String(b.name||'').trim().slice(0,80),
+    phone: normPhone(b.phone).slice(0,20),
+    email: String(b.email||'').trim().toLowerCase().slice(0,120),
+    city: String(b.city||'').trim().slice(0,60),
+    verified: false, status: 'pending', rating: 0, createdAt: Date.now()
+  };
+  if(role==='contractor'){
+    p.specialty = String(b.specialty||'general').trim().slice(0,40);
+    p.coverage = String(b.coverage||'').trim().slice(0,120);
+    p.crNo = String(b.crNo||'').trim().slice(0,40);
+    p.portfolio = (Array.isArray(b.portfolio)?b.portfolio:[]).slice(0,12)
+      .map(x=>({name:String((x&&x.name)||'').slice(0,80), url:String((x&&x.url)||'').slice(0,300)})).filter(x=>x.name||x.url);
+  } else {
+    p.productLines = (Array.isArray(b.productLines)?b.productLines:[]).slice(0,12)
+      .map(x=>String(x||'').slice(0,40)).filter(Boolean);
+    p.deliveryScope = String(b.deliveryScope||'').trim().slice(0,120);
+    p.tradeLicense = String(b.tradeLicense||'').trim().slice(0,80);
+    p.catalogUrl = String(b.catalogUrl||'').trim().slice(0,300);
+  }
+  return p;
+}
+function actorRoleOwns(session, rfq){
+  if(session.role==='admin' || session.role==='engineer') return true;
+  return session.userId === rfq.ownerId;
+}
+function rfqVisibleTo(provider, rfq){
+  if(rfq.status!=='open') return false;
+  if(rfq.visibility==='direct')
+    return (rfq.invitedProviderIds||[]).includes(provider.id);
+  return rfq.type === (provider.type==='supplier' ? 'material' : 'maintenance');
+}
+function rfqViewFor(actor, rfq, includeBids){
+  const base = {
+    id:rfq.id, no:rfq.no, type:rfq.type, ownerName:rfq.ownerName,
+    compoundName:rfq.compoundName, assetName:rfq.assetName, assetId:rfq.assetId,
+    title:rfq.title, desc:rfq.desc, category:rfq.category,
+    qty:rfq.qty, unit:rfq.unit, targetDate:rfq.targetDate,
+    status:rfq.status, visibility:rfq.visibility, createdAt:rfq.createdAt,
+    jobStatus:rfq.jobStatus, awardedBidId:rfq.awardedBidId
+  };
+  const myProvider = actor.role==='contractor'||actor.role==='supplier' ? actor.provider : null;
+  if(includeBids || actor.role==='owner' || actor.role==='admin' || actor.role==='engineer'){
+    base.bids = (rfq.bids||[]).map(b=>({
+      id:b.id, providerId:b.providerId, providerName:b.providerName,
+      amount:b.amount, note:b.note, createdAt:b.createdAt, status:b.status,
+      invoice:b.invoice||null
+    }));
+  } else if(myProvider){
+    base.bidCount = (rfq.bids||[]).length;
+    const mine = (rfq.bids||[]).find(b=>b.providerId===myProvider.id);
+    base.myBid = mine ? { id:mine.id, amount:mine.amount, note:mine.note, status:mine.status, createdAt:mine.createdAt } : null;
+  } else {
+    base.bidCount = (rfq.bids||[]).length;
+  }
+  return base;
+}
+
 /* ---- تسجيل الدخول ---- */
 app.post('/api/login', loginRateLimit, async (req,res)=>{
   let st;
@@ -398,6 +501,14 @@ app.get('/api/state', async (req,res)=>{
   catch (e) { console.error('DB error on GET /api/state:', e.message); return res.status(500).json({error:'DB'}); }
   const actor = cur.data ? auth(req,res) : null;
   if(cur.data && !actor) return;
+  /* أدوار السوق (مالك/مقاول/مورّد) تستقبل نسخة معزولة — لا تصل لبيانات غيرها */
+  if(cur.data && MARKET_ROLES.includes(actor.session.role)){
+    const meU = (cur.data.users||[]).find(u=>u.id===actor.session.userId) || {id:actor.session.userId, name:'', role:actor.session.role, email:'', phone:'', u:''};
+    return res.json({
+      data: { lang: cur.data.lang, ver: cur.ver, users: [{id:meU.id, u:meU.u, name:meU.name, role:meU.role, email:meU.email, phone:meU.phone}] },
+      ver: cur.ver, userId: actor.session.userId, role: actor.session.role, marketplace: true
+    });
+  }
   res.json(cur.data ? { ...cur, userId: actor.session.userId, role: actor.session.role } : cur);
 });
 
@@ -408,6 +519,9 @@ app.post('/api/state', async (req,res)=>{
   catch (e) { console.error('DB error on POST /api/state:', e.message); return res.status(500).json({error:'DB'}); }
   const actor = cur.data ? auth(req,res) : null;
   if(cur.data && !actor) return;
+  /* أدوار السوق لا تكتب الحالة كاملة — تعتمد على مسارات السوق المخصصة */
+  if(cur.data && MARKET_ROLES.includes(actor.session.role))
+    return res.status(403).json({error:'FORBIDDEN'});
   const {baseVer,data} = req.body || {};
   if(!data) return res.status(400).json({error:'NO_DATA'});
   if(cur.data && Number(baseVer) !== cur.ver)
@@ -489,6 +603,306 @@ app.get('/api/public/requests', pubLimit, async (req, res) => {
     no: w.no, title: w.title, status: w.status,
     createdAt: w.createdAt, closedAt: w.closedAt || null,
   })));
+});
+
+/* ============================================================
+   التسجيل الذاتي متعدد الأدوار (مالك / مقاول / مورّد)
+   ============================================================ */
+app.post('/api/signup', loginRateLimit, async (req,res)=>{
+  try {
+    const b = req.body || {};
+    const role = String(b.role || '').trim();
+    if(!MARKET_ROLES.includes(role)) return res.status(400).json({error:'BAD_ROLE'});
+    const name = String(b.name || '').trim().slice(0,80);
+    const email = String(b.email || '').trim().toLowerCase().slice(0,120);
+    const phone = normPhone(b.phone).slice(0,20);
+    const password = String(b.password || '');
+    if(!name || password.length < 6 || password.length > 200)
+      return res.status(400).json({error:'BAD_FIELDS'});
+    if(email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+      return res.status(400).json({error:'BAD_EMAIL'});
+    if(role!=='owner'){
+      if(!String(b.bizName||'').trim()) return res.status(400).json({error:'BAD_BIZ'});
+      if(role==='contractor' && !String(b.specialty||'').trim()) return res.status(400).json({error:'BAD_SPECIALTY'});
+      if(role==='supplier' && !(Array.isArray(b.productLines) && b.productLines.length)) return res.status(400).json({error:'BAD_PRODUCT_LINES'});
+    }
+    const uname = ((email ? email.split('@')[0] : ('u'+phone)) || 'user')
+      .toLowerCase().replace(/[^a-z0-9._-]/g,'').slice(0,40) || 'user'+Date.now().toString(36);
+    const out = await serialized(async () => {
+      const st = await getState();
+      if(email && (st.data.users||[]).some(x => String(x.email||'').toLowerCase()===email))
+        return { err:409, code:'EMAIL_TAKEN' };
+      let un = uname, i = 1;
+      while((st.data.users||[]).some(x => String(x.u||'').toLowerCase()===un)){ un = uname+'-'+i; i++; }
+      const userId = 'U' + crypto.randomBytes(6).toString('hex');
+      const user = { id:userId, u:un, p:hashPassword(password), name, role, phone, email, cmpIds:[], activeCmp:'', defaultPw:false };
+      st.data.users.push(user);
+      if(role==='contractor' || role==='supplier'){
+        (st.data.providers||[]).push(buildProvider(role, userId, b));
+      } else {
+        /* المالك يبدأ بعقار افتراضي يملكه */
+        st.data.compounds.push({ id:'C'+crypto.randomBytes(6).toString('hex'), name:(b.company?String(b.company).trim().slice(0,80):'')||(name+' — عقاري'), loc:'', notes:'', createdAt:Date.now(), ownerId:userId, kind:'property' });
+      }
+      const ver = await setState(st.data, st.ver);
+      if(ver == null) return { err:409, code:'CONFLICT' };
+      return { ok:true, userId };
+    });
+    if(out.err) return res.status(out.err).json({ error: out.code || 'ERR' });
+    res.json({ ok:true });
+  } catch(e){ console.error('DB error on POST /api/signup:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- بيانات السوق الخاصة بالمستخدم الحالي (معزولة حسب الدور) ---- */
+app.get('/api/market/me', roleGuard(['owner','contractor','supplier','admin','engineer']), async (req,res)=>{
+  try {
+    const st = await getState();
+    const actor = req.auth.session;
+    const meU = (st.data.users||[]).find(u=>u.id===actor.userId) || {};
+    const out = { role: actor.role, user: { id:meU.id, name:meU.name, role:meU.role, email:meU.email, phone:meU.phone } };
+    if(actor.role==='contractor' || actor.role==='supplier'){
+      const provider = (st.data.providers||[]).find(p=>p.userId===actor.userId) || null;
+      out.profile = provider ? pubProvider(provider) : null;
+      const pctx = { role: actor.role, provider };
+      const visible = (st.data.rfqs||[])
+        .filter(rfq => rfqVisibleTo(provider, rfq) || (rfq.awardedBidId && (rfq.bids||[]).some(b=>b.id===rfq.awardedBidId && b.providerId===provider.id)))
+        .map(rfq => rfqViewFor(pctx, rfq, false));
+      out.rfqs = visible;
+      out.myJobs = (st.data.rfqs||[])
+        .filter(rfq => rfq.awardedBidId && (rfq.bids||[]).some(b=>b.id===rfq.awardedBidId && b.providerId===provider.id))
+        .map(rfq => rfqViewFor(pctx, rfq, true));
+    } else if(actor.role==='owner'){
+      const owned = (st.data.compounds||[]).filter(c=>c.ownerId===actor.userId);
+      out.compounds = owned.map(c=>({id:c.id,name:c.name,kind:c.kind,loc:c.loc}));
+      const cids = owned.map(c=>c.id);
+      out.assets = (st.data.assets||[]).filter(a=>cids.includes(a.compoundId))
+        .map(a=>({id:a.id,name:a.name,category:a.category,compoundId:a.compoundId,compoundName:(owned.find(c=>c.id===a.compoundId)||{}).name}));
+      out.rfqs = (st.data.rfqs||[]).filter(rfq=>rfq.ownerId===actor.userId).map(rfq=>rfqViewFor({role:'owner'}, rfq, true));
+      out.directory = (st.data.providers||[]).filter(p=>p.verified && p.status!=='suspended').map(pubProvider);
+    } else {
+      /* admin / engineer — إشراف كامل على السوق */
+      out.providers = (st.data.providers||[]).map(pubProvider);
+      out.rfqs = (st.data.rfqs||[]).map(rfq=>rfqViewFor({role:actor.role}, rfq, true));
+      out.directory = (st.data.providers||[]).filter(p=>p.verified && p.status!=='suspended').map(pubProvider);
+    }
+    res.json(out);
+  } catch(e){ console.error('DB error on GET /api/market/me:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- دليل مقدّمي الخدمة المعتمدين (بحث/تصفية) ---- */
+app.get('/api/market/directory', roleGuard(['owner','contractor','supplier','admin','engineer']), async (req,res)=>{
+  try {
+    const st = await getState();
+    let list = (st.data.providers||[]).filter(p=>p.verified && p.status!=='suspended');
+    const type = String(req.query.type||'').trim();
+    const specialty = String(req.query.specialty||'').trim();
+    const city = String(req.query.city||'').trim();
+    if(type) list = list.filter(p=>p.type===type);
+    if(specialty) list = list.filter(p=>p.specialty===specialty || (p.productLines||[]).includes(specialty));
+    if(city) list = list.filter(p=>String(p.city||'').toLowerCase().includes(city.toLowerCase()));
+    list = list.slice(0,200).sort((a,b)=>(b.rating||0)-(a.rating||0));
+    res.json(list.map(pubProvider));
+  } catch(e){ console.error('DB error on GET /api/market/directory:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- إنشاء أمر صيانة / طلب عروض أسعار (RFQ) — للمالك ---- */
+app.post('/api/market/rfqs', roleGuard(['owner','admin','engineer']), async (req,res)=>{
+  try {
+    const b = req.body || {};
+    const type = (String(b.type||'')==='material') ? 'material' : 'maintenance';
+    const title = String(b.title||'').trim().slice(0,140);
+    const desc = String(b.desc||'').trim().slice(0,2000);
+    if(!title) return res.status(400).json({error:'BAD_TITLE'});
+    const visibility = String(b.visibility||'')==='direct' ? 'direct' : 'public';
+    const out = await serialized(async () => {
+      const st = await getState();
+      const meU = (st.data.users||[]).find(u=>u.id===req.auth.session.userId) || {};
+      st.data.rfqSeq = (st.data.rfqSeq||0) + 1;
+      const y = new Date().getFullYear();
+      const assetId = String(b.assetId||'');
+      const asset = assetId ? (st.data.assets||[]).find(a=>a.id===assetId) : null;
+      const compoundId = String(b.compoundId||(asset&&asset.compoundId)||'');
+      const compound = compoundId ? (st.data.compounds||[]).find(c=>c.id===compoundId) : null;
+      const rfq = {
+        id:'R'+crypto.randomBytes(6).toString('hex'),
+        no:'RFQ-'+y+'-'+String(st.data.rfqSeq).padStart(4,'0'),
+        type, ownerId: req.auth.session.userId, ownerName: meU.name||'',
+        compoundId, compoundName: compound?compound.name:'',
+        assetId, assetName: asset ? asset.name : String(b.assetName||'').trim().slice(0,120),
+        title, desc, category: String(b.category||'').trim().slice(0,60),
+        qty: Number(b.qty)||1, unit: String(b.unit||'').trim().slice(0,30),
+        targetDate: String(b.targetDate||'').slice(0,10),
+        status:'open', visibility,
+        invitedProviderIds: Array.isArray(b.invitedProviderIds)?b.invitedProviderIds.map(x=>String(x)).slice(0,50):[],
+        bids:[], awardedBidId:'', jobStatus:'pending', createdAt: Date.now()
+      };
+      (st.data.rfqs||[]).unshift(rfq);
+      const ver = await setState(st.data, st.ver);
+      if(ver==null) return { err:409 };
+      return { ok:true, no: rfq.no, id: rfq.id };
+    });
+    if(out.err) return res.status(409).json({error:'CONFLICT'});
+    res.json(out);
+  } catch(e){ console.error('DB error on POST /api/market/rfqs:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- تقديم عرض سعر — للمقاول/المورّد ---- */
+app.post('/api/market/rfqs/:id/bid', roleGuard(['contractor','supplier']), async (req,res)=>{
+  try {
+    const id = String(req.params.id||'');
+    const b = req.body || {};
+    const amount = Number(b.amount);
+    if(!(amount>0)) return res.status(400).json({error:'BAD_AMOUNT'});
+    const note = String(b.note||'').trim().slice(0,1000);
+    const out = await serialized(async () => {
+      const st = await getState();
+      const provider = (st.data.providers||[]).find(p=>p.userId===req.auth.session.userId);
+      if(!provider) return { err:403 };
+      const rfq = (st.data.rfqs||[]).find(r=>r.id===id);
+      if(!rfq) return { err:404 };
+      if(rfq.status!=='open' || !rfqVisibleTo(provider, rfq)) return { err:403 };
+      const existing = (rfq.bids||[]).find(x=>x.providerId===provider.id);
+      const bid = {
+        id:'B'+crypto.randomBytes(6).toString('hex'),
+        providerId: provider.id, providerName: provider.bizName||provider.contactName||'',
+        amount, note, invoice: b.invoice?String(b.invoice).trim().slice(0,300):'',
+        createdAt: Date.now(), status:'submitted'
+      };
+      if(existing) Object.assign(existing, bid, {id:existing.id});
+      else rfq.bids.push(bid);
+      const ver = await setState(st.data, st.ver);
+      if(ver==null) return { err:409 };
+      return { ok:true };
+    });
+    if(out.err) return res.status(out.err).json({error: out.err===404?'NOT_FOUND':'FORBIDDEN'});
+    res.json(out);
+  } catch(e){ console.error('DB error on bid:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- ترسية العرض — للمالك ---- */
+app.post('/api/market/rfqs/:id/award', roleGuard(['owner','admin','engineer']), async (req,res)=>{
+  try {
+    const id = String(req.params.id||'');
+    const bidId = String(req.body.bidId||'');
+    const out = await serialized(async () => {
+      const st = await getState();
+      const rfq = (st.data.rfqs||[]).find(r=>r.id===id);
+      if(!rfq) return { err:404 };
+      if(actorRoleOwns(req.auth.session, rfq)===false) return { err:403 };
+      const bid = (rfq.bids||[]).find(x=>x.id===bidId);
+      if(!bid) return { err:400 };
+      rfq.bids.forEach(x=>{ x.status = (x.id===bidId) ? 'awarded' : 'submitted'; });
+      rfq.awardedBidId = bidId; rfq.status='awarded'; rfq.jobStatus='pending';
+      const ver = await setState(st.data, st.ver);
+      if(ver==null) return { err:409 };
+      return { ok:true };
+    });
+    if(out.err) return res.status(out.err).json({error: out.err===404?'NOT_FOUND':'ERR'});
+    res.json(out);
+  } catch(e){ console.error('DB error on award:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- تحديث حالة التنفيذ — للمقاول/المورّد المرسى له ---- */
+app.post('/api/market/rfqs/:id/status', roleGuard(['contractor','supplier']), async (req,res)=>{
+  try {
+    const id = String(req.params.id||'');
+    const js = String(req.body.jobStatus||'');
+    if(!['pending','inprogress','completed','paid'].includes(js)) return res.status(400).json({error:'BAD_STATUS'});
+    const out = await serialized(async () => {
+      const st = await getState();
+      const provider = (st.data.providers||[]).find(p=>p.userId===req.auth.session.userId);
+      if(!provider) return { err:403 };
+      const rfq = (st.data.rfqs||[]).find(r=>r.id===id);
+      if(!rfq) return { err:404 };
+      if(!rfq.awardedBidId || !(rfq.bids||[]).some(x=>x.id===rfq.awardedBidId && x.providerId===provider.id)) return { err:403 };
+      rfq.jobStatus = js;
+      if(js==='completed' || js==='paid') rfq.status = js==='paid' ? 'closed' : rfq.status;
+      const ver = await setState(st.data, st.ver);
+      if(ver==null) return { err:409 };
+      return { ok:true };
+    });
+    if(out.err) return res.status(out.err).json({error: out.err===404?'NOT_FOUND':'FORBIDDEN'});
+    res.json(out);
+  } catch(e){ console.error('DB error on status:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- إغلاق/إلغاء RFQ — للمالك ---- */
+app.post('/api/market/rfqs/:id/close', roleGuard(['owner','admin','engineer']), async (req,res)=>{
+  try {
+    const id = String(req.params.id||'');
+    const out = await serialized(async () => {
+      const st = await getState();
+      const rfq = (st.data.rfqs||[]).find(r=>r.id===id);
+      if(!rfq) return { err:404 };
+      if(actorRoleOwns(req.auth.session, rfq)===false) return { err:403 };
+      rfq.status='closed';
+      const ver = await setState(st.data, st.ver);
+      if(ver==null) return { err:409 };
+      return { ok:true };
+    });
+    if(out.err) return res.status(out.err).json({error: out.err===404?'NOT_FOUND':'ERR'});
+    res.json(out);
+  } catch(e){ console.error('DB error on close:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- اعتماد/تعليق مقدّم خدمة — للمدير/المهندس ---- */
+app.post('/api/market/providers/:id/verify', roleGuard(['admin','engineer']), async (req,res)=>{
+  try {
+    const id = String(req.params.id||'');
+    const action = String(req.body.action||'approve');
+    const out = await serialized(async () => {
+      const st = await getState();
+      const p = (st.data.providers||[]).find(x=>x.id===id);
+      if(!p) return { err:404 };
+      if(action==='suspend'){ p.status='suspended'; }
+      else { p.verified=true; p.status='active'; }
+      const ver = await setState(st.data, st.ver);
+      if(ver==null) return { err:409 };
+      return { ok:true };
+    });
+    if(out.err) return res.status(out.err).json({error: out.err===404?'NOT_FOUND':'ERR'});
+    res.json(out);
+  } catch(e){ console.error('DB error on verify:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- إضافة/تعديل أصل للمالك (مستعمل في ربط أوامر السوق) ---- */
+app.post('/api/market/assets', roleGuard(['owner']), async (req,res)=>{
+  try {
+    const b = req.body || {};
+    const compoundId = String(b.compoundId||'');
+    const name = String(b.name||'').trim().slice(0,120);
+    if(!compoundId || !name) return res.status(400).json({error:'MISSING'});
+    const out = await serialized(async () => {
+      const st = await getState();
+      const cmp = (st.data.compounds||[]).find(c=>c.id===compoundId);
+      if(!cmp || cmp.ownerId!==req.auth.session.userId) return { err:403 };
+      const asset = { id:'A'+crypto.randomBytes(6).toString('hex'), name, category:String(b.category||'').trim().slice(0,60),
+        building:'', compoundId, floor:'', detail:'', model:'', serial:'', installdate:'', warrantyend:'', status:'ok', notes:'', projectId:'', photos:[] };
+      (st.data.assets||[]).push(asset);
+      const ver = await setState(st.data, st.ver);
+      if(ver==null) return { err:409 };
+      return { ok:true, id:asset.id };
+    });
+    if(out.err) return res.status(out.err).json({error: out.err===409?'CONFLICT':'FORBIDDEN'});
+    res.json(out);
+  } catch(e){ console.error('DB error on assets:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- إضافة عقار للمالك ---- */
+app.post('/api/market/compounds', roleGuard(['owner']), async (req,res)=>{
+  try {
+    const b = req.body || {};
+    const name = String(b.name||'').trim().slice(0,120);
+    if(!name) return res.status(400).json({error:'MISSING'});
+    const out = await serialized(async () => {
+      const st = await getState();
+      st.data.compounds.push({ id:'C'+crypto.randomBytes(6).toString('hex'), name, loc:String(b.loc||'').trim().slice(0,80), notes:'', createdAt:Date.now(), ownerId:req.auth.session.userId, kind:'property' });
+      const ver = await setState(st.data, st.ver);
+      if(ver==null) return { err:409 };
+      return { ok:true };
+    });
+    if(out.err) return res.status(409).json({error:'CONFLICT'});
+    res.json(out);
+  } catch(e){ console.error('DB error on compounds:', e.message); return res.status(500).json({error:'DB'}); }
 });
 
 /* ---- 404 لأي مسار API غير معروف (JSON) ---- */
