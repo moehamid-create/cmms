@@ -350,6 +350,53 @@ label{font-size:11px;font-weight:800;color:var(--muted);display:block;margin:9px
 .dark .hub-badge{background:rgba(34,184,207,.14);border-color:rgba(34,184,207,.28)}
 .topbar .pname{background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff;padding:3px 10px;border-radius:9px;
   font-size:12.5px;font-weight:800;box-shadow:0 6px 14px -6px rgba(14,116,144,.6)}
+/* ===== مبدّل الأصل (هيدر) + بطاقات نوع الأصل + التهيئة الأولى ===== */
+.topbar .asw{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.6);border:1px solid var(--line);
+  border-radius:12px;padding:4px 9px;cursor:pointer;font:inherit;color:var(--ink);transition:.18s;max-width:min(300px,46vw)}
+.topbar .asw:hover{background:#fff;border-color:rgba(14,116,144,.4);transform:translateY(-1px)}
+.asw-ic{width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;flex:0 0 auto}
+.asw-tx{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;min-width:0}
+.asw-tx b{font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.asw-tx small{font-size:9.5px;color:var(--muted);font-weight:700}
+.swlist{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.swrow{display:flex;align-items:center;gap:10px;width:100%;text-align:start;font:inherit;cursor:pointer;
+  background:rgba(255,255,255,.5);border:1px solid var(--line);border-radius:12px;padding:9px 11px;transition:.15s;color:var(--ink)}
+.swrow:hover{background:#fff;border-color:rgba(14,116,144,.4)}
+.swrow.on{border-color:var(--brand);box-shadow:0 0 0 2px rgba(14,116,144,.14)}
+.swic{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;flex:0 0 auto}
+.swtx{display:flex;flex-direction:column;min-width:0;flex:1}
+.swtx b{font-size:13.5px}
+.swtx small{font-size:10.5px;color:var(--muted);font-weight:600}
+.dom-chip{display:inline-flex;align-items:center;gap:5px;color:#fff;font-size:10.5px;font-weight:800;
+  padding:3px 9px;border-radius:99px;margin-inline-end:6px;vertical-align:middle}
+.ic-fleet{background:linear-gradient(135deg,#6d28d9,#a78bfa);box-shadow:0 8px 18px -8px rgba(109,40,217,.75)}
+.ic-ind{background:linear-gradient(135deg,#b45309,#f59e0b);box-shadow:0 8px 18px -8px rgba(180,83,9,.75)}
+.ic-gen{background:linear-gradient(135deg,#334155,#94a3b8);box-shadow:0 8px 18px -8px rgba(51,65,85,.75)}
+.onb-hero{text-align:center;margin-bottom:14px}
+.onb-logo img{width:52px;height:52px;border-radius:15px;display:inline-block}
+.onb-hero h1{font-size:20px;margin:10px 0 6px}
+.onb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:6px 0 4px}
+.onb-card{display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:start;cursor:pointer;font:inherit;
+  background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:14px;padding:13px;transition:.18s;color:var(--ink)}
+.onb-card:hover{transform:translateY(-2px);border-color:rgba(14,116,144,.45);background:#fff;
+  box-shadow:0 14px 30px -16px rgba(2,44,66,.35)}
+.onb-ic{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff}
+.onb-card b{font-size:13.5px}
+.onb-card .muted{font-size:11px;line-height:1.5}
+.onb-go{font-size:11px;font-weight:800;color:var(--brand);margin-top:2px}
+.onb-wrap{border-inline-start:3px solid var(--brand)}
+.onb-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:8px}
+.onb-step{display:flex;align-items:center;gap:9px;text-align:start;font:inherit;font-weight:700;font-size:12.5px;
+  cursor:pointer;background:rgba(255,255,255,.5);border:1px solid var(--line);border-radius:11px;padding:9px 11px;transition:.16s;color:var(--ink)}
+.onb-step:hover{background:#fff;border-color:rgba(14,116,144,.4)}
+.onb-step .n{width:22px;height:22px;border-radius:99px;background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff;
+  font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.cmpcard{position:relative}
+.cmpdom{position:absolute;top:10px;inset-inline-end:10px;width:26px;height:26px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;color:#fff}
+.dark .topbar .asw,.dark .swrow,.dark .onb-card,.dark .onb-step{background:rgba(255,255,255,.07)}
+.dark .topbar .asw:hover,.dark .swrow:hover,.dark .onb-card:hover,.dark .onb-step:hover{background:rgba(255,255,255,.12)}
 @media(max-width:1080px){.hub{grid-template-columns:1fr}}
 .kpi{cursor:pointer}
 .kpi .khead{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px}
@@ -710,7 +757,14 @@ print:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16
 moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
 sun:'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>',
  coins:'<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18M7 6h1v4M16.71 13.88l.7.71-2.82 2.82"/>',
- wallet:'<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>'
+ wallet:'<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
+ chev:'<path d="M6 9l6 6 6-6"/>',
+ truck:'<path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+ factory:'<path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M17 18h1M12 18h1M7 18h1"/>',
+ fuel:'<path d="M3 22h12V4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/><path d="M14 10h2a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9l-3-3"/><path d="M6 8h6"/>',
+ gauge:'<path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+ shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+ zap:'<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>'
 };
 function ic(n,s){s=s||18;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]||''}</svg>`;}
 
@@ -812,6 +866,9 @@ function initLangMaps(){
   BTYPES={villa:lb('فيلا||Villa'),tower:lb('مبنى سكني||Residential Bldg'),mall:lb('مبنى تجاري||Commercial Bldg'),area:lb('منطقة عامة||Common Area')};
   UNITKIND={apt:lb('شقة||Apartment'),villa:lb('فيلا كاملة||Full Villa'),subunit:lb('وحدة فرعية (جزء فيلا)||Sub-unit'),office:lb('مكتب||Office'),shop:lb('محل تجاري||Shop'),annex:lb('ملحق||Annex'),land:lb('أرض||Land'),clinic:lb('عيادة||Clinic'),store:lb('مستودع||Storage'),other:lb('أخرى||Other')};
   CTRSC={amc:lb('عقد صيانة شامل||Annual Maintenance (AMC)'),cleaning:lb('نظافة||Cleaning'),security:lb('أمن وحراسة||Security'),
+    insurance:lb('تأمين (مركبات / ممتلكات)||Insurance'),registration:lb('استمارة / تسجيل||Registration'),
+    fuel:lb('وقود ومحروقات||Fuel supply'),utilities:lb('مرافق (كهرباء / ماء)||Utilities'),
+    safety:lb('سلامة ودفاع مدني||Safety & civil defence'),
     pest:lb('مكافحة حشرات||Pest Control'),lifts:lb('مصاعد||Elevators'),landscape:lb('حدائق وري||Landscaping'),other:lb('أخرى||Other')};
   CYCLEK={mo:lb('شهري||Monthly'),q:lb('ربعي||Quarterly'),yr:lb('سنوي||Yearly'),one:lb('دفعة واحدة||One-time')};
   PRSTAT={pending:[lb('بانتظار الموافقة||Pending Approval'),'b-prog'],approved:[lb('معتمد||Approved'),'b-ok'],
@@ -1127,24 +1184,45 @@ function setCmp(id){
   persist();pmGen();genSysNotifs();render();
 }
 
-function navItems(){
-  return [
-    ['dash','home',lb('الرئيسية||Dashboard'),['admin','engineer','sitemgr','tech','store','proc']],
-    ['wos','tool',lb('أوامر الشغل||Work Orders'),['admin','engineer','sitemgr','tech']],
-    ['pm','cal',lb('الصيانة الدورية||Preventive'),['admin','engineer','sitemgr']],
-    ['proj','layers',lb('المشاريع||Projects'),['admin','engineer','sitemgr']],
-    ['cmps','bldg',lb('المجمعات||Compounds'),['admin']],
-    ['assets','gear',lb('الأصول||Assets'),['admin','engineer','sitemgr']],
-    ['units','homes',lb('الوحدات والمستأجرون||Units & Tenants'),['admin','engineer','sitemgr']],
-    ['inv','box',lb('المخزون||Inventory'),['admin','engineer','store']],
-    ['proc','cart',lb('المشتريات||Procurement'),['admin','engineer','sitemgr','proc']],
-    ['contracts','file',lb('العقود||Contracts'),['admin','engineer','sitemgr']],
-    ['hr','briefcase',lb('الموظفون||Workforce'),['admin','engineer']],
-    ['rep','chart',lb('التقارير||Reports'),['admin','engineer','sitemgr']],
-    ['users','users',lb('المستخدمون||Users'),['admin']]
-  ].filter(n=>n[3].includes(me.role));
+/* ===== التنقل — يتكيّف مع نوع الأصل النشط ===== */
+const COMMON_ROLES={dash:['admin','engineer','sitemgr','tech','store','proc'],wos:['admin','engineer','sitemgr','tech'],
+  pm:['admin','engineer','sitemgr'],proj:['admin','engineer','sitemgr'],assets:['admin','engineer','sitemgr'],
+  units:['admin','engineer','sitemgr'],inv:['admin','engineer','store'],proc:['admin','engineer','sitemgr','proc'],
+  contracts:['admin','engineer','sitemgr'],hr:['admin','engineer'],rep:['admin','engineer','sitemgr'],users:['admin'],cmps:['admin']};
+function navDef(k){
+  const d=domainOf();
+  const L={
+    dash:['home',lb('الرئيسية||Dashboard')],
+    wos:['tool',lb('أوامر الشغل||Work Orders')],
+    pm:['cal',d==='fleet'?lb('صيانة دورية (زيت وفلاتر)||Scheduled service')
+      :d==='industrial'?lb('الصيانة الوقائية للمعدات||Equipment PM'):lb('الصيانة الدورية||Preventive')],
+    proj:['layers',lb('المشاريع||Projects')],
+    cmps:['bldg',lb('إدارة كل الأصول||Manage all assets')],
+    assets:['gear',d==='fleet'?lb('المركبات||Vehicles'):d==='industrial'?lb('المعدات والآلات||Machinery'):lb('الأصول||Assets')],
+    units:['homes',lb('الوحدات والمستأجرون||Units & Tenants')],
+    inv:['box',d==='fleet'?lb('قطع الغيار||Spare parts'):lb('المخزون||Inventory')],
+    proc:['cart',lb('المشتريات والفواتير||Procurement & invoices')],
+    contracts:['file',d==='fleet'?lb('التأمين والعقود||Insurance & contracts'):lb('العقود||Contracts')],
+    hr:['briefcase',d==='fleet'?lb('السائقون والموظفون||Drivers & workforce'):lb('الموظفون||Workforce')],
+    rep:['chart',lb('التقارير||Reports')],
+    users:['users',lb('المستخدمون||Users')]
+  };
+  return L[k]||['home',k];
 }
-function tabAllowed(t){return navItems().some(n=>n[0]===t);}
+const DOMAIN_TABS={
+  realestate:['dash','wos','pm','proj','assets','units','inv','proc','contracts','hr','rep','users'],
+  fleet:['dash','wos','pm','assets','inv','proc','contracts','proj','hr','rep','users'],
+  industrial:['dash','wos','pm','assets','contracts','inv','proc','proj','hr','rep','users'],
+  generic:['dash','wos','pm','assets','contracts','inv','proc','proj','hr','rep','users']
+};
+/* شاشات إدارية لا تظهر في القائمة الجانبية — تُفتح من مبدّل الأصل في الهيدر */
+const HIDDEN_TABS=['cmps'];
+function navItems(){
+  const order=DOMAIN_TABS[domainOf()]||DOMAIN_TABS.realestate;
+  return order.map(k=>{const def=navDef(k);return [k,def[0],def[1],COMMON_ROLES[k]||[]];})
+    .filter(n=>n[3].includes(me.role));
+}
+function tabAllowed(t){return HIDDEN_TABS.includes(t)||navItems().some(n=>n[0]===t);}
 function goTab(t){TAB=tabAllowed(t)?t:'dash';render();}
 function dashStatus(st){FILT.woStatus=st;FILT.wos='';goTab('wos');}
 function sbFocus(){const sb=document.querySelector('#view .searchbar');if(sb){sb.focus();try{sb.setSelectionRange(sb.value.length,sb.value.length)}catch(e){}}}
@@ -1418,40 +1496,106 @@ function markAllRead(){db.notifs.forEach(n=>n.read=true);persist();closeModal();
 function render(){
   document.body.dir=db.lang==='ar'?'rtl':'ltr';
   document.body.lang=db.lang==='ar'?'ar':'en';
+  /* عزل السياق: لو التبويب الحالي غير منطبق على نوع الأصل النشط نرجع للوحة */
+  if(me&&!tabAllowed(TAB))TAB='dash';
   $('app').innerHTML = me ? (PICK?pickerHtml():shell()) : loginHtml();
   if(me&&!PICK)paintTab();
   document.querySelectorAll('#app button[title]').forEach(b=>{if(!b.getAttribute('aria-label'))b.setAttribute('aria-label',b.title);});
 }
+/* بطاقات اختيار نوع الأصل — تُستخدم في شاشة البداية وفي نافذة "أصل جديد" */
+function onbCard(kind,icon,ar,en,subAr,subEn){
+  return `<button class="onb-card" onclick="closeModal();cmpForm(null,'${kind}')">
+    <span class="onb-ic">${ic(icon,20)}</span>
+    <b>${lb(ar+'||'+en)}</b>
+    <span class="muted">${lb(subAr+'||'+subEn)}</span>
+    <span class="onb-go">${lb('ابدأ ←||Start →')}</span></button>`;
+}
+function onbGrid(){
+  return `<div class="onb-grid">
+    ${onbCard('property','bldg','عقار سكني / تجاري','Residential / Commercial','وحدات · مستأجرون · عقود إيجار · مصروفات','Units · tenants · leases · expenses')}
+    ${onbCard('vehicles','truck','أسطول مركبات','Vehicle fleet','عدّاد · وقود · صيانة دورية · تأمين واستمارة','Odometer · fuel · service · insurance')}
+    ${onbCard('factory','factory','مصنع / منشأة صناعية','Factory / Industrial','آلات ومعدات · مرافق · امتثال وسلامة','Machinery · utilities · compliance')}
+    ${onbCard('other','layers','أملاك أخرى','Other assets','معدات وأصول متنوعة','Miscellaneous assets')}
+  </div>`;
+}
+function newAssetPicker(){
+  modal(`<h3>${lb('إضافة أصل جديد||Add a new asset')}</h3>
+  <p class="muted">${lb('اختر نوع الأصل — واجهة الإدارة والحقول تتغيّر تلقائياً حسب النوع.||Pick the asset type — the dashboard and fields adapt automatically.')}</p>
+  ${onbGrid()}
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button></div>`);
+}
 function pickerHtml(){
   const list=myCmps();
   const card=c=>{
+    const dom=domainOf(c.id),dm=domainMeta(dom);
     const bl=db.buildings.filter(b=>b.compoundId===c.id).length;
+    const un=db.units.filter(u=>{const b=db.buildings.find(x=>x.id===u.buildingId);return b&&b.compoundId===c.id;}).length;
     const as=db.assets.filter(a=>a.compoundId===c.id).length;
     const wo=db.wos.filter(w=>w.compoundId===c.id&&w.status!=='closed').length;
-    const kindT=(KINDL()[c.kind||'property']||'')+(c.ptype?(' · '+(PTYPEL()[c.ptype]||c.ptype)):'');
-    return `<div class="cmpcard" onclick="setCmp('${c.id}')">
+    const stats=dom==='realestate'
+      ?`${bl} ${lb('مبنى||bldgs')} · ${un} ${lb('وحدة||units')}`
+      :`${as} ${lb('أصل||assets')}`;
+    return `<div class="cmpcard dom-${dm.k}" onclick="setCmp('${c.id}')">
+      <span class="cmpdom" style="background:${dm.col}">${ic(dm.ic,15)}</span>
       <div class="cc-t">${esc(c.name)}</div>
-      ${kindT?`<div class="muted">${kindT}</div>`:''}
+      <div class="muted">${dm.t}${c.ptype?' · '+(PTYPEL()[c.ptype]||c.ptype):''}</div>
       ${c.loc?`<div class="muted">${esc(c.loc)}</div>`:''}
-      <div class="cc-s"><span>${bl} ${lb('مبنى||bldgs')}</span><span>${wo} ${lb('مفتوح||open')}</span><span>${as} ${lb('أصل||assets')}</span></div>
+      <div class="cc-s"><span>${stats}</span><span>${wo} ${lb('مفتوح||open')}</span></div>
       <div class="cc-go">${lb('دخول ←||Enter →')}</div></div>`;};
-  const canCreate=isAdmin();
-  const addActions=canCreate?`<div class="property-actions">
-      <button class="btn property-action" onclick="cmpForm(null,'property')">＋ ${lb('إضافة عقار||Add property')}</button>
-      <button class="btn ghost property-action" onclick="cmpForm(null,'other')">＋ ${lb('إضافة أملاك أخرى||Add other assets')}</button>
-    </div>`:'';
+  if(!list.length){
+    return `<div class="login-wrap"><div class="login-card property-picker">
+      <div class="onb-hero"><span class="onb-logo"><img src="/logo-mark.svg" alt="أملاكي"></span>
+        <h1>${lb('أهلاً بك في أملاكي||Welcome to Amlaki')}</h1>
+        <p class="sub">${esc(me.name)} — ${lb('ابدأ بإضافة أول أصل لتديره، وستُبنى لوحة الإدارة تلقائياً حسب نوعه.||Add your first asset — its management dashboard is built automatically from its type.')}</p></div>
+      ${isAdmin()?onbGrid():`<div class="empty">${lb('لا توجد أصول مرتبطة بحسابك بعد — اطلب من مدير النظام إضافتك إلى أصل.||No assets linked to your account yet — ask an admin to add you to one.')}</div>`}
+      <div style="text-align:center;margin-top:14px"><button class="btn ghost sm" onclick="PICK=false;logout()">${lb('خروج||Logout')}</button></div>
+    </div></div>`;
+  }
   return `<div class="login-wrap"><div class="login-card property-picker">
-    <h1>${lb('العقارات||Properties')}</h1>
-    <p class="sub">${esc(me.name)} — ${lb('اختر عقاراً لعرض لوحة الإدارة، أو أضف عقاراً جديداً.||Choose a property to open its dashboard, or add a new one.')}</p>
-    ${addActions}
-    <div class="property-section-title"><span>${lb('العقارات الموجودة||Existing properties')}</span><span class="muted">${list.length}</span></div>
-    <div class="cmpgrid">${list.map(card).join('')||`<div class="empty">${lb('لا عقارات بعد — أضف أول عقار بالأعلى||No properties yet — add your first one above')}</div>`}</div>
+    <h1>${lb('أصولك||Your assets')}</h1>
+    <p class="sub">${esc(me.name)} — ${lb('اختر أصلاً لفتح لوحته المعزولة، أو أضف أصلاً جديداً.||Choose an asset to open its isolated dashboard, or add a new one.')}</p>
+    ${isAdmin()?`<div class="property-actions"><button class="btn property-action" onclick="newAssetPicker()">＋ ${lb('إضافة أصل||Add asset')}</button></div>`:''}
+    <div class="property-section-title"><span>${lb('الأصول الموجودة||Existing assets')}</span><span class="muted">${list.length}</span></div>
+    <div class="cmpgrid">${list.map(card).join('')}</div>
     <div style="text-align:center;margin-top:14px"><button class="btn ghost sm" onclick="PICK=false;logout()">${lb('خروج||Logout')}</button></div>
   </div></div>`;
 }
 /* أنواع العقارات والأملاك */
-function KINDL(){return {property:lb('عقار||Property'),residentialBuilding:lb('مبنى سكني||Residential'),other:lb('أملاك أخرى||Other assets')};}
+/* أنواع الأصول: عقار / أسطول مركبات / منشأة صناعية / أملاك أخرى */
+function KINDL(){return {property:lb('عقار||Property'),residentialBuilding:lb('مبنى سكني||Residential'),
+  vehicles:lb('أسطول مركبات||Vehicle fleet'),factory:lb('مصنع / منشأة صناعية||Factory / Industrial'),
+  other:lb('أملاك أخرى||Other assets')};}
 function PTYPEL(){return {residential:lb('سكني||Residential'),commercial:lb('تجاري||Commercial'),admin:lb('إداري||Administrative'),mixed:lb('مختلط||Mixed'),complex:lb('مجمع||Complex')};}
+/* ===== نطاق الأصل (Domain) — يحدد القائمة واللوحة والحقول ===== */
+function domainOf(id){
+  const c=(db&&db.compounds)?db.compounds.find(x=>x.id===(id||activeCmp())):null;
+  const k=(c&&c.kind)||'property';
+  if(k==='vehicles')return 'fleet';
+  if(k==='factory')return 'industrial';
+  if(k==='other')return 'generic';
+  return 'realestate';
+}
+function domainMeta(d){
+  const M={
+    realestate:{k:'realestate',t:lb('إدارة العقارات||Real estate'),s:lb('وحدات ومستأجرون وعقود إيجار||Units · tenants · leases'),
+      ic:'bldg',cls:'ic-bldg',col:'#0e7490'},
+    fleet:{k:'fleet',t:lb('إدارة الأسطول||Fleet'),s:lb('مركبات · عدّاد · وقود · تأمين||Vehicles · odometer · fuel · insurance'),
+      ic:'truck',cls:'ic-fleet',col:'#7c3aed'},
+    industrial:{k:'industrial',t:lb('إدارة المنشأة الصناعية||Industrial'),s:lb('آلات ومعدات · مرافق · امتثال||Machinery · utilities · compliance'),
+      ic:'factory',cls:'ic-ind',col:'#b45309'},
+    generic:{k:'generic',t:lb('إدارة الأملاك الأخرى||Other assets'),s:lb('أصول ومعدات متنوعة||Miscellaneous assets'),
+      ic:'layers',cls:'ic-gen',col:'#475569'}
+  };
+  return M[d]||M.realestate;
+}
+function domainNow(){return domainMeta(domainOf());}
+/* هل الأصل النشط جديد بلا أي بيانات بعد؟ (لتشغيل التهيئة الأولى) */
+function cmpIsEmpty(id){
+  const c=id||activeCmp();
+  return !db.buildings.some(b=>b.compoundId===c)&&!db.units.some(u=>{const b=db.buildings.find(x=>x.id===u.buildingId);return b&&b.compoundId===c;})
+    &&!db.assets.some(a=>a.compoundId===c)&&!db.wos.some(w=>w.compoundId===c)&&!db.pms.some(p=>p.compoundId===c)
+    &&!db.contracts.some(k=>k.compoundId===c)&&!(db.vehicles||[]).some(v=>v.compoundId===c);
+}
   async function logout(){
   try{await api('/logout',{method:'POST'});}catch(e){}
   AUTH.csrf='';AUTH.mustChange=false;me=null;PICK=false;render();}
@@ -1465,16 +1609,17 @@ function shell(){
   const nav=navItems();
   const groups=[nav.slice(0,4),nav.slice(4)];
   const act=activeCmp();
-  const cmpSel=myCmps().length>1
-    ?`<div style="padding:0 4px 6px"><div class="slabel" style="padding:0 4px 3px">${lb('العقار الحالي||Current property')}</div><select class="cmpsel" title="${lb('تبديل العقار||Switch property')}" onchange="setCmp(this.value)">${myCmps().map(c=>`<option value="${c.id}" ${act===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>`
-    :`<div class="cmpchip" title="${lb('العقار الحالي||Current property')}"><small>${lb('العقار الحالي||Current property')}</small>${esc(cmpName(act))}</div>`;
+  const dm=domainNow();
+  /* مبدّل الأصل — عنصر مدمج ودائم في الهيدر (بدل قوائم العقارات داخل الشاشة) */
+  const asw=`<button class="asw" onclick="assetSwitcher()" title="${lb('تبديل الأصل||Switch asset')}" aria-label="${lb('تبديل الأصل||Switch asset')}">
+      <span class="asw-ic" style="background:${dm.col}">${ic(dm.ic,15)}</span>
+      <span class="asw-tx"><b>${esc(cmpName(act))}</b><small>${dm.t}</small></span>${ic('chev',14)}</button>`;
   return `
   <div class="layout">
     <aside class="side">
       <div class="brand"><span class="logo"><img src="/logo-mark.svg" alt="أملاكي"></span>
         <span class="brand-t">${lb('أملاكي||Amlaki')}<small>${lb('منصة إدارة الأملاك والصيانة والفواتير||Property, Maintenance & Billing')}</small></span>
       </div>
-      ${cmpSel}
       <div class="sidediv"></div>
       <div class="slabel">${lb('التشغيل||Operations')}</div>
       ${groups[0].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" title="${n[2]}" onclick="TAB='${n[0]}';render()"><span class="ic">${ic(n[1],20)}</span><span class="nt">${n[2]}</span></button>`).join('')}
@@ -1488,7 +1633,7 @@ function shell(){
           ${isAdmin()?`<button class="btn ghost sm" title="${lb('نسخة احتياطية الآن||Backup now')}" onclick="bkNow()">${lb('نسخة||Backup')}</button>`:''}
           <button class="btn ghost sm" title="${lb('الوضع الليلي||Night mode')}" onclick="toggleTheme()">${ic(document.documentElement.classList.contains('dark')?'sun':'moon',14)}</button>
           <button class="btn ghost sm" title="${lb('اللغة||Language')}" onclick="toggleLang()">${db.lang==='ar'?'EN':'ع'}</button>
-          <button class="btn ghost sm" title="${lb('تبديل المجمع||Switch compound')}" onclick="PICK=true;render()">${lb('تبديل||Switch')}</button>
+          ${isAdmin()?`<button class="btn ghost sm" title="${lb('إدارة كل الأصول||Manage all assets')}" onclick="goTab('cmps')">${lb('الأصول||Assets')}</button>`:''}
           <button class="btn ghost sm" title="${lb('خروج||Logout')}" onclick="logout()">${lb('خروج||Exit')}</button>
         </div>
       </div>
@@ -1497,7 +1642,7 @@ function shell(){
       <div class="topbar">
         <span class="ttl"><span class="pname">${lb('أملاكي||Amlaki')}</span>${(()=>{const c=nav.find(n=>n[0]===TAB);return c?c[2]:lb('الرئيسية||Dashboard')})()}</span>
         <span class="meta">
-          <span title="${lb('المجمع الحالي||Current compound')}"> ${esc(cmpName(act))}</span>
+          ${asw}
           <span> ${fmtD(todayISO())}</span>
           <button class="bell" title="${lb('الإشعارات||Notifications')}" onclick="notifModal()">${ic('bell',16)}${uc?`<span class="bellb">${uc}</span>`:''}</button>
         </span>
@@ -1508,6 +1653,24 @@ function shell(){
     </div>
   </div>`;
 }
+/* نافذة تبديل الأصل — مدمجة في الهيدر، بلا قوائم أصول مزاحمة داخل الشاشة */
+function assetSwitcher(){
+  const list=myCmps();const act=activeCmp();
+  const row=c=>{
+    const dm=domainMeta(domainOf(c.id));
+    const open=db.wos.filter(w=>w.compoundId===c.id&&w.status!=='closed').length;
+    return `<button class="swrow ${c.id===act?'on':''}" onclick="switchAsset('${c.id}')">
+      <span class="swic" style="background:${dm.col}">${ic(dm.ic,15)}</span>
+      <span class="swtx"><b>${esc(c.name)}</b><small>${dm.t}${c.loc?' · '+esc(c.loc):''}${open?' · '+open+' '+lb('مفتوح||open'):''}</small></span>
+      ${c.id===act?`<span class="badge b-ok">${lb('الحالي||Active')}</span>`:''}</button>`;};
+  modal(`<h3>${lb('تبديل الأصل||Switch asset')}</h3>
+  <p class="muted">${lb('كل الشاشات معزولة على الأصل المختار فقط — لا تظهر بيانات أصل آخر داخل لوحته.||Every screen is scoped to the selected asset only — no other asset data appears inside its dashboard.')}</p>
+  <div class="swlist">${list.map(row).join('')}</div>
+  <div class="ma">
+    ${isAdmin()?`<button class="btn ghost" onclick="newAssetPicker()">＋ ${lb('أصل جديد||New asset')}</button>`:''}
+    <button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button></div>`);
+}
+function switchAsset(id){closeModal();setCmp(id);toast(lb('تم تبديل الأصل||Asset switched'),'ok');}
 function paintTab(){
   const v=$('view');
   if(TAB==='dash')v.innerHTML=vDash();
@@ -1550,29 +1713,50 @@ function cmpForm(cid,kind){
   let c={};
   if(cid){const f=db.compounds.find(x=>x.id===cid);if(f)c=f;}
   const k=kind||c.kind||'property';
-  const isOther=k==='other';
-  const title=cid?lb('تعديل العقار||Edit property'):(isOther?lb('إضافة أملاك أخرى||Add other assets'):lb('إضافة عقار||Add property'));
-  const nameLabel=isOther?lb('اسم المجموعة * (مثال: أسطول السيارات)||Group name * (e.g. Vehicle fleet)'):lb('اسم العقار *||Property name *');
-  const nameHint=isOther?lb('مثال: أسطول السيارات - معدات - أصول متنقلة||e.g. Vehicle fleet, equipment'):lb('مثال: مجمع الخير السكني - حي الروضة||e.g. Al-Khair Property');
+  const dom=domainMeta(k==='vehicles'?'fleet':k==='factory'?'industrial':k==='other'?'generic':'realestate');
+  const isRE=(k==='property'||k==='residentialBuilding');
+  const kindOpts=Object.keys(KINDL()).map(v=>`<option value="${v}" ${k===v?'selected':''}>${KINDL()[v]}</option>`).join('');
   const ptypeOpts=Object.keys(PTYPEL()).map(v=>`<option value="${v}" ${c.ptype===v?'selected':''}>${PTYPEL()[v]}</option>`).join('');
-  modal(`<h3>${title}</h3>
+  const nameLabel=isRE?lb('اسم العقار *||Property name *')
+    :k==='vehicles'?lb('اسم الأسطول *||Fleet name *')
+    :k==='factory'?lb('اسم المنشأة *||Facility name *'):lb('اسم المجموعة *||Group name *');
+  const nameHint=isRE?lb('مثال: مجمع الخير السكني — حي الروضة||e.g. Al-Khair Residential Compound')
+    :k==='vehicles'?lb('مثال: أسطول سيارات التشغيل||e.g. Operations fleet')
+    :k==='factory'?lb('مثال: مصنع التعبئة — المدينة الصناعية||e.g. Packaging plant — industrial city')
+    :lb('مثال: أصول متنوعة||e.g. Miscellaneous assets');
+  const locLabel=k==='vehicles'?lb('المقر / المستودع||Depot / location')
+    :k==='factory'?lb('الموقع / المدينة الصناعية||Site / industrial city'):lb('الموقع / الحي||Location / District');
+  modal(`<h3>${cid?lb('تعديل الأصل||Edit asset'):lb('إضافة أصل||Add asset')}
+    <span class="badge" style="background:${dom.col};color:#fff;border-color:transparent">${ic(dom.ic,12)} ${dom.t}</span></h3>
+  <p class="muted">${lb('نوع الأصل يحدد واجهة الإدارة والحقول والمؤشرات داخل لوحته.||The asset type drives its dashboard, fields and metrics.')}</p>
+  <div class="fg">
+    <div><label>${lb('نوع الأصل *||Asset type *')}</label><select id="fcpx_k" aria-label="${lb('نوع الأصل||Asset type')}">${kindOpts}</select></div>
+    ${isRE?`<div><label>${lb('نوع العقار||Property type')}</label><select id="fcpx_pt">${ptypeOpts}</select></div>`:''}
+  </div>
   <label>${nameLabel}</label><input id="fcpx_n" value="${esc(c.name||'')}" placeholder="${nameHint}">
-  ${isOther?'':`<div><label>${lb('نوع العقار||Property type')}</label><select id="fcpx_pt">${ptypeOpts}</select></div>`}
-  <div class="fg"><div><label>${lb('الموقع / الحي||Location / District')}</label><input id="fcpx_l" value="${esc(c.loc||'')}"></div></div>
+  <div class="fg"><div><label>${locLabel}</label><input id="fcpx_l" value="${esc(c.loc||'')}"></div></div>
   <label>${lb('ملاحظات||Notes')}</label><textarea id="fcpx_no" rows="2">${esc(c.notes||'')}</textarea>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
-  <button class="btn" onclick="saveCmp('${cid||''}','${k}')">${lb('حفظ||Save')}</button></div>`);
+  <button class="btn" onclick="saveCmp('${cid||''}')">${lb('حفظ||Save')}</button></div>`);
 }
-function saveCmp(iStr,kind){
+function saveCmp(iStr){
   const isNew=(iStr==null||iStr==='null'||iStr==='');
   const n=$('fcpx_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
-  const o={name:n,loc:$('fcpx_l').value.trim(),notes:$('fcpx_no').value.trim(),
-    kind:kind||'property',ptype:($('fcpx_pt')?$('fcpx_pt').value:'')||''};
-  if(isNew){const c=Object.assign({id:uid('C'),createdAt:Date.now(),kind:kind||'property',ownerId:me.id},o);db.compounds.push(c);
+  const kind=$('fcpx_k')?$('fcpx_k').value:'property';
+  const isRE=(kind==='property'||kind==='residentialBuilding');
+  const o={name:n,loc:$('fcpx_l').value.trim(),notes:$('fcpx_no').value.trim(),kind,
+    ptype:isRE&&$('fcpx_pt')?$('fcpx_pt').value:''};
+  if(isNew){
+    const c=Object.assign({id:uid('C'),createdAt:Date.now(),ownerId:me.id},o);
+    db.compounds.push(c);
     if(me.role!=='admin'){me.cmpIds=[...(me.cmpIds||[]),c.id];}
-    me.activeCmp=c.id;}
-  else{const ex=db.compounds.find(x=>x.id===iStr);if(!ex)return toast(lb(' العقار غير موجود|| Property not found'),'err');Object.assign(ex,o);}
-  persist();closeModal();paintTab();toast(lb(' تم حفظ المجمع|| Compound saved'),'ok');
+    me.activeCmp=c.id;TAB='dash';PICK=false; /* ندخل الأصل الجديد مباشرة لبدء التهيئة */
+  }else{
+    const ex=db.compounds.find(x=>x.id===iStr);
+    if(!ex)return toast(lb(' الأصل غير موجود|| Asset not found'),'err');
+    Object.assign(ex,o);
+  }
+  persist();closeModal();render();toast(lb(' تم الحفظ|| Saved'),'ok');
 }
 function delCmp(cid){const c=db.compounds.find(x=>x.id===cid);if(!c)return;
   if(myCmps().length<=1)return toast(lb(' لا يمكن حذف آخر عقار لديك — أنشئ عقاراً جديداً أولاً|| Cannot delete your last property — create another first'),'err');
@@ -1838,8 +2022,9 @@ function hubMaintenanceCard(){
 /* --- 3) المتتبع المالي: الإيرادات والفواتير والمصروفات --- */
 function hubFinance(){
   const act=activeCmp();
-  const tenants=cmpTenants();
-  const income=tenants.reduce((s,t)=>s+Number(t.rent||0),0);
+  const isRE=domainOf()==='realestate';
+  const tenants=isRE?cmpTenants():[];
+  const income=isRE?tenants.reduce((s,t)=>s+Number(t.rent||0),0):0;
   const wos=db.wos.filter(w=>w.compoundId===act);
   const labor=wos.filter(w=>w.status==='closed'&&!w.projectId).reduce((s,w)=>s+Number(w.cost||0),0);
   const pos=db.pos.filter(po=>!po.compoundId||po.compoundId===act);
@@ -1864,7 +2049,7 @@ function hubFinance(){
   const maxM=Math.max(1,...months.map(m=>Math.max(incM[m],expM[m])));
   const mName=k=>{const p=k.split('-');return new Date(+p[0],+p[1]-1,1).toLocaleDateString(db.lang==='ar'?'ar-EG':'en-GB',{month:'short'});};
   const rows=[
-    [lb('إيرادات الإيجار المتعاقدة||Contracted rental income'),income,'ok'],
+    [isRE?lb('إيرادات الإيجار المتعاقدة||Contracted rental income'):lb('إيرادات تشغيلية مسجّلة||Recorded operating income'),income,'ok'],
     [lb('تكلفة الصيانة (عمالة)||Maintenance labor'),labor,''],
     [lb('فواتير المشتريات المعتمدة||Approved purchase invoices'),purch,''],
     [lb('مصروفات المشاريع||Project expenses'),projExp,''],
@@ -1877,19 +2062,19 @@ function hubFinance(){
       <button class="btn ghost sm pgo" onclick="goTab('rep')">${lb('التقارير||Reports')}</button></div>
     ${empty?`<div class="empty">${lb('لا توجد بيانات مالية بعد — أضف وحدات ومستأجرين وأوامر شغل||No financial data yet — add units, tenants and work orders')}</div>`:''}
     <div class="pkpis">
-      ${hubKpi(moneyK(income)+' <small>'+lb('ر.س||SAR')+'</small>',lb('الإيرادات (سنوي)||Income (year)'))}
+      ${hubKpi(moneyK(income)+' <small>'+lb('ر.س||SAR')+'</small>',isRE?lb('الإيرادات (سنوي)||Income (year)'):lb('إيرادات تشغيلية||Operating income'))}
       ${hubKpi(moneyK(totalExp)+' <small>'+lb('ر.س||SAR')+'</small>',lb('إجمالي المصروفات||Total expenses'),totalExp?'warn':'')}
       ${hubKpi((net<0?'-':'')+moneyK(Math.abs(net))+' <small>'+lb('ر.س||SAR')+'</small>',lb('الصافي||Net'),net<0?'warn':'ok')}
       ${hubKpi(invs.length,lb('فواتير معتمدة||Approved invoices'))}
     </div>
-    <div class="netline ${net>=0?'pos':'neg'}"><span>${lb('صافي الدخل المتوقع (سنوي)||Expected net income (year)')}</span>
-      <span class="nv">${net<0?'-':''}${money(Math.abs(net))}</span></div>
-    ${empty?'':`<div class="psub">${lb('الإيراد الشهري مقابل المصروفات — 6 أشهر||Monthly income vs expenses — 6 months')}</div>
+    <div class="netline ${(isRE?net>=0:false)?'pos':'neg'}"><span>${isRE?lb('صافي الدخل المتوقع (سنوي)||Expected net income (year)'):lb('إجمالي تكلفة التشغيل (سنوي)||Total cost of ownership (year)')}</span>
+      <span class="nv">-${money(isRE?Math.abs(Math.min(net,0)):totalExp)}</span></div>
+    ${empty?'':`<div class="psub">${isRE?lb('الإيراد الشهري مقابل المصروفات — 6 أشهر||Monthly income vs expenses — 6 months'):lb('المصروفات الشهرية — 6 أشهر||Monthly expenses — 6 months')}</div>
     <div class="fchart">${months.map(m=>`<div class="fcol" title="${mName(m)} — ${lb('إيراد||Income')}: ${money(incM[m])} · ${lb('مصروف||Expense')}: ${money(expM[m])}">
-      <span class="fbars"><i class="inc" style="height:${Math.round(incM[m]/maxM*100)}%"></i><i class="exp" style="height:${Math.round(expM[m]/maxM*100)}%"></i></span>
+      <span class="fbars">${isRE?`<i class="inc" style="height:${Math.round(incM[m]/maxM*100)}%"></i>`:''}<i class="exp" style="height:${Math.round(expM[m]/maxM*100)}%"></i></span>
       <span class="fl">${mName(m)}</span></div>`).join('')}</div>
     <div class="legend" style="flex-direction:row;gap:14px">
-      <span class="li" style="justify-content:flex-start;gap:6px;padding:0"><span class="dot" style="background:#22c55e"></span>${lb('إيرادات||Income')}</span>
+      ${isRE?`<span class="li" style="justify-content:flex-start;gap:6px;padding:0"><span class="dot" style="background:#22c55e"></span>${lb('إيرادات||Income')}</span>`:''}
       <span class="li" style="justify-content:flex-start;gap:6px;padding:0"><span class="dot" style="background:#dc2626"></span>${lb('مصروفات||Expenses')}</span></div>`}
     <div class="tbl-wrap" style="margin-top:2px"><table>
       <tr><th>${lb('البند||Item')}</th><th>${lb('المبلغ||Amount')}</th></tr>
@@ -1902,16 +2087,172 @@ function hubFinance(){
       <button class="btn ghost sm" onclick="goTab('proj')">${lb('المشاريع||Projects')}</button>
     </div></div>`;
 }
-/* الوحدات الثلاث بلوحة واحدة — الصلاحيات تحدد ما يظهر لكل دور */
+/* --- لوحة الأسطول: جاهزية المركبات والعدّاد والتأمين والاستمارة --- */
+function hubFleetCard(){
+  const act=activeCmp();
+  const veh=db.assets.filter(a=>a.compoundId===act);
+  const ok=veh.filter(a=>a.status!=='down'&&a.status!=='maint').length;
+  const down=veh.filter(a=>a.status==='down').length;
+  const maint=veh.filter(a=>a.status==='maint').length;
+  const meters=veh.filter(a=>a.meter!=null&&a.meter!=='');
+  const totalKm=meters.reduce((s,a)=>s+Number(a.meter||0),0);
+  const ctrs=db.contracts.filter(c=>c.compoundId===act);
+  const soon=ctrs.filter(c=>(c.scope==='insurance'||c.scope==='registration')&&daysUntil(c.end)<=45);
+  const pms=db.pms.filter(p=>p.compoundId===act);
+  const pmDue=pms.filter(p=>pmIsLate(p)||daysUntil(nextDueOf(p))<=14).length;
+  const maxKm=meters.length?Math.max(...meters.map(a=>Number(a.meter||0))):1;
+  const top=meters.slice().sort((a,b)=>Number(b.meter||0)-Number(a.meter||0)).slice(0,4);
+  return `<div class="pillar">
+    <div class="pillar-head"><span class="pillar-ic ic-fleet">${ic('truck',19)}</span>
+      <span><span class="pt">${lb('أسطول المركبات||Vehicle fleet')}</span>
+      <span class="ps">${lb('الجاهزية · العدّاد · التأمين والاستمارة||Readiness · odometer · insurance & registration')}</span></span>
+      <button class="btn ghost sm pgo" onclick="goTab('assets')">${lb('المركبات||Vehicles')}</button></div>
+    <div class="donut-wrap" style="justify-content:space-between">
+      ${hubDonut([{v:ok,c:'#7c3aed'},{v:maint,c:'#f59e0b'},{v:down,c:'#dc2626'}],veh.length?Math.round(ok/veh.length*100)+'%':'—',lb('جاهزية||Ready'))}
+      <div class="pkpis" style="flex:1;min-width:180px">
+        ${hubKpi(veh.length,lb('مركبات||Vehicles'))}
+        ${hubKpi(ok,lb('جاهزة||Ready'),'ok')}
+        ${hubKpi(down,lb('خارج الخدمة||Out of service'),down?'warn':'')}
+        ${hubKpi(maint,lb('تحت الصيانة||Under maintenance'),maint?'warn':'')}
+        ${hubKpi(moneyK(totalKm)+' <small>'+lb('كم||km')+'</small>',lb('إجمالي العدّاد||Total odometer'))}
+        ${hubKpi(pmDue,lb('صيانة مستحقة||Service due'),pmDue?'warn':'')}
+      </div></div>
+    ${soon.length?`<div class="alert-li alrow" onclick="goTab('contracts')">${lb('تأمين / استمارة تنتهي خلال 45 يوماً:||Insurance / registration expiring ≤45d:')} <b>${soon.length}</b></div>`:''}
+    ${top.length?top.map(a=>hubBar(a.name,Number(a.meter||0),maxKm,'linear-gradient(90deg,#7c3aed,#a78bfa)',"goTab('assets')",moneyK(a.meter)+' '+lb('كم||km'))).join(''):''}
+    ${!veh.length?`<div class="empty">${lb('لا مركبات مسجّلة بعد — أضفها من شاشة المركبات.||No vehicles yet — add them from the Vehicles screen.')}</div>`:''}
+    <div class="pillar-foot">
+      <button class="btn ghost sm" onclick="goTab('assets')">${lb('المركبات||Vehicles')}</button>
+      <button class="btn ghost sm" onclick="goTab('pm')">${lb('صيانة دورية||Scheduled service')}</button>
+      <button class="btn ghost sm" onclick="goTab('contracts')">${lb('التأمين والعقود||Insurance & contracts')}</button>
+    </div></div>`;
+}
+/* --- لوحة المنشأة الصناعية: المعدات والمرافق والامتثال --- */
+function hubFacilityCard(){
+  const act=activeCmp();
+  const eq=db.assets.filter(a=>a.compoundId===act);
+  const ok=eq.filter(a=>a.status!=='down'&&a.status!=='maint').length;
+  const down=eq.filter(a=>a.status==='down').length;
+  const maint=eq.filter(a=>a.status==='maint').length;
+  const ctrs=db.contracts.filter(c=>c.compoundId===act);
+  const amc=ctrs.filter(c=>c.scope==='amc'&&daysUntil(c.end)>=0).length;
+  const util=ctrs.filter(c=>c.scope==='utilities'&&daysUntil(c.end)>=0);
+  const utilVal=util.reduce((s,c)=>s+Number(c.cost||0),0);
+  const safety=ctrs.filter(c=>c.scope==='safety');
+  const safetySoon=safety.filter(c=>daysUntil(c.end)<=45).length;
+  const wos=db.wos.filter(w=>w.compoundId===act);
+  const downtime=wos.reduce((s,w)=>s+Number(w.downtimeH||0),0);
+  const utilLogs=(db.utilityLogs||[]).filter(u=>u.compoundId===act);
+  const utilQty=utilLogs.reduce((s,u)=>s+Number(u.qty||0),0);
+  const maxEq=eq.length?Math.max(...eq.map(a=>Number(a.meter||0)))||1:1;
+  return `<div class="pillar">
+    <div class="pillar-head"><span class="pillar-ic ic-ind">${ic('factory',19)}</span>
+      <span><span class="pt">${lb('المنشأة والمعدات||Facility & machinery')}</span>
+      <span class="ps">${lb('الآلات · المرافق · الامتثال والسلامة||Machinery · utilities · compliance')}</span></span>
+      <button class="btn ghost sm pgo" onclick="goTab('assets')">${lb('المعدات||Machinery')}</button></div>
+    <div class="donut-wrap" style="justify-content:space-between">
+      ${hubDonut([{v:ok,c:'#b45309'},{v:maint,c:'#f59e0b'},{v:down,c:'#dc2626'}],eq.length?Math.round(ok/eq.length*100)+'%':'—',lb('تشغيل||Up'))}
+      <div class="pkpis" style="flex:1;min-width:180px">
+        ${hubKpi(eq.length,lb('معدات وآلات||Machinery'))}
+        ${hubKpi(down,lb('متوقفة||Down'),down?'warn':'')}
+        ${hubKpi(maint,lb('تحت الصيانة||Under maintenance'),maint?'warn':'')}
+        ${hubKpi(amc,lb('عقود AMC سارية||Active AMC'))}
+        ${hubKpi(utilVal?moneyK(utilVal)+' <small>'+lb('ر.س||SAR')+'</small>':'—',lb('عقود المرافق||Utility contracts'))}
+        ${hubKpi(downtime?moneyK(downtime)+' <small>'+lb('ساعة||h')+'</small>':'—',lb('زمن التوقف||Downtime'))}
+      </div></div>
+    ${safetySoon?`<div class="alert-li alrow" onclick="goTab('contracts')">${lb('فحوصات سلامة / دفاع مدني تنتهي ≤45 يوم:||Safety & civil-defence checks ≤45d:')} <b>${safetySoon}</b></div>`:''}
+    ${utilLogs.length?`<div class="psub">${lb('استهلاك المرافق المسجّل||Logged utility usage')}: <b>${moneyK(utilQty)}</b></div>`:''}
+    ${!eq.length?`<div class="empty">${lb('لا معدات مسجّلة بعد — أضفها من شاشة المعدات.||No machinery yet — add it from the Machinery screen.')}</div>`:''}
+    <div class="pillar-foot">
+      <button class="btn ghost sm" onclick="goTab('assets')">${lb('المعدات||Machinery')}</button>
+      <button class="btn ghost sm" onclick="goTab('pm')">${lb('الصيانة الوقائية||Equipment PM')}</button>
+      <button class="btn ghost sm" onclick="goTab('contracts')">${lb('العقود والامتثال||Contracts & compliance')}</button>
+    </div></div>`;
+}
+/* --- لوحة عامة للأملاك الأخرى --- */
+function hubAssetsCard(){
+  const act=activeCmp();
+  const as=db.assets.filter(a=>a.compoundId===act);
+  const ok=as.filter(a=>a.status!=='down'&&a.status!=='maint').length;
+  const down=as.filter(a=>a.status==='down').length;
+  const maint=as.filter(a=>a.status==='maint').length;
+  const cost={};
+  db.wos.filter(w=>w.compoundId===act&&w.status==='closed').forEach(w=>{
+    const k=w.assetName||w.assetId||lb('غير محدد||Unspecified');
+    cost[k]=(cost[k]||0)+Number(w.cost||0);});
+  const top=Object.entries(cost).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const maxC=top.length?Math.max(...top.map(x=>x[1])):1;
+  return `<div class="pillar">
+    <div class="pillar-head"><span class="pillar-ic ic-gen">${ic('layers',19)}</span>
+      <span><span class="pt">${lb('الأصول والمعدات||Assets & equipment')}</span>
+      <span class="ps">${lb('الحالة · التشغيل · تكلفة الصيانة||Status · operation · maintenance cost')}</span></span>
+      <button class="btn ghost sm pgo" onclick="goTab('assets')">${lb('الأصول||Assets')}</button></div>
+    <div class="donut-wrap" style="justify-content:space-between">
+      ${hubDonut([{v:ok,c:'#475569'},{v:maint,c:'#f59e0b'},{v:down,c:'#dc2626'}],as.length?Math.round(ok/as.length*100)+'%':'—',lb('تشغيل||Up'))}
+      <div class="pkpis" style="flex:1;min-width:180px">
+        ${hubKpi(as.length,lb('إجمالي الأصول||Total assets'))}
+        ${hubKpi(down,lb('متوقفة||Down'),down?'warn':'')}
+        ${hubKpi(maint,lb('تحت الصيانة||Under maintenance'),maint?'warn':'')}
+        ${hubKpi(db.wos.filter(w=>w.compoundId===act&&w.status!=='closed').length,lb('أوامر مفتوحة||Open work orders'))}
+      </div></div>
+    ${top.map(kv=>hubBar(kv[0],kv[1],maxC,'linear-gradient(90deg,#475569,#94a3b8)',"goTab('rep')",moneyK(kv[1]))).join('')}
+    ${!as.length?`<div class="empty">${lb('لا أصول مسجّلة بعد.||No assets yet.')}</div>`:''}
+    <div class="pillar-foot">
+      <button class="btn ghost sm" onclick="goTab('assets')">${lb('الأصول||Assets')}</button>
+      <button class="btn ghost sm" onclick="goTab('pm')">${lb('الصيانة الدورية||Preventive')}</button>
+      <button class="btn ghost sm" onclick="goTab('contracts')">${lb('العقود||Contracts')}</button>
+    </div></div>`;
+}
+/* --- تهيئة أولى للأصل الجديد: خطوات حسب نوع الأصل --- */
+function hubOnboarding(){
+  const dom=domainOf();
+  const steps=(dom==='realestate'?[
+      ['أضف المباني والوحدات||Add buildings & units','units'],
+      ['أضف الأصول والمعدات||Add assets','assets'],
+      ['أضف المستأجرين وعقود الإيجار||Add tenants & leases','units'],
+      ['أضف الفنيين واربطهم بالأصل||Add technicians','users'],
+      ['سجّل عقد خدمة أو صيانة دورية||Add a service contract or PM','contracts']
+    ]:dom==='fleet'?[
+      ['أضف المركبات||Add vehicles','assets'],
+      ['حدّد صيانة دورية (زيت وفلاتر) لكل مركبة||Set scheduled service per vehicle','pm'],
+      ['أضف التأمين والاستمارة كعقود||Add insurance & registration contracts','contracts'],
+      ['أضف السائقين والموظفين||Add drivers & workforce','hr']
+    ]:dom==='industrial'?[
+      ['أضف الآلات والمعدات||Add machinery','assets'],
+      ['خطط الصيانة الوقائية للمعدات||Create equipment PM plans','pm'],
+      ['أضف عقود AMC والسلامة والمرافق||Add AMC, safety & utility contracts','contracts'],
+      ['أضف الفنيين واربطهم||Add technicians','users']
+    ]:[
+      ['أضف الأصول||Add assets','assets'],
+      ['خطط الصيانة الدورية||Create PM plans','pm'],
+      ['أضف عقود الخدمات||Add service contracts','contracts']
+    ]).filter(s=>tabAllowed(s[1]));
+  return `<div class="card onb-wrap">
+    <h2>${ic('zap',17)} ${lb('ابدأ التهيئة||Get started')}</h2>
+    <p class="muted">${lb('هذا الأصل جديد — الأركان أدناه ستعرض بيانات حقيقية بمجرد إضافة أول عنصر.||This asset is new — the pillars below show real data as soon as you add the first item.')}</p>
+    <div class="onb-steps">${steps.map((s,i)=>`<button class="onb-step" onclick="goTab('${s[1]}')"><span class="n">${i+1}</span>${s[0]}</button>`).join('')}</div>
+  </div>`;
+}
+/* الأركان تتغيّر حسب نوع الأصل — والصلاحيات تحدد ما يظهر لكل دور */
 function vHub(){
+  const dom=domainOf(),dm=domainMeta(dom);
   const cards=[];
-  if(!isTech())cards.push(hubPortfolioCard());
-  cards.push(hubMaintenanceCard());
-  if(isEng()||me.role==='sitemgr')cards.push(hubFinance());
+  if(isTech()){
+    cards.push(hubMaintenanceCard());
+  }else{
+    if(dom==='realestate')cards.push(hubPortfolioCard());
+    else if(dom==='fleet')cards.push(hubFleetCard());
+    else if(dom==='industrial')cards.push(hubFacilityCard());
+    else cards.push(hubAssetsCard());
+    cards.push(hubMaintenanceCard());
+    if(isEng()||me.role==='sitemgr')cards.push(hubFinance());
+  }
+  const empty=cmpIsEmpty(activeCmp());
   return `<div class="hub-head">
-    <span><b>${lb('منصة أملاكي||Amlaki Platform')}</b>
-      <span class="muted">${lb('محفظة العقارات · الصيانة والمقاولون · المتتبع المالي||Property portfolio · Maintenance & contractors · Financial tracker')}</span></span>
+    <span><span class="dom-chip" style="background:${dm.col}">${ic(dm.ic,13)} ${dm.t}</span>
+      <b>${lb('منصة أملاكي||Amlaki Platform')}</b>
+      <span class="muted">${dm.s} · ${lb('الصيانة والمقاولون||Maintenance & contractors')}${(isEng()||me.role==='sitemgr')?' · '+lb('المتتبع المالي||Financial tracker'):''}</span></span>
     <span class="hub-badge">${lb('لوحة إدارة الأملاك||Property management dashboard')}</span></div>
+  ${empty?hubOnboarding():''}
   <div class="hub">${cards.join('')}</div>`;
 }
 function vDash(){
