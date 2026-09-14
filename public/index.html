@@ -992,7 +992,80 @@ function migrate(d){
       if(u.activeCmp==null)u.activeCmp='';
     });
   }
-  /* ---- شبكة أمان تُنفَّذ دائماً (حتى مع ver=6) لضمان بيانات قابلة للاستخدام ---- */
+  /* ===== v7: عزل كامل لكل أصل — المخزون والمشتريات والموردون والحركات والمستخدمون ===== */
+  if(d.ver<7){
+    d.ver=7;
+    ['compounds','buildings','units','tenants','contracts','assets','wos','inv','moves','pms','suppliers',
+     'prs','pos','projects','employees','shifts','notifs'].forEach(k=>{if(!Array.isArray(d[k]))d[k]=[];});
+    const defC=(d.compounds[0]||{}).id||'';
+    /* خريطة مقدّم الطلب → أصله — تُبنى قبل فصل الحسابات وإلا تكرّرت الأسماء واختلط الإسناد */
+    const userCmp={};
+    (d.users||[]).forEach(u=>{
+      if(u.role==='admin'||userCmp[u.name])return;
+      const ids=(u.cmpIds||[]).filter(id=>d.compounds.some(c=>c.id===id));
+      if(ids.length===1)userCmp[u.name]=ids[0];
+      else if(ids.length>1)userCmp[u.name]=ids.includes(u.activeCmp)?u.activeCmp:ids[0];
+    });
+    /* (1) المستخدمون: حساب مستقل لكل أصل — المدير يملك كل الأصول ويبدّل من الهيدر */
+    const taken=new Set((d.users||[]).map(u=>String(u.u||'').toLowerCase()));
+    const splitRows=[],extraUsers=[];
+    (d.users||[]).forEach(u=>{
+      if(u.role==='admin')return;
+      const ids=[...new Set((u.cmpIds||[]).filter(id=>d.compounds.some(c=>c.id===id)))];
+      if(ids.length<=1){
+        u.cmpIds=ids.length?ids:(defC?[defC]:[]);
+        if(!u.cmpIds.includes(u.activeCmp))u.activeCmp=u.cmpIds[0]||'';
+        return;
+      }
+      const first=ids[0];
+      u.cmpIds=[first];u.activeCmp=first;
+      ids.slice(1).forEach(cid=>{
+        const base=String(u.u||'user');
+        let n=2,un=base+'-'+n;
+        while(taken.has(un.toLowerCase())){n++;un=base+'-'+n;}
+        taken.add(un.toLowerCase());
+        const cName=(d.compounds.find(c=>c.id===cid)||{}).name||'';
+        extraUsers.push(Object.assign({},u,{id:uid('U'),u:un,cmpIds:[cid],activeCmp:cid}));
+        splitRows.push({name:u.name,user:un,cmp:cName});
+      });
+    });
+    extraUsers.forEach(u=>d.users.push(u));
+    if(splitRows.length)d.splitReport=splitRows;
+    /* (2) استنتاج الأصل من السجلات المرتبطة، ثم الأصل الأساسي لما تبقّى */
+    const invById={},invByName={};
+    d.inv.forEach(i=>{invById[i.id]=i;if(!invByName[i.name])invByName[i.name]=i;});
+    d.pos.forEach(po=>{                                    /* أمر شراء ← طلب الشراء / المشروع */
+      if(po.compoundId)return;
+      const pr=d.prs.find(p=>p.id===po.prId),pj=d.projects.find(p=>p.id===po.projectId);
+      po.compoundId=(pr&&pr.compoundId)||(pj&&pj.compoundId)||'';});
+    d.prs.forEach(pr=>{                                    /* طلب شراء ← مقدّم الطلب / أصنافه */
+      if(pr.compoundId)return;
+      let c=userCmp[pr.by]||'';
+      if(!c)(pr.items||[]).some(it=>{const iv=(it.invId&&invById[it.invId])||invByName[it.desc];
+        if(iv&&iv.compoundId){c=iv.compoundId;return true;}return false;});
+      pr.compoundId=c;});
+    const woByNo={},poByInvNo={};                           /* حركة مخزون ← مرجع أمر شغل / فاتورة */
+    d.wos.forEach(w=>{woByNo[w.no]=w;});
+    d.pos.forEach(po=>{if(po.invoice&&po.invoice.no)poByInvNo[po.invoice.no]=po;});
+    d.moves.forEach(mv=>{
+      if(mv.compoundId)return;
+      const wo=woByNo[mv.ref],po=poByInvNo[mv.ref];
+      mv.compoundId=(wo&&wo.compoundId)||(po&&po.compoundId)||'';});
+    d.inv.forEach(it=>{                                     /* صنف ← حركاته */
+      if(it.compoundId)return;
+      const hit=d.moves.find(m=>(m.invId===it.id||m.item===it.name)&&m.compoundId);
+      it.compoundId=hit?hit.compoundId:'';});
+    d.moves.forEach(mv=>{                                   /* حركة ← صنفها */
+      if(mv.compoundId)return;
+      const it=(mv.invId&&invById[mv.invId])||invByName[mv.item];
+      mv.compoundId=(it&&it.compoundId)||'';});
+    d.suppliers.forEach(s=>{                                /* مورد ← أوامر الشراء المسجّل بها */
+      const po=d.pos.find(p=>p.supplier===s.name&&p.compoundId);
+      s.compoundId=(po&&po.compoundId)||'';});
+    ['inv','prs','pos','moves','suppliers','notifs'].forEach(k=>{
+      d[k].forEach(r=>{if(!r.compoundId)r.compoundId=defC;});});
+  }
+  /* ---- شبكة أمان تُنفَّذ دائماً (حتى مع ver=7) لضمان بيانات قابلة للاستخدام ---- */
   ['compounds','buildings','units','tenants','contracts','assets','wos','inv','moves','pms',
    'suppliers','prs','pos','projects','employees','shifts','notifs','fuelLogs','utilityLogs','certs']
    .forEach(k=>{if(!Array.isArray(d[k]))d[k]=[];});
@@ -1096,8 +1169,8 @@ function loadDemo(){
     {id:uid('PH'),d:demoImg('مضخة المسبح — قبل الصيانة','#0e7490','#155e75'),n:'قبل',at:Date.now()},
     {id:uid('PH'),d:demoImg('مضخة المسبح — بعد الصيانة','#159957','#0e7490'),n:'بعد',at:Date.now()}];
   const addInv=(name,unit,qty,minQty,unitCost,loc)=>{
-    if(db.inv.some(x=>x.name===name))return db.inv.find(x=>x.name===name);
-    const it={id:uid('I'),name,unit,qty,minQty,unitCost,loc};db.inv.push(it);return it;};
+    if(db.inv.some(x=>x.name===name&&x.compoundId===act))return db.inv.find(x=>x.name===name&&x.compoundId===act);
+    const it={id:uid('I'),name,unit,qty,minQty,unitCost,loc,compoundId:act};db.inv.push(it);return it;};
   addInv('كلور حبيبات 5 كجم','علبة',1,3,45,'غرفة المضخات');
   addInv('أقراص كلور 200 جم','علبة',4,2,38,'غرفة المضخات');
   addInv('فلتر مكيف سبليت','حبة',8,4,25,'المستودع - رف A');
@@ -1122,15 +1195,15 @@ function loadDemo(){
     '1. تنظيف الفلاتر\n2. فحص الفريون\n3. تنظيف المبخر والمكثف');
   addPm('الفحص الشهري للمصعد',aLift.id,1,'months',addDays(todayISO(),-32),
     '1. فحص الأبواب والأقفال\n2. تجربة زر الطوارئ\n3. تزييت السكة');
-  const addSup=(name,service,phone)=>{if(!db.suppliers.some(s=>s.name===name))
-    db.suppliers.push({id:uid('V'),name,service,phone,email:'',notes:''});};
+  const addSup=(name,service,phone)=>{if(!db.suppliers.some(s=>s.name===name&&s.compoundId===act))
+    db.suppliers.push({id:uid('V'),name,service,phone,email:'',notes:'',compoundId:act});};
   addSup('شركة التكييف الحديث','تكييف وتبريد','0555 111 222');
   addSup('مؤسسة مياه الرياض','مضخات ومعالجة مياه','0555 333 444');
   addSup('شركة المصاعد المتقدمة','مصاعد','0555 555 666');
   if(!db.prs.some(p=>p.title==='مواد تعقيم المسبح')){
     db.prSeq++;
     db.prs.push({no:'PR-'+Y+'-'+String(db.prSeq).padStart(4,'0'),title:'مواد تعقيم المسبح',
-      by:me?me.name:'مدير النظام',date:todayISO(),status:'pending',approver:'',approverDate:'',notes:'',poNo:'',
+      by:me?me.name:'مدير النظام',date:todayISO(),status:'pending',approver:'',approverDate:'',notes:'',poNo:'',compoundId:act,
       items:[{desc:'كلور حبيبات 5 كجم',invId:(db.inv.find(x=>x.name==='كلور حبيبات 5 كجم')||{}).id||'',qty:10,price:45,q:[]}]});}
   if(!db.projects.some(p=>p.name==='تجديد منطقة السبا')){
     db.prjSeq++;
@@ -1400,7 +1473,7 @@ function loginHtml(){
 /* ===== NOTIFICATIONS ===== */
 function notify(icon,text,tab,key){
   if(key&&db.notifs.some(n=>n.key===key&&!n.read))return;
-  db.notifs.unshift({id:uid('N'),icon,text,tab:tab||'dash',key:key||'',at:Date.now(),read:false});
+  db.notifs.unshift({id:uid('N'),icon,text,tab:tab||'dash',key:key||'',at:Date.now(),read:false,compoundId:activeCmp()||''});
   if(db.notifs.length>200)db.notifs.length=200;
 }
 /* التحقق من كلمة المرور محلياً (وضع عدم الاتصال): يدعم المشفّرة pbkdf2$ والنص القديم */
@@ -1478,9 +1551,9 @@ function genSysNotifs(){
     if(d<=0)notify('',lb('صيانة دورية متأخرة: ||Overdue PM: ')+p.name,'pm','pm-'+p.id+'-late');
     else if(d<=3)notify('',lb('صيانة قريبة: ||PM soon: ')+p.name+' ('+fmtD(nextDueOf(p))+')','pm','pm-'+p.id+'-soon');
   });
-  db.inv.filter(it=>it.qty<=it.minQty).forEach(it=>
+  db.inv.filter(it=>it.qty<=it.minQty&&it.compoundId===act).forEach(it=>
     notify('',lb('مخزون تحت الحد: ||Low stock: ')+it.name+' ('+it.qty+' '+it.unit+')','inv','low-'+it.id));
-  if(canAppr())db.prs.filter(pr=>pr.status==='pending').forEach(pr=>
+  if(canAppr())db.prs.filter(pr=>pr.status==='pending'&&pr.compoundId===act).forEach(pr=>
     notify('',lb('طلب شراء بانتظار الموافقة: ||PR awaiting approval: ')+pr.title+' ('+pr.no+')','proc','pr-'+pr.no));
   if(canAppr()){
     db.contracts.filter(c=>c.compoundId===act).forEach(c=>{const dd=daysUntil(c.end);
@@ -1501,9 +1574,10 @@ function genSysNotifs(){
     if(dd<=45)notify('',(dd<0?lb('شهادة منتهية: ||Expired certificate: '):lb('شهادة تنتهي قريباً: ||Certificate expiring: '))+(CERTTL()[c.type||'other'])+' ('+fmtD(c.expires)+')','certs','cert-'+c.id+'-'+c.expires);});
   persist();
 }
-function unreadCount(){return db.notifs.filter(n=>!n.read).length;}
+function unreadCount(){const act=activeCmp();return db.notifs.filter(n=>!n.read&&n.compoundId===act).length;}
 function notifModal(){
-  const list=db.notifs.slice(0,50);
+  const act=activeCmp();
+  const list=db.notifs.filter(n=>n.compoundId===act).slice(0,50);
   modal(`<h3> ${lb('الإشعارات||Notifications')}</h3>
   ${list.length?list.map(n=>`<div class="alert-li" style="cursor:pointer;${n.read?'opacity:.5':''}" onclick="notifGo('${n.id}')">${n.icon} ${esc(n.text)}<br><span class="muted">${fmtDT(n.at)}</span></div>`).join('')
    :`<div class="empty">${lb('لا إشعارات||No notifications')}</div>`}
@@ -1515,7 +1589,7 @@ function notifGo(id){
   n.read=true;persist();closeModal();
   goTab(n.tab);
 }
-function markAllRead(){db.notifs.forEach(n=>n.read=true);persist();closeModal();render();toast(lb(' تم||Done'),'ok');}
+function markAllRead(){notifsQ().forEach(n=>n.read=true);persist();closeModal();render();toast(lb(' تم||Done'),'ok');}
 
 /* ===== RENDER ROOT ===== */
 function render(){
@@ -2034,7 +2108,7 @@ function hubMaintenanceCard(){
       ${hubKpi(urgent,lb('طارئة||Urgent'),urgent?'warn':'')}
       ${hubKpi(overdue,lb('متجاوزة الاستحقاق||Overdue'),overdue?'warn':'')}
       ${hubKpi(actCtr,lb('عقود سارية||Active contracts'))}
-      ${hubKpi(db.suppliers.length,lb('مقاولون وموردون||Contractors'))}
+      ${hubKpi(supQ().length,lb('مقاولون وموردون||Contractors'))}
       ${hubKpi(moneyK(ctrVal)+' <small>'+lb('ر.س||SAR')+'</small>',lb('قيمة العقود||Contracts value'))}
     </div>
     ${soonCtr?`<div class="alert-li alrow" onclick="goTab('contracts')">${lb('عقود تنتهي خلال 30 يوماً:||Contracts ending within 30 days:')} <b>${soonCtr}</b></div>`:''}
@@ -2055,7 +2129,7 @@ function hubFinance(){
   const income=isRE?tenants.reduce((s,t)=>s+Number(t.rent||0),0):0;
   const wos=db.wos.filter(w=>w.compoundId===act);
   const labor=wos.filter(w=>w.status==='closed'&&!w.projectId).reduce((s,w)=>s+Number(w.cost||0),0);
-  const pos=db.pos.filter(po=>!po.compoundId||po.compoundId===act);
+  const pos=posQ();
   const invs=pos.filter(po=>po.invApproved&&po.invoice&&!po.projectId);
   const purch=invs.reduce((s,po)=>s+Number(po.invoice.total||0),0);
   const projExp=db.projects.filter(p=>p.compoundId===act).reduce((s,p)=>s+projCosts(p).total,0);
@@ -2314,6 +2388,16 @@ function vHub(){
   ${empty?hubOnboarding():''}
   <div class="hub">${cards.join('')}</div>`;
 }
+/* تقرير فصل الحسابات القديمة (يظهر للمدير مرة واحدة بعد الترحيل) */
+function splitReportCard(){
+  const rep=db.splitReport;
+  if(!rep||!rep.length||!isAdmin())return '';
+  return `<div class="card onb-wrap"><h2>${ic('users',17)} ${lb('فُصلت حسابات الفنيين حسب الأصل||Technician accounts split per asset')}</h2>
+    <p class="muted">${lb('كان هؤلاء مرتبطين بأكثر من أصل، فتم إنشاء حساب مستقل لكل أصل بنفس كلمة المرور. راجع أسماء الدخول الجديدة ووزّعها.||These users were linked to several assets, so a separate account was created per asset with the same password. Review the new usernames and hand them out.')}</p>
+    <div class="tbl-wrap"><table><tr><th>${lb('الاسم||Name')}</th><th>${lb('اسم الدخول الجديد||New username')}</th><th>${lb('الأصل||Asset')}</th></tr>
+    ${rep.map(r=>`<tr><td>${esc(r.name)}</td><td><b dir="ltr">${esc(r.user)}</b></td><td>${esc(r.cmp)}</td></tr>`).join('')}</table></div>
+    <div class="ma"><button class="btn ghost sm" onclick="db.splitReport=null;persist();paintTab()">${lb('تم الاطلاع||Dismiss')}</button></div></div>`;
+}
 function vDash(){
   const act=activeCmp();
   const scope=(isTech()?db.wos.filter(w=>w.assigneeId===me.id):db.wos).filter(w=>w.compoundId===act);
@@ -2321,7 +2405,7 @@ function vDash(){
   const openN=unclosed.length;
   const urgN=unclosed.filter(w=>w.priority==='urgent').length;
   const down=db.assets.filter(a=>a.status==='down'&&a.compoundId===act);
-  const low=db.inv.filter(i=>Number(i.qty)<=Number(i.minQty));
+  const low=invQ().filter(i=>Number(i.qty)<=Number(i.minQty));
   const pmAll=isTech()?[]:db.pms.filter(p=>p.compoundId===act);
   const pmLateN=isTech()?0:pmAll.filter(p=>pmIsLate(p)).length;
   const pmSoonList=isTech()?[]:pmAll.filter(p=>daysUntil(nextDueOf(p))<=14)
@@ -2342,7 +2426,7 @@ function vDash(){
    .forEach(p=>alerts.push({ic:'',h:`${lb('صيانة دورية متأخرة:||Overdue PM:')} <b>${esc(p.name)}</b>`,tab:'pm'}));
   pmAll.filter(p=>{const d=daysUntil(nextDueOf(p));return d>0&&d<=3;})
    .forEach(p=>alerts.push({ic:'',h:`${lb('صيانة قريبة:||PM soon:')} <b>${esc(p.name)}</b> (${fmtD(nextDueOf(p))})`,tab:'pm'}));
-  if(canAppr())db.prs.filter(pr=>pr.status==='pending'&&(!pr.compoundId||pr.compoundId===act))
+  if(canAppr())db.prs.filter(pr=>pr.status==='pending'&&pr.compoundId===act)
    .forEach(pr=>alerts.push({ic:'',h:`${lb('طلب شراء بانتظار الموافقة:||PR awaiting approval:')} <b>${esc(pr.title)}</b> (${pr.no})`,tab:'proc'}));
   if(!isTech()){
     db.contracts.filter(c=>c.compoundId===act).forEach(c=>{const dd=daysUntil(c.end);
@@ -2393,7 +2477,7 @@ function vDash(){
 
   if(isTech()){
     return `<div class="stats">${stats}</div>
-    ${pwBanner}<div class="qa">${qa.join('')}</div>
+    ${pwBanner}${splitReportCard()}<div class="qa">${qa.join('')}</div>
     ${vHub()}
     <div class="dash-grid">
       <div class="card dg-6"><h2> ${lb('مهامي المفتوحة||My Open Tasks')}</h2>
@@ -2402,7 +2486,7 @@ function vDash(){
     </div>`;
   }
   return `<div class="stats">${stats}</div>
-  ${pwBanner}<div class="qa">${qa.join('')}</div>
+  ${pwBanner}${splitReportCard()}<div class="qa">${qa.join('')}</div>
   ${vHub()}
   <div class="dash-grid">
     ${alertsCard}
@@ -2996,7 +3080,7 @@ function contractForm(id){
   modal(`<h3>${id?lb('تعديل عقد||Edit Contract'):lb('عقد خدمة جديد||New Service Contract')}</h3>
   <div class="fg">
     <div><label>${lb('المورد/الجهة *||Vendor *')}</label><input id="fct_v" list="supdl2" value="${esc(c.vendor||'')}">
-    <datalist id="supdl2">${db.suppliers.map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist></div>
+    <datalist id="supdl2">${supQ().map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist></div>
     <div><label>${lb('النطاق||Scope')}</label><select id="fct_s">${Object.keys(CTRSC).map(k=>`<option value="${k}" ${(c.scope||'amc')===k?'selected':''}>${CTRSC[k]}</option>`).join('')}</select></div>
     <div><label>${lb('رقم العقد||Contract No.')}</label><input id="fct_no" value="${esc(c.no||'')}" placeholder="${lb('تلقائي إن تُرك فارغاً||auto if blank')}"></div>
     <div><label>${lb('من تاريخ||Start')}</label><input type="date" id="fct_st" value="${c.start||todayISO()}"></div>
@@ -3190,7 +3274,7 @@ function woCloseForm(i){
   renderWoPhGrids();initSig();
 }
 function addPartRow(){
-  const opts=db.inv.map(it=>`<option value="${it.id}">${esc(it.name)} (${it.qty} ${esc(it.unit)})</option>`).join('');
+  const opts=invQ().map(it=>`<option value="${it.id}">${esc(it.name)} (${it.qty} ${esc(it.unit)})</option>`).join('');
   $('prows').insertAdjacentHTML('beforeend',
    `<div class="partrow"><select class="pr_i">${opts}</select><input type="number" class="pr_q" min="1" value="1"><button class="btn sm danger" onclick="this.parentNode.remove()">${ic('x',12)}</button></div>`);
 }
@@ -3200,7 +3284,7 @@ function doCloseWO(i){
   if(!notes)return toast(lb(' اكتب ما الذي تم عمله قبل الإغلاق|| Describe what was done before closing'),'err');
   if(!(window._woPhA||[]).length)return toast(lb(' صورة "بعد الإصلاح" مطلوبة للتوثيق|| An AFTER photo is required for documentation'),'err');
   for(const r of [...document.querySelectorAll('#prows .partrow')]){
-    const it=db.inv.find(x=>x.id===r.querySelector('.pr_i').value);
+    const it=invQ().find(x=>x.id===r.querySelector('.pr_i').value);
     const q=+r.querySelector('.pr_q').value||0;
     if(it&&q>0){
       if(q>it.qty){toast(lb(' الكمية غير متوفرة من: || Not enough stock: ')+it.name,'err');return;}
@@ -3212,7 +3296,7 @@ function doCloseWO(i){
     if(cb){c.done=cb.checked;c.v=vv?vv.value:'';}
   });
   used.forEach(u=>{u.it.qty-=u.q;
-    db.moves.unshift({date:todayISO(),item:u.it.name,type:'out',qty:u.q,ref:w.no,by:me.name});});
+    db.moves.unshift({date:todayISO(),item:u.it.name,invId:u.it.id,type:'out',qty:u.q,ref:w.no,by:me.name,compoundId:u.it.compoundId||w.compoundId});});
   w.parts=used.map(u=>({name:u.it.name,qty:u.q}));
   const phs=[];
   (window._woPhB||[]).forEach(p=>phs.push({id:uid('PH'),tag:'before',d:p.d,n:p.n||'',at:Date.now()}));
@@ -3231,17 +3315,25 @@ function doCloseWO(i){
 }
 
 /* ===== INVENTORY ===== */
+/* ===== دوال العزل: كل قراءة تمرّ من هنا فلا تختلط بيانات الأصول ===== */
+function invQ(){return db.inv.filter(it=>it.compoundId===activeCmp());}
+function movesQ(){return db.moves.filter(m=>m.compoundId===activeCmp());}
+function supQ(){return db.suppliers.filter(s=>s.compoundId===activeCmp());}
+function prsQ(){return db.prs.filter(p=>p.compoundId===activeCmp());}
+function posQ(){return db.pos.filter(p=>p.compoundId===activeCmp());}
+function notifsQ(){return db.notifs.filter(n=>n.compoundId===activeCmp());}
 function vInv(){
   const q=FILT.inv.toLowerCase();
-  const list=db.inv.filter(it=>!q||(it.name+' '+(it.loc||'')).toLowerCase().includes(q)).slice().sort((a,b)=>a.name.localeCompare(b.name,'ar'));
-  const val=db.inv.reduce((s,it)=>s+it.qty*it.unitCost,0),low=db.inv.filter(it=>it.qty<=it.minQty).length;
+  const mine=invQ(),mv=movesQ();
+  const list=mine.filter(it=>!q||(it.name+' '+(it.loc||'')).toLowerCase().includes(q)).slice().sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  const val=mine.reduce((s,it)=>s+it.qty*it.unitCost,0),low=mine.filter(it=>it.qty<=it.minQty).length;
   return `${canInv()?`<div class="toolbar"><button class="btn" onclick="itemForm()">＋ ${lb('صنف جديد||New Item')}</button>
     <button class="btn ghost" onclick="moveForm('in')"> ${lb('وارد||Stock In')}</button>
     <button class="btn ghost" onclick="moveForm('out')"> ${lb('صرف يدوي||Manual Issue')}</button>
     <button class="btn ghost" onclick="prFromLow()"> ${lb('طلب تعويض النواقص||Restock Request')}</button></div>`:''}
   <input class="searchbar" placeholder=" ${lb('بحث…||Search…')}" value="${esc(FILT.inv)}" oninput="FILT.inv=this.value;paintTab();sbFocus()">
   <div class="stats" style="margin-top:10px">
-    <div class="stat"><div class="num">${db.inv.length}</div><div class="lbl">${lb('عدد الأصناف||Items')}</div></div>
+    <div class="stat"><div class="num">${mine.length}</div><div class="lbl">${lb('عدد الأصناف||Items')}</div></div>
     <div class="stat"><div class="num" style="font-size:19px">${money(val)}</div><div class="lbl">${lb('قيمة المخزون||Stock Value')}</div></div>
     <div class="stat ${low?'warn':''}"><div class="num">${low}</div><div class="lbl">${lb('تحت الحد الأدنى||Below Min')}</div></div>
   </div>
@@ -3258,13 +3350,13 @@ function vInv(){
     :`<tr><td colspan="6"><div class="empty">${lb('لا أصناف بعد||No items yet')}</div></td></tr>`}</table></div></div>
   <div class="card"><h2>${lb('آخر الحركات||Recent Movements')}</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('التاريخ||Date')}</th><th>${lb('الصنف||Item')}</th><th>${lb('النوع||Type')}</th><th>${lb('الكمية||Qty')}</th><th>${lb('المرجع||Ref')}</th><th>${lb('بواسطة||By')}</th></tr>
-  ${db.moves.slice(0,12).map(m=>`<tr><td>${fmtD(m.date)}</td><td>${esc(m.item)}</td>
+  ${mv.slice(0,12).map(m=>`<tr><td>${fmtD(m.date)}</td><td>${esc(m.item)}</td>
     <td><span class="badge ${m.type==='in'?'b-ok':'b-wait'}">${m.type==='in'?lb('وارد||IN'):lb('صادر||OUT')}</span></td>
     <td>${m.qty}</td><td>${esc(m.ref||'')}</td><td>${esc(m.by||'')}</td></tr>`).join('')||
     `<tr><td colspan="6"><div class="empty">${lb('لا حركات||No movements')}</div></td></tr>`}</table></div></div>`;
 }
 function itemForm(id){
-  const it=id?db.inv.find(x=>x.id===id):{};
+  const it=id?invQ().find(x=>x.id===id):{};
   const units=['حبة','علبة','كرتون','متر','لفة','لتر','كجم','جالون','طقم'];
   modal(`<h3>${id?lb('تعديل صنف||Edit Item'):lb('صنف جديد||New Item')}</h3>
   <label>${lb('اسم الصنف *||Item Name *')}</label><input id="fi_n" value="${esc(it.name||'')}">
@@ -3281,16 +3373,18 @@ function itemForm(id){
 function saveItem(id){
   const n=$('fi_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const o={name:n,unit:$('fi_u').value,qty:+$('fi_q').value||0,minQty:+$('fi_m').value||0,
-    unitCost:+$('fi_c').value||0,loc:$('fi_l').value.trim()};
-  if(id)Object.assign(db.inv.find(x=>x.id===id),o);else db.inv.push({id:uid('I'),...o});
+    unitCost:+$('fi_c').value||0,loc:$('fi_l').value.trim(),compoundId:activeCmp()};
+  if(id)Object.assign(invQ().find(x=>x.id===id),o);else db.inv.push({id:uid('I'),...o});
   persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
 function delItem(id){if(!confirm(lb('حذف الصنف؟||Delete item?')))return;
+  const mine=invQ().some(it=>it.id===id);
+  if(!mine)return toast(lb(' الصنف تابع لأصل آخر|| Item belongs to another asset'),'err');
   db.inv=db.inv.filter(it=>it.id!==id);persist();paintTab();}
 function moveForm(type,itemId){
   const t=type==='in';
   modal(`<h3>${t?' '+lb('حركة وارد||Stock In'):' '+lb('صرف||Issue Out')}</h3>
-  <label>${lb('الصنف||Item')}</label><select id="fm_i">${db.inv.map(it=>`<option value="${it.id}" ${itemId===it.id?'selected':''}>${esc(it.name)} (${it.qty})</option>`).join('')}</select>
+  <label>${lb('الصنف||Item')}</label><select id="fm_i">${invQ().map(it=>`<option value="${it.id}" ${itemId===it.id?'selected':''}>${esc(it.name)} (${it.qty})</option>`).join('')}</select>
   <div class="fg">
     <div><label>${lb('الكمية||Quantity')}</label><input type="number" id="fm_q" value="1" min="1"></div>
     <div><label>${lb('المرجع/السبب||Reference')}</label><input id="fm_r"></div>
@@ -3299,11 +3393,11 @@ function moveForm(type,itemId){
   <button class="btn" onclick="doMove('${type}')">${lb('تأكيد||Confirm')}</button></div>`);
 }
 function doMove(type){
-  const it=db.inv.find(x=>x.id===$('fm_i').value);if(!it)return;
+  const it=invQ().find(x=>x.id===$('fm_i').value);if(!it)return;
   const q=+$('fm_q').value||0;if(q<=0)return toast(lb(' أدخل كمية|| Enter quantity'),'err');
   if(type==='out'){if(q>it.qty)return toast(lb(' الكمية أكبر من المتوفر|| Not enough stock'),'err');it.qty-=q;}
   else it.qty+=q;
-  db.moves.unshift({date:todayISO(),item:it.name,type,qty:q,ref:$('fm_r').value.trim(),by:me.name});
+  db.moves.unshift({date:todayISO(),item:it.name,invId:it.id,type,qty:q,ref:$('fm_r').value.trim(),by:me.name,compoundId:it.compoundId});
   persist();closeModal();paintTab();toast(lb(' سُجلت الحركة|| Recorded'),'ok');
 }
 
@@ -3325,8 +3419,9 @@ function paintProc(){
   else b.innerHTML=vSup();
 }
 function vPrList(){
+  const mine=prsQ();
   let rows='';
-  [...db.prs].sort((a,b)=>b.date.localeCompare(a.date)).forEach(pr=>{
+  [...mine].sort((a,b)=>b.date.localeCompare(a.date)).forEach(pr=>{
     const i=db.prs.indexOf(pr);
     const tot=pr.items.reduce((s,it)=>s+it.qty*it.price,0);
     let acts=`<button class="btn sm ghost" onclick="prView(${i})">${ic('view',13)}</button>`;
@@ -3342,13 +3437,13 @@ function vPrList(){
     <td><span class="badge ${PRSTAT[pr.status][1]}">${PRSTAT[pr.status][0]}</span></td>
     <td nowrap>${acts}</td></tr>`;
   });
-  return `<div class="card"><h2>${lb('طلبات الشراء||Purchase Requests')} (${db.prs.length})</h2><div class="tbl-wrap"><table>
+  return `<div class="card"><h2>${lb('طلبات الشراء||Purchase Requests')} (${mine.length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الرقم||No.')}</th><th>${lb('الطلب||Request')}</th><th>${lb('الإجمالي التقديري||Est. Total')}</th><th>${lb('أمر الشراء||PO')}</th><th>${lb('الحالة||Status')}</th><th></th></tr>
   ${rows||`<tr><td colspan="6"><div class="empty">${lb('لا طلبات||None yet')}</div></td></tr>`}</table></div></div>`;
 }
 function prForm(i){
   const pr=i!=null?db.prs[i]:{items:[]};
-  const invOpts=v=>`<option value="">—</option>`+db.inv.map(it=>`<option value="${it.id}" ${v===it.id?'selected':''}>${esc(it.name)}</option>`).join('');
+  const invOpts=v=>`<option value="">—</option>`+invQ().map(it=>`<option value="${it.id}" ${v===it.id?'selected':''}>${esc(it.name)}</option>`).join('');
   window._invOptsFn=invOpts;
   modal(`<h3>${i!=null?lb('تعديل طلب شراء||Edit Request'):lb('طلب شراء جديد||New Purchase Request')}</h3>
   <label>${lb('وصف مختصر للطلب *||Title *')}</label><input id="fpr_t" value="${esc(pr.title||'')}">
@@ -3383,7 +3478,7 @@ function savePr(iStr){
   if(isNew){db.prSeq++;const y=new Date().getFullYear();
     const no='PR-'+y+'-'+String(db.prSeq).padStart(4,'0');
     db.prs.push({no,title:t,by:me.name,date:todayISO(),status:'pending',approver:'',approverDate:'',
-      notes:$('fpr_n').value.trim(),poNo:'',items:items.map(it=>Object.assign({q:[]},it))});
+      compoundId:activeCmp(),notes:$('fpr_n').value.trim(),poNo:'',items:items.map(it=>Object.assign({q:[]},it))});
     if(canAppr())notify('',lb('طلب شراء جديد بانتظار الموافقة: ||New PR awaiting approval: ')+t,'proc','pr-'+no);
   }else{const pr=db.prs[iStr];pr.title=t;pr.notes=$('fpr_n').value.trim();
     pr.items=items.map((it,j)=>Object.assign({q:(pr.items[j]&&pr.items[j].q)||[]},it));}
@@ -3391,7 +3486,7 @@ function savePr(iStr){
 }
 /* طلب تعويض تلقائي: يفتح طلب شراء جاهز بالأصناف تحت الحد (الكمية المقترحة ترفع الرصيد لضعف الحد) */
 function prFromLow(){
-  const low=db.inv.filter(it=>Number(it.qty)<=Number(it.minQty));
+  const low=invQ().filter(it=>Number(it.qty)<=Number(it.minQty));
   if(!low.length)return toast(lb(' لا توجد أصناف تحت الحد|| Nothing below minimum'),'ok');
   prForm();
   $('fpr_t').value=lb('تعويض مخزون تحت الحد||Restock below-minimum items');
@@ -3433,7 +3528,7 @@ function quoteForm(pi,ii){
   const it=db.prs[pi].items[ii];
   modal(`<h3>${lb('عرض سعر لـ||Quote for')}: ${esc(it.desc)}</h3>
   <label>${lb('اسم المورد||Supplier')}</label><input id="fq_s" list="supdl">
-  <datalist id="supdl">${db.suppliers.map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist>
+  <datalist id="supdl">${supQ().map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist>
   <label>${lb('السعر للوحدة||Unit Price')}</label><input type="number" step="any" id="fq_p">
   <div class="ma"><button class="btn ghost" onclick="prView(${pi})">${lb('رجوع||Back')}</button>
   <button class="btn" onclick="saveQuote(${pi},${ii})">${lb('إضافة||Add')}</button></div>`);
@@ -3454,8 +3549,9 @@ function qApplyMinAll(pi){
   persist();prView(pi);toast(c+' ','ok');
 }
 function vPoList(){
+  const mine=posQ();
   let rows='';
-  [...db.pos].sort((a,b)=>b.date.localeCompare(a.date)).forEach(po=>{
+  [...mine].sort((a,b)=>b.date.localeCompare(a.date)).forEach(po=>{
     const i=db.pos.indexOf(po);
     const tot=po.lines.reduce((s,l)=>s+l.qty*l.price,0);
     const recv=po.lines.reduce((s,l)=>s+(l.rq||0),0);
@@ -3472,7 +3568,7 @@ function vPoList(){
     <td>${po.rn?`<span class="muted">${po.rn}</span><br>`:''}<span class="badge ${POSTAT[po.status][1]}">${POSTAT[po.status][0]}</span></td>
     <td nowrap>${acts}</td></tr>`;
   });
-  return `<div class="card"><h2>${lb('أوامر الشراء||Purchase Orders')} (${db.pos.length})</h2><div class="tbl-wrap"><table>
+  return `<div class="card"><h2>${lb('أوامر الشراء||Purchase Orders')} (${mine.length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الرقم||No.')}</th><th>${lb('المورد||Supplier')}</th><th>${lb('القيمة||Total')}</th><th>${lb('مستلم||Received')}</th><th>${lb('الحالة||Status')}</th><th></th></tr>
   ${rows||`<tr><td colspan="6"><div class="empty">${lb('لا أوامر شراء||None yet')}</div></td></tr>`}</table></div></div>`;
 }
@@ -3481,7 +3577,7 @@ function poFromPr(pi){
   window._poTmp=pr;
   modal(`<h3> ${lb('أمر شراء من||PO from')} ${pr.no}</h3>
   <label>${lb('المورد||Supplier *')}</label>
-  <select id="fpo_s">${db.suppliers.map(s=>`<option>${esc(s.name)}</option>`).join('')||('<option value="">'+lb(' لا يوجد موردون — أضف مورداً أولاً من تبويب الموردين|| No suppliers — add one from Suppliers tab')+'</option>')}</select>
+  <select id="fpo_s">${supQ().map(s=>`<option>${esc(s.name)}</option>`).join('')||('<option value="">'+lb(' لا يوجد موردون — أضف مورداً أولاً من تبويب الموردين|| No suppliers — add one from Suppliers tab')+'</option>')}</select>
   <label>${lb('الأصناف (قابلة للتعديل)||Lines (editable)')}</label>
   <div id="polines"></div>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
@@ -3504,7 +3600,7 @@ function poCreate(pi){
   db.poSeq++;const y=new Date().getFullYear();
   const no='PO-'+y+'-'+String(db.poSeq).padStart(4,'0');
   db.pos.push({no,supplier:s,date:todayISO(),status:'ordered',rn:'',prId:pr.id,
-    invoice:null,invApproved:false,notes:'',lines,projectId:''});
+    compoundId:pr.compoundId||activeCmp(),invoice:null,invApproved:false,notes:'',lines,projectId:''});
   pr.status='ordered';pr.poNo=no;
   persist();closeModal();paintTab();toast(lb(' صدر أمر الشراء|| PO issued')+': '+no,'ok');
 }
@@ -3584,9 +3680,9 @@ function poApproveInvoice(i){
   }
   po.lines.forEach(l=>{
     if(l.invId&&l.rq>0){
-      const it=db.inv.find(x=>x.id===l.invId);
+      const it=invQ().find(x=>x.id===l.invId);
       if(it){it.qty+=l.rq;
-        db.moves.unshift({date:todayISO(),item:it.name,type:'in',qty:l.rq,ref:po.invoice.no,by:me.name});}
+        db.moves.unshift({date:todayISO(),item:it.name,invId:it.id,type:'in',qty:l.rq,ref:po.invoice.no,by:me.name,compoundId:it.compoundId});}
     }
   });
   po.status='closed';po.invApproved=true;
@@ -3595,9 +3691,10 @@ function poApproveInvoice(i){
 }
 function poDel(i){if(!confirm(lb('حذف أمر الشراء؟||Delete PO?')))return;db.pos.splice(i,1);persist();paintTab();}
 function vSup(){
-  return `<div class="card"><h2>${lb('الموردون||Suppliers')} (${db.suppliers.length})</h2><div class="tbl-wrap"><table>
+  const mine=supQ();
+  return `<div class="card"><h2>${lb('الموردون||Suppliers')} (${mine.length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الاسم||Name')}</th><th>${lb('التخصص||Service')}</th><th>${lb('الهاتف||Phone')}</th><th>${lb('البريد||Email')}</th>${canProc()?`<th></th>`:''}</tr>
-  ${db.suppliers.map(s=>{const i=db.suppliers.indexOf(s);
+  ${mine.map(s=>{const i=db.suppliers.indexOf(s);
     return `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.service||'—')}</td>
     <td>${s.phone?`<a href="tel:${esc(s.phone)}">${esc(s.phone)}</a>`:'—'}</td><td>${esc(s.email||'—')}</td>
     ${canProc()?`<td nowrap><button class="btn sm ghost" onclick="supForm(${i})">${ic('edit',13)}</button>
@@ -3619,7 +3716,7 @@ function supForm(i){
 }
 function saveSup(iStr){
   const n=$('fv_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
-  const o={name:n,service:$('fv_s').value,phone:$('fv_p').value,email:$('fv_e').value,notes:$('fv_no').value};
+  const o={name:n,service:$('fv_s').value,phone:$('fv_p').value,email:$('fv_e').value,notes:$('fv_no').value,compoundId:activeCmp()};
   if(iStr!=null&&iStr!=='null')Object.assign(db.suppliers[iStr],o);
   else db.suppliers.push(Object.assign({id:uid('V')},o));
   persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
@@ -3630,7 +3727,7 @@ function delSup(i){if(!confirm(lb('حذف المورد؟||Delete supplier?')))re
 function projCosts(p){
   let labor=0,purch=0,manual=0;
   db.wos.forEach(w=>{if(w.projectId===p.id&&w.status==='closed')labor+=Number(w.cost||0);});
-  db.pos.forEach(po=>{if(po.projectId===p.id&&po.invApproved&&po.invoice)purch+=Number(po.invoice.total||0);});
+  db.pos.forEach(po=>{if(po.projectId===p.id&&po.compoundId===p.compoundId&&po.invApproved&&po.invoice)purch+=Number(po.invoice.total||0);});
   (p.expenses||[]).forEach(e=>manual+=Number(e.amt||0));
   return {labor,purch,manual,total:labor+purch+manual};
 }
@@ -3709,8 +3806,9 @@ function prjView(i){
   const p=db.projects[i];
   const c=projCosts(p),pc=projProgress(p);
   const over=p.budget>0&&c.total>p.budget;
-  const techNames=db.users.filter(u=>u.role==='tech').map(u=>esc(u.name)).concat(db.employees.map(e=>esc(e.name)));
-  const freePOs=db.pos.filter(x=>!x.projectId);
+  const techNames=db.users.filter(u=>u.role==='tech'&&(u.cmpIds||[]).includes(activeCmp())).map(u=>esc(u.name))
+    .concat(db.employees.filter(e=>e.compoundId===activeCmp()).map(e=>esc(e.name)));
+  const freePOs=posQ().filter(x=>!x.projectId);
   modal(`<h3> ${p.no} — ${esc(p.name)}
   <span class="badge ${PRJSTAT[p.status][1]}">${PRJSTAT[p.status][0]}</span></h3>
   <p class="muted">${esc(p.manager||'')} · ${fmtD(p.start)} ← ${fmtD(p.end)} · ${money(p.budget)}</p>
@@ -3731,7 +3829,7 @@ function prjView(i){
     <input type="date" id="ft_due"><button class="btn sm" onclick="taskAdd(${i})">＋</button></div>
   <datalist id="techdl">${techNames.map(n=>`<option value="${n}">`).join('')}</datalist>`:''}
   <label> ${lb('أوامر الشراء المرتبطة||Linked POs')}</label>
-  ${db.pos.filter(x=>x.projectId===p.id).map(x=>`<div class="alert-li">${x.no} — ${esc(x.supplier)}
+  ${db.pos.filter(x=>x.projectId===p.id&&x.compoundId===p.compoundId).map(x=>`<div class="alert-li">${x.no} — ${esc(x.supplier)}
     ${x.invoice?' ·  '+money(x.invoice.total):''}
     ${isEng()?`<button class="btn sm ghost" onclick="poUnlink(${i},'${x.id}')">${lb('فصل||Unlink')}</button>`:''}</div>`).join('')||`<div class="muted">${lb('لا أوامر مرتبطة||None linked')}</div>`}
   ${isEng()&&freePOs.length?`<select id="pj_po"><option value="">— ${lb('اربط أمر شراء||Link a PO')} —</option>${freePOs.map(x=>`<option value="${x.id}">${x.no} — ${esc(x.supplier)}</option>`).join('')}</select>
@@ -3891,7 +3989,7 @@ function shiftForm(){
   modal(`<h3> ${lb('مناوبة جديدة||New Shift')}</h3>
   <div class="fg">
     <div><label>${lb('التاريخ||Date')}</label><input type="date" id="fs_d" value="${todayISO()}"></div>
-    <div><label>${lb('الموظف||Employee')}</label><select id="fs_e">${db.employees.filter(e=>e.active).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}</select></div>
+    <div><label>${lb('الموظف||Employee')}</label><select id="fs_e">${db.employees.filter(e=>e.active&&e.compoundId===activeCmp()).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}</select></div>
     <div><label>${lb('الوردية||Shift')}</label><select id="fs_s">${Object.keys(SHIFTK).map(k=>`<option value="${k}">${SHIFTK[k]}</option>`).join('')}</select></div>
     <div><label>${lb('ملاحظة||Note')}</label><input id="fs_n"></div>
   </div>
@@ -3941,7 +4039,7 @@ function vRep(){
   const mLabor={},mPurch={};
   months.forEach(m=>{mLabor[m]=0;mPurch[m]=0;});
   scope.forEach(w=>{if(w.status==='closed'&&w.closedAt){const k=monthKey(w.closedAt);if(k in mLabor)mLabor[k]+=Number(w.cost||0);}});
-  db.pos.forEach(po=>{if(po.invApproved&&po.invoice){const k=monthKey(po.invoice.date);if(k in mPurch)mPurch[k]+=Number(po.invoice.total||0);}});
+  posQ().forEach(po=>{if(po.invApproved&&po.invoice){const k=monthKey(po.invoice.date);if(k in mPurch)mPurch[k]+=Number(po.invoice.total||0);}});
   const maxM=Math.max(1,...months.map(m=>mLabor[m]+mPurch[m]));
   const mName=k=>{const parts=k.split('-');return new Date(+parts[0],+parts[1]-1,1).toLocaleDateString(db.lang==='ar'?'ar-EG':'en-GB',{month:'short',year:'numeric'});};
   return `<div class="toolbar"><button class="btn ghost" onclick="window.print()"> ${lb('طباعة / PDF||Print / PDF')}</button></div>
@@ -3997,7 +4095,7 @@ function repMonthCsv(){
   const rows=months.map(m=>{
     let l=0,p=0;
     scope.forEach(w=>{if(w.status==='closed'&&w.closedAt&&monthKey(w.closedAt)===m)l+=Number(w.cost||0);});
-    db.pos.forEach(po=>{if(po.invApproved&&po.invoice&&monthKey(po.invoice.date)===m)p+=Number(po.invoice.total||0);});
+    posQ().forEach(po=>{if(po.invApproved&&po.invoice&&monthKey(po.invoice.date)===m)p+=Number(po.invoice.total||0);});
     return [m,l.toFixed(2),p.toFixed(2),(l+p).toFixed(2)];});
   csvExport('monthly-expenses',[lb('الشهر||Month'),lb('عمالة||Labor'),lb('مشتريات||Purchases'),lb('الإجمالي||Total')],rows);
 }
@@ -4273,11 +4371,11 @@ function userForm(id){
     <div><label>${lb('الدور||Role')}</label><select id="fu_r">${Object.keys(ROLES).map(k=>`<option value="${k}" ${u.role===k?'selected':''}>${ROLES[k]}</option>`).join('')}</select></div>
     <div><label>${lb('رقم الجوال (لواتساب)||Mobile (for WhatsApp)')}</label><input id="fu_ph" value="${esc(u.phone||'')}" placeholder="${lb('05xxxxxxxx||05xxxxxxxx')}"></div>
   </div>
-  <label>${lb('المجمعات المسموحة لهذا المستخدم||Allowed Compounds')}</label>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-  ${db.compounds.map(c=>`<label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink);font-weight:700">
-    <input type="checkbox" class="fu_cmp" value="${c.id}" ${(u.cmpIds||[]).includes(c.id)?'checked':''}> ${esc(c.name)}</label>`).join('')}
-  </div>
+  <label>${lb('الأصل المسموح لهذا المستخدم *||Allowed asset for this user *')}</label>
+  <select id="fu_cmp" ${u.role==='admin'?'disabled':''}>
+    ${db.compounds.map(c=>`<option value="${c.id}" ${(u.cmpIds||[])[0]===c.id?'selected':''}>${esc(c.name)} — ${KINDL()[c.kind||'property']||''}</option>`).join('')}
+  </select>
+  <p class="muted">${lb('كل مستخدم أو فني مرتبط بأصل واحد فقط. لو الفني يعمل في أكثر من أصل، أنشئ له حساباً مستقلاً لكل أصل حتى لا تتداخل بياناته.||Each user or technician belongs to one asset only. If a technician works in several assets, create a separate account for each so their data never mixes.')}</p>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="saveUser('${id||''}')">${lb('حفظ||Save')}</button></div>`);
 }
@@ -4288,9 +4386,11 @@ function saveUser(id){
   if(email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return toast(lb(' البريد الإلكتروني غير صحيح|| Invalid email'),'err');
   if(db.users.some(x=>x.u.toLowerCase()===un.toLowerCase()&&x.id!==id))return toast(lb(' اسم الدخول مستخدم|| Username taken'),'err');
   if(email&&db.users.some(x=>String(x.email||'').toLowerCase()===email&&x.id!==id))return toast(lb(' البريد مستخدم لحساب آخر|| Email already used'),'err');
-  const cmpIds=[...document.querySelectorAll('.fu_cmp:checked')].map(x=>x.value);
   const role=(id&&id===me.id)?'admin':$('fu_r').value; /* المدير يبقى مديراً — لا يستطيع سحب صلاحيته من نفسه */
-  if(role!=='admin'&&!cmpIds.length)return toast(lb(' اختر مجمعاً واحداً على الأقل لهذا المستخدم|| Pick at least one compound for this user'),'err');
+  /* أصل واحد فقط لكل مستخدم (المدير يملك كل الأصول ويبدّل من الهيدر) */
+  const oneCmp=$('fu_cmp')?$('fu_cmp').value:'';
+  const cmpIds=role==='admin'?[]:(oneCmp?[oneCmp]:[]);
+  if(role!=='admin'&&!cmpIds.length)return toast(lb(' اختر أصلاً لهذا المستخدم|| Pick an asset for this user'),'err');
   const phone=$('fu_ph').value.trim();
   if(id){const x=db.users.find(y=>y.id===id);
     const upd={name:n,u:un,email,role,phone,cmpIds,activeCmp:(x.activeCmp&&(cmpIds.includes(x.activeCmp)||role==='admin'))?x.activeCmp:''};
