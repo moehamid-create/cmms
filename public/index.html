@@ -176,6 +176,36 @@ button.btn.sm svg{width:13px;height:13px}
 .nbtn.active{background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff;border-color:transparent;
   box-shadow:0 10px 22px -8px rgba(14,116,144,.55)}
 .nbtn.active .ic{filter:none}
+/* ===== تفاعل القائمة الجانبية مع الماوس: مؤشر منزلق + حركة ديناميكية ===== */
+.navglide{
+  position:absolute;top:0;left:8px;right:8px;height:0;border-radius:12px;pointer-events:none;z-index:0;
+  background:linear-gradient(135deg,rgba(14,116,144,.20),rgba(8,145,178,.12));
+  border:1px solid rgba(14,116,144,.25);opacity:0;
+  transition:transform .36s cubic-bezier(.22,1,.36,1),height .36s cubic-bezier(.22,1,.36,1),opacity .25s ease;
+}
+.dark .navglide{background:linear-gradient(135deg,rgba(34,184,207,.24),rgba(34,184,207,.12));border-color:rgba(34,184,207,.32)}
+.nbtn{position:relative;z-index:1;
+  transition:transform .22s cubic-bezier(.22,1,.36,1),background .18s,border-color .18s,box-shadow .18s,color .18s}
+.nbtn::before{ /* لمعة تمرّ على العنصر عند المرور */
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:translateX(-130%);transition:transform .55s cubic-bezier(.22,1,.36,1);opacity:0;
+}
+.dark .nbtn::before{background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+.nbtn:hover{transform:translateX(5px)}
+.nbtn:hover::before{transform:translateX(130%);opacity:1}
+.nbtn:hover .ic{transform:scale(1.14) rotate(-4deg)}
+.nbtn .ic{transition:transform .26s cubic-bezier(.22,1,.36,1)}
+body[dir="rtl"] .nbtn:hover{transform:translateX(-5px)}
+body[dir="rtl"] .nbtn::before{transform:translateX(130%)} /* البداية من الطرف المقابل في RTL */
+body[dir="rtl"] .nbtn:hover::before{transform:translateX(-130%)}
+.nbtn.active::before{display:none}
+@media (max-width:960px){.navglide{display:none}.nbtn:hover{transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .navglide,.nbtn,.nbtn::before,.nbtn .ic{transition:none!important}
+  .nbtn:hover{transform:none}
+  .nbtn:hover .ic{transform:none}
+}
 .sidefoot{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:8px}
 .ucard{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:13px;
   background:rgba(255,255,255,.55);border:1px solid var(--line)}
@@ -562,6 +592,25 @@ html[dir="ltr"] .btn-login svg{transform:scaleX(1)}
   content:"";position:absolute;inset:0;
   background-image:radial-gradient(rgba(255,255,255,.12) 1px,transparent 1px);
   background-size:28px 28px;opacity:.35;pointer-events:none;
+}
+/* ===== تلطيف الحدّ بين لوحة الهوية ونموذج الدخول: تلاشٍ تدريجي بدل خط حاد =====
+   الملاحظة: اتجاه الصفحة يُضبط على body[dir] داخل render() وليس على html. */
+@media (min-width:961px){
+  .auth-hero-side{
+    padding-inline-start:60px; /* يُبعد المحتوى عن خط اللحام في الاتجاهين */
+    -webkit-mask-image:linear-gradient(to left,#000 86%,rgba(0,0,0,.6) 94%,transparent 100%);
+            mask-image:linear-gradient(to left,#000 86%,rgba(0,0,0,.6) 94%,transparent 100%);
+  }
+  body[dir="rtl"] .auth-hero-side{
+    -webkit-mask-image:linear-gradient(to right,#000 86%,rgba(0,0,0,.6) 94%,transparent 100%);
+            mask-image:linear-gradient(to right,#000 86%,rgba(0,0,0,.6) 94%,transparent 100%);
+  }
+  /* وهج ناعم يعبر خط اللحام فيتمازج اللونان تماماً */
+  .auth-form-side::before{
+    content:"";position:absolute;inset-block:0;inset-inline-end:-80px;width:170px;
+    background:linear-gradient(90deg,rgba(14,116,144,0),rgba(14,116,144,.30),rgba(14,116,144,0));
+    filter:blur(30px);pointer-events:none;z-index:1;
+  }
 }
 .hero-content{position:relative;z-index:2;max-width:500px;display:flex;flex-direction:column;gap:20px}
 .hero-brand{display:flex;align-items:center;gap:14px}
@@ -1696,6 +1745,7 @@ function render(){
   if(me&&!tabAllowed(TAB))TAB='dash';
   $('app').innerHTML = me ? (PICK?pickerHtml():shell()) : loginHtml();
   if(me&&!PICK)paintTab();
+  if(me&&!PICK)initNavGlider();
   document.querySelectorAll('#app button[title]').forEach(b=>{if(!b.getAttribute('aria-label'))b.setAttribute('aria-label',b.title);});
 }
 /* بطاقات اختيار نوع الأصل — تُستخدم في شاشة البداية وفي نافذة "أصل جديد" */
@@ -1818,9 +1868,9 @@ function shell(){
       </div>
       <div class="sidediv"></div>
       <div class="slabel">${lb('التشغيل||Operations')}</div>
-      ${groups[0].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" title="${n[2]}" onclick="TAB='${n[0]}';render()"><span class="ic">${ic(n[1],20)}</span><span class="nt">${n[2]}</span></button>`).join('')}
+      ${groups[0].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" data-tab="${n[0]}" title="${n[2]}" onclick="goTab('${n[0]}')"><span class="ic">${ic(n[1],20)}</span><span class="nt">${n[2]}</span></button>`).join('')}
       ${groups[1].length?`<div class="sidediv"></div><div class="slabel">${lb('الإدارة||Management')}</div>
-      ${groups[1].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" title="${n[2]}" onclick="TAB='${n[0]}';render()"><span class="ic">${ic(n[1],20)}</span><span class="nt">${n[2]}</span></button>`).join('')}`:''}
+      ${groups[1].map(n=>`<button class="nbtn ${TAB===n[0]?'active':''}" data-tab="${n[0]}" title="${n[2]}" onclick="goTab('${n[0]}')"><span class="ic">${ic(n[1],20)}</span><span class="nt">${n[2]}</span></button>`).join('')}`:''}
       <div class="sidefoot">
         <div class="ucard"><span class="av">${esc(initials)}</span>
           <span class="uinfo"><span class="nm">${esc(me.name)}</span><br><span class="rl">${ROLES[me.role]}</span></span>
@@ -2666,6 +2716,43 @@ function closeModal(){const m=$('mbg');if(!m)return;
   const bx=m.querySelector('.modal');
   if(bx)bx.style.animation='pop .15s ease reverse forwards';
   setTimeout(()=>m.remove(),150);}
+/* ===== تفاعل القائمة الجانبية مع الماوس: مؤشر منزلق + تبديل بالمرور ===== */
+function initNavGlider(){
+  const side=document.querySelector('.side');
+  if(!side)return;
+  let gl=document.getElementById('navglide');
+  if(!gl||!side.contains(gl)){
+    gl=document.createElement('span');
+    gl.id='navglide';gl.className='navglide';
+    side.insertBefore(gl,side.firstChild);
+  }
+  const btns=[...side.querySelectorAll('.nbtn')];
+  if(!btns.length)return;
+  const place=el=>{
+    if(!el){gl.style.opacity='0';return;}
+    gl.style.height=el.offsetHeight+'px';
+    gl.style.transform='translateY('+el.offsetTop+'px)';
+    gl.style.opacity='1';
+  };
+  btns.forEach(b=>{
+    b.addEventListener('mouseenter',()=>{
+      place(b);
+      /* التبديل بالمرور بعد مهلة قصيرة (280ms) حتى لا يتبدّل التبويب عشوائياً */
+      clearTimeout(window._navDwell);
+      const t=b.dataset.tab;
+      if(t&&t!==TAB)window._navDwell=setTimeout(()=>{if(t&&t!==TAB)goTab(t);},280);
+    });
+    b.addEventListener('mouseleave',()=>clearTimeout(window._navDwell));
+  });
+  if(!side._navBound){
+    side._navBound=true;
+    side.addEventListener('mouseleave',()=>{
+      clearTimeout(window._navDwell);
+      place(side.querySelector('.nbtn.active'));
+    });
+  }
+  place(side.querySelector('.nbtn.active')||btns[0]);
+}
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeModal();return;}
   /* التنقل بين عناصر القائمة بأسهم الكيبورد (يعمل عندما يكون التركيز على أحد الأزرار فقط — لا يسرق الأسهم من الحقول) */
