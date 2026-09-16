@@ -1124,7 +1124,24 @@ function migrate(d){
     if(!Array.isArray(d.rfqs))d.rfqs=[];
     if(d.rfqSeq==null)d.rfqSeq=0;
   }
-  /* ---- شبكة أمان تُنفَّذ دائماً (حتى مع ver=7) لضمان بيانات قابلة للاستخدام ---- */
+  /* ---- v9: تصحيح تصنيف الأصول القديمة (مصنع / أسطول) من الاسم ---- */
+  if(d.ver<9){
+    d.ver=9;
+    const FACTORY=/(مصنع|منشأة صناعية|منشأه صناعية|معمل|ورشة|مشغل|صناعي|صناعية|إنتاج|انتاج|مصفاة|تعبئة|خط إنتاج)/;
+    const FLEET=/(أسطول|سيارات|سيارة|مركبات|مركبة|شاحن|شاحنات|نقل|مقطورات|كرينات|أوناش)/;
+    d.compounds.forEach(c=>{
+      const nm=String(c.name||'');
+      const hasRE=(d.buildings||[]).some(b=>b.compoundId===c.id)||
+        (d.units||[]).some(u=>{const b=(d.buildings||[]).find(x=>x.id===u.buildingId);return b&&b.compoundId===c.id;});
+      if(!c.kind){
+        c.kind=FACTORY.test(nm)?'factory':FLEET.test(nm)?'vehicles':'property';
+      }else if((c.kind==='property'||c.kind==='residentialBuilding')&&!hasRE){
+        if(FACTORY.test(nm))c.kind='factory';
+        else if(FLEET.test(nm))c.kind='vehicles';
+      }
+    });
+  }
+  /* ---- شبكة أمان تُنفَّذ دائماً (حتى مع أحدث ver) لضمان بيانات قابلة للاستخدام ---- */
   ['compounds','buildings','units','tenants','contracts','assets','wos','inv','moves','pms',
    'suppliers','prs','pos','projects','employees','shifts','notifs','fuelLogs','utilityLogs','certs','providers','rfqs']
    .forEach(k=>{if(!Array.isArray(d[k]))d[k]=[];});
