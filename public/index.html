@@ -793,6 +793,335 @@ html[dir="ltr"] .feature-item:hover{transform:translateX(3px)}
 .dark .mkt-tag{background:rgba(34,184,207,.14);border-color:rgba(34,184,207,.28)}
 .dark .mkt-role-pts{background:rgba(34,184,207,.14);border-color:rgba(34,184,207,.28)}
 @media(max-width:600px){.mkt-filters{flex-direction:column}.mkt-filters .f,.mkt-filters input,.mkt-filters select{width:100%}}
+
+/* ══════════════════════════════════════════════════════════════════
+   أملاكي — طبقة الهوية البصرية v2  (AMLAKI VISUAL LAYER v2)
+   تعديل مظهر فقط: لا تغيير في HTML أو JavaScript أو أسماء الفئات.
+   Appearance-only layer. No markup, script or class-name changes.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── 1. الألوان والمقاسات ───────────────────────────────────────── */
+:root{
+  /* حبر وسطوح */
+  --ink:#10232d;--muted:#617c8b;
+  --brand:#0d6e80;--brand-2:#0f92a8;--dark:#0a5563;
+  --brand-soft:rgba(13,110,128,.09);
+  --sand:#a9702f;                       /* لون مساند دافئ للتنبيهات الزمنية */
+  --line:#dde5ea;                       /* خط شعرة بدل حافة الزجاج */
+  --line-soft:#eaf0f3;
+  --glass-hi:#ffffff;--glass-lo:#fbfcfd;/* بطاقات صلبة وواضحة بدل الزجاج */
+  --s2:#f4f8f9;                         /* سطح داخلي (خانات، أشرطة، صفوف) */
+  --s3:#edf3f5;
+  --slab-1:#0c2632;--slab-2:#0a1b24;    /* عمود التنقّل الداكن */
+
+  --red:#c94141;--redbg:#fdeceb;
+  --green:#12855f;--greenbg:#e4f5ee;
+  --amber:#b4761a;--amberbg:#fbf0dd;
+  --blue:#2b64d9;--bluebg:#e7eefc;
+  --purple:#6d4bd8;--purplebg:#eeeafc;
+
+  --shadow:0 1px 2px rgba(10,35,45,.05),0 10px 26px -18px rgba(10,35,45,.35);
+  --shadow-lift:0 2px 4px rgba(10,35,45,.06),0 20px 40px -24px rgba(10,35,45,.45);
+  --r:15px;
+}
+:root.dark{
+  --ink:#e7eff3;--muted:#91a8b5;
+  --brand:#33bfd4;--brand-2:#4ad2e6;--dark:#1a93a8;
+  --brand-soft:rgba(51,191,212,.14);
+  --sand:#d9a459;
+  --line:rgba(255,255,255,.10);
+  --line-soft:rgba(255,255,255,.06);
+  --glass-hi:#122430;--glass-lo:#0f1f2a;
+  --s2:rgba(255,255,255,.05);
+  --s3:rgba(255,255,255,.08);
+  --red:#f07272;--redbg:rgba(153,27,27,.32);
+  --green:#3ed39a;--greenbg:rgba(6,95,70,.34);
+  --amber:#f0b64a;--amberbg:rgba(120,53,15,.36);
+  --blue:#6d9bf5;--bluebg:rgba(30,58,138,.4);
+  --purple:#a892f8;--purplebg:rgba(76,29,149,.4);
+  --shadow:0 1px 2px rgba(0,0,0,.45),0 16px 36px -26px rgba(0,0,0,.9);
+  --shadow-lift:0 2px 6px rgba(0,0,0,.5),0 26px 50px -28px rgba(0,0,0,1);
+}
+
+/* ── 2. الخلفية والطباعة ────────────────────────────────────────── */
+body{background:#e9eef1;font-size:14.5px;line-height:1.55;letter-spacing:normal}
+body::before{
+  background:linear-gradient(180deg,#f5f8f9 0%,#eaeff2 55%,#e6ecef 100%);
+  filter:none;
+}
+/* شبكة مخطط هندسية خفيفة — إشارة إلى عالم المباني والصيانة */
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:linear-gradient(rgba(10,45,60,.045) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(10,45,60,.045) 1px,transparent 1px);
+  background-size:64px 64px;
+  -webkit-mask-image:radial-gradient(120% 90% at 50% 0%,#000 30%,transparent 78%);
+          mask-image:radial-gradient(120% 90% at 50% 0%,#000 30%,transparent 78%);
+}
+.dark body{background:#081319}
+.dark body::before{background:linear-gradient(180deg,#0c1c25 0%,#091620 55%,#081319 100%)}
+.dark body::after{background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+                                   linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px)}
+/* العربية لا تقبل التباعد بين الحروف ولا الحروف الكبيرة — إزالتهما ترفع الوضوح فوراً */
+th,label,.slabel,.stat .lbl,.badge,.chip,.brand-t,.mkt-tag,.hub-badge,.psub{
+  letter-spacing:normal;text-transform:none;
+}
+h1,h2,h3,.topbar .ttl,.stat .num,.brand-t{letter-spacing:-.3px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(90,120,138,.3);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(90,120,138,.5);border:3px solid transparent;background-clip:content-box}
+
+/* ── 3. عمود التنقّل: كتلة داكنة صلبة (العنصر البصري الأبرز) ──── */
+.side{
+  background:linear-gradient(196deg,var(--slab-1) 0%,var(--slab-2) 58%,#0b2029 100%);
+  border:none;box-shadow:0 0 0 1px rgba(0,0,0,.35),18px 0 42px -34px rgba(4,20,28,.9);
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.brand{border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:6px}
+.brand .logo{box-shadow:0 8px 20px -8px rgba(15,146,168,.7)}
+.side .brand-t{color:#f2f8fa}
+.side .brand-t small{color:#7d99a7;font-weight:600}
+.side .slabel{color:#6d8b9a;font-size:10.5px;font-weight:700;padding:10px 12px 4px}
+.side .sidediv{background:rgba(255,255,255,.08);box-shadow:none}
+.side .nbtn{color:#a7c0cb;font-weight:600;font-size:13.5px;border-radius:11px}
+.side .nbtn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.06);color:#eaf4f7}
+.side .nbtn .ic{opacity:.92;filter:none}
+.side .nbtn.active{
+  background:linear-gradient(135deg,#0f8296,#12a6bd);color:#fff;font-weight:700;
+  box-shadow:0 12px 26px -14px rgba(18,166,189,.95);
+}
+.side .nbtn.active .ic{opacity:1}
+/* حذف لمعة التمرير المتحركة — ضجيج بصري بلا معنى */
+.nbtn::before{display:none!important}
+.side .nbtn:hover{transform:none}
+body[dir="rtl"] .side .nbtn:hover{transform:none}
+.side .nbtn:hover .ic{transform:none}
+.navglide{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.08);left:10px;right:10px}
+.dark .navglide{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.08)}
+.side .ucard{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);border-radius:12px}
+.side .ucard .nm{color:#eef6f8}
+.side .ucard .rl{color:#89a5b2}
+.side .ucard .av{box-shadow:0 6px 16px -8px rgba(0,0,0,.8)}
+.side .sideacts button.btn.ghost{
+  background:rgba(255,255,255,.07);color:#cfe2e9;border:1px solid rgba(255,255,255,.1);box-shadow:none;
+}
+.side .sideacts button.btn.ghost:hover{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.2)}
+.side .cmpchip{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);color:#e3eef2}
+.side .cmpchip small{color:#8aa6b3}
+.side select{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12);color:#e7f1f5}
+.side select option{background:#12242f;color:#e7f1f5}
+
+/* ── 4. الشريط العلوي ──────────────────────────────────────────── */
+.topbar{
+  background:rgba(255,255,255,.88);border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 1px 2px rgba(10,35,45,.05),0 12px 28px -24px rgba(10,35,45,.5);
+  backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
+}
+.dark .topbar{background:rgba(16,32,42,.86);border-color:rgba(255,255,255,.08)}
+.topbar .ttl{font-size:17px;font-weight:800}
+.topbar .pname{
+  background:var(--brand-soft);color:var(--brand);box-shadow:none;
+  border:1px solid rgba(13,110,128,.16);font-size:11.5px;padding:3px 9px;border-radius:8px;
+}
+.dark .topbar .pname{border-color:rgba(51,191,212,.25)}
+.topbar .meta{font-weight:600}
+.topbar .asw{background:var(--s2);border-color:var(--line);border-radius:11px}
+.topbar .asw:hover{background:var(--s3);border-color:rgba(13,110,128,.35);transform:none}
+.bell{background:var(--s2);border-color:var(--line);border-radius:10px}
+.bell:hover{background:var(--s3);transform:none}
+.bellb{box-shadow:none;font-weight:700;padding:1px 5px}
+footer{color:#93a7b3;font-size:11.5px;padding-top:22px}
+
+/* ── 5. البطاقات والمؤشرات ─────────────────────────────────────── */
+.card,.stat,.pillar,.mkt-provider,.mkt-rfq,.mkt-kpi,.login-card{
+  background:var(--glass-hi);border:1px solid var(--line);box-shadow:var(--shadow);
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.card{border-radius:var(--r)}
+.card h2{
+  font-size:15.5px;font-weight:800;padding-bottom:11px;margin-bottom:13px;
+  border-bottom:1px solid var(--line-soft);
+}
+.stat{border-radius:13px;position:relative;overflow:hidden;transition:box-shadow .2s,transform .2s}
+.stat::before{
+  content:"";position:absolute;top:0;bottom:0;inset-inline-start:0;width:3px;background:var(--brand);
+}
+.stat.warn::before{background:var(--red)}
+.stat.ok::before{background:var(--green)}
+.stat:hover{transform:none;box-shadow:var(--shadow-lift)}
+.stat.kpi:hover{transform:translateY(-2px)}
+.stat .num{font-size:27px;font-weight:800;letter-spacing:-1px}
+.stat .lbl{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:4px}
+.kpi .kico{opacity:.55}
+.trend{font-weight:700;border-radius:7px;padding:2px 8px}
+.trend.flat{background:var(--s2);color:var(--muted)}
+.pillar:hover,.mkt-provider:hover{transform:none;box-shadow:var(--shadow-lift)}
+.mkt-kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-lift)}
+.pkpi,.netline,.pmrow,.taskrow,.ckrow,.mkt-bid,.swrow,.onb-card,.onb-step,.mkt-role-card,.cmpcard{
+  background:var(--s2);border-color:var(--line);
+}
+.pkpi{border-radius:10px}
+.hbar .hb,.legend .li:hover{background:var(--s3)}
+.hbar .hb i{border-radius:7px}
+.donut .hole{background:var(--glass-hi)}
+.hub-badge{background:var(--brand-soft);border-color:rgba(13,110,128,.18);font-weight:700}
+.swrow:hover,.onb-card:hover,.onb-step:hover,.cmpcard:hover,.mkt-role-card:hover{
+  background:var(--s3);border-color:rgba(13,110,128,.35);
+}
+.onb-card:hover,.mkt-role-card:hover,.cmpcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-lift)}
+.alrow:hover{background:var(--s2)}
+.mkt-tag,.mkt-role-pts{background:var(--brand-soft);border-color:rgba(13,110,128,.18)}
+
+/* ── 6. الجداول ────────────────────────────────────────────────── */
+table{font-size:13.5px}
+th{
+  background:var(--s2);color:var(--muted);font-size:11.5px;font-weight:700;
+  padding:10px 11px;border-bottom:1px solid var(--line);
+}
+.dark th,.dark table th{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
+td{padding:11px;border-bottom:1px solid var(--line-soft)}
+tr:hover td{background:var(--s2)}
+.tbl-wrap{border-radius:12px;border:1px solid var(--line-soft)}
+.dark .tbl-wrap{border-color:rgba(255,255,255,.07)}
+.overdue td{background:var(--redbg)!important}
+
+/* ── 7. الحالات والأزرار والحقول ───────────────────────────────── */
+.badge{
+  border:none;box-shadow:none;border-radius:7px;padding:3px 9px;font-weight:700;font-size:11px;
+}
+.b-urgent{background:var(--red);color:#fff;box-shadow:none}
+.b-down{background:var(--red);color:#fff}
+.b-normal{background:var(--s3);color:var(--muted)}
+.b-low{background:var(--s3);color:var(--muted)}   /* كانت حمراء كالعاجل — تصحيح دلالي */
+.mkt-pill{border-color:transparent}
+.chip{background:var(--glass-hi);border-color:var(--line);color:var(--muted);font-weight:600}
+.chip:hover{background:var(--s3);color:var(--ink);border-color:rgba(13,110,128,.3)}
+.chip.on{background:var(--brand);color:#fff;box-shadow:0 8px 18px -12px rgba(13,110,128,.9)}
+button.btn{
+  border-radius:10px;font-weight:700;
+  background:linear-gradient(180deg,var(--brand-2),var(--brand));
+  box-shadow:0 1px 1px rgba(10,35,45,.12),0 10px 20px -14px rgba(13,110,128,.95);
+}
+button.btn:hover{transform:translateY(-1px);box-shadow:0 2px 3px rgba(10,35,45,.14),0 14px 26px -14px rgba(13,110,128,1);filter:none}
+button.btn.ghost{background:var(--glass-hi);border:1px solid var(--line);color:var(--ink);box-shadow:none}
+button.btn.ghost:hover{background:var(--s3);border-color:rgba(13,110,128,.4);color:var(--brand)}
+button.btn.danger{background:var(--glass-hi);border-color:rgba(201,65,65,.35);color:var(--red)}
+button.btn.sm{border-radius:8px;padding:5px 10px}
+.dark button.btn.ghost{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12)}
+input,select,textarea{
+  border:1px solid #cdd9df;border-radius:10px;background:var(--glass-hi);
+  padding:9px 12px;font-size:13.5px;backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px var(--brand-soft);border-color:var(--brand)}
+textarea{min-height:82px;line-height:1.7}
+input[type=checkbox]{transform:scale(1.1)}
+label{font-size:11.5px;font-weight:700;color:var(--muted);margin:10px 0 5px}
+.searchbar{max-width:340px}
+
+/* ── 8. النوافذ والتنبيهات ─────────────────────────────────────── */
+.modal-bg{background:rgba(8,26,35,.55);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.modal{
+  background:var(--glass-hi);border:1px solid var(--line);border-radius:18px;padding:24px;
+  box-shadow:0 40px 90px -34px rgba(4,26,36,.6);
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.dark .modal{background:#122430;border-color:rgba(255,255,255,.1)}
+.modal h3{font-size:18px;font-weight:800}
+.fsec{
+  border-top:1px solid var(--line-soft);color:var(--brand);font-weight:700;
+  display:flex;align-items:center;gap:7px;
+}
+.fsec::before{content:"";width:5px;height:5px;border-radius:2px;background:var(--brand);flex:0 0 auto}
+.fsec:first-of-type::before{display:inline-block}
+.toast{
+  background:#0f232e;border:1px solid rgba(255,255,255,.12);border-radius:12px;
+  box-shadow:0 20px 44px -18px rgba(0,0,0,.6);font-weight:600;
+}
+.toast.ok{background:#0e6b4e}.toast.err{background:#a83232}
+.empty,.mkt-empty{font-style:normal;color:var(--muted);font-size:13px;padding:26px}
+
+/* ── 9. الرسوم البيانية ────────────────────────────────────────── */
+.bar{height:8px;border-radius:99px;box-shadow:none}
+.bar.red,.bar.grn{box-shadow:none}
+.mbar{border-radius:8px;box-shadow:none}
+.mcol:hover .mbar{transform:translateY(-2px);filter:none;box-shadow:0 10px 20px -12px rgba(10,35,45,.6)}
+.mini-bar{border-radius:7px}
+.fcol .fbars i{border-radius:5px}
+.legend .dot{box-shadow:none;border-radius:3px}
+
+/* ── 10. شاشة الدخول ──────────────────────────────────────────── */
+.auth-wrapper{background:#f7fafb}
+.auth-form-side{background:linear-gradient(180deg,#fdfefe,#f4f8f9)}
+.dark .auth-form-side{background:linear-gradient(180deg,#0c1c25,#081319)}
+.auth-card{border-radius:20px;box-shadow:0 1px 3px rgba(10,35,45,.06),0 28px 60px -34px rgba(10,35,45,.5),0 0 0 1px var(--line)}
+.auth-title{font-size:26px;letter-spacing:-.4px}
+.auth-sub{font-size:13px;line-height:1.7}
+.auth-hero-side{background:linear-gradient(200deg,#0a2530 0%,#0c5e6f 52%,#08202a 100%)}
+.auth-hero-side::before{
+  background:radial-gradient(circle at 78% 18%,rgba(70,214,234,.22) 0%,transparent 52%),
+             radial-gradient(circle at 18% 84%,rgba(13,110,128,.4) 0%,transparent 60%);
+}
+/* شبكة مخطط بدل النقاط — أقرب لمجال إدارة المباني */
+.auth-hero-side::after{
+  background-image:linear-gradient(rgba(255,255,255,.075) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.075) 1px,transparent 1px);
+  background-size:46px 46px;opacity:1;
+  -webkit-mask-image:radial-gradient(100% 80% at 70% 20%,#000 20%,transparent 85%);
+          mask-image:radial-gradient(100% 80% at 70% 20%,#000 20%,transparent 85%);
+}
+.hero-headline{font-size:31px;line-height:1.55;text-shadow:none}
+.hero-quote-card,.feature-item{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.16);border-radius:14px}
+.feature-item:hover{background:rgba(255,255,255,.15)}
+.input-icon-wrap input{border-width:1px;border-color:#cdd9df;border-radius:11px;padding-block:11px}
+.input-icon-wrap input:focus{box-shadow:0 0 0 3px var(--brand-soft)}
+.btn-login{border-radius:12px;background:linear-gradient(180deg,#0f92a8,#0c6675);box-shadow:0 12px 24px -14px rgba(13,110,128,.95)}
+.btn-login:hover{filter:none;box-shadow:0 16px 30px -14px rgba(13,110,128,1)}
+.btn-google{border-width:1px;border-radius:12px}
+.demo-accounts{border-style:solid;border-color:var(--line);background:var(--s2);border-radius:12px}
+.demo-chip{border-radius:8px;border-color:var(--line)}
+.demo-chip:hover{background:var(--brand);border-color:var(--brand)}
+
+/* ── 12. تباين الوضع الليلي ────────────────────────────────────── */
+.dark button.btn{background:linear-gradient(180deg,#178da2,#0f6b7c);color:#f2fbfd;
+  box-shadow:0 1px 1px rgba(0,0,0,.4),0 12px 24px -16px rgba(0,0,0,.9)}
+.dark button.btn:hover{box-shadow:0 2px 4px rgba(0,0,0,.45),0 16px 30px -16px rgba(0,0,0,1)}
+.dark .chip.on{background:#137f93;color:#f2fbfd}
+.dark .b-urgent,.dark .b-down{background:#b23a3a;color:#fff}
+.dark .stat::before{opacity:.9}
+.dark .topbar .asw,.dark .bell{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}
+.dark .topbar .asw:hover,.dark .bell:hover{background:rgba(255,255,255,.12)}
+.dark .demo-accounts{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
+.dark .auth-hero-side{background:linear-gradient(200deg,#07202a 0%,#0a4f5e 52%,#061820 100%)}
+.dark footer{color:#6d8794}
+
+/* ── 11. تفاصيل سطح المكتب ─────────────────────────────────────── */
+@media(min-width:761px){
+  .side{margin:0;border-radius:0;top:0;height:100vh}
+  .content{padding:16px 22px 28px}
+  .topbar{padding:12px 16px;margin-bottom:16px}
+  .card{padding:18px;margin-bottom:16px}
+  .stat{padding:16px 16px 14px}
+  .stats{gap:14px}
+}
+@media(min-width:1181px){
+  .side{flex:0 0 252px;padding:20px 12px 16px}
+  .side .nbtn{min-height:42px}
+}
+/* الهاتف: شريط سفلي داكن متّسق مع العمود */
+@media(max-width:760px){
+  .side{border-radius:16px 16px 0 0;box-shadow:0 -12px 34px rgba(4,20,28,.4)}
+  .side .nbtn{color:#a7c0cb}
+  .content{padding:10px 10px 104px}
+  .card h2{padding-bottom:9px;margin-bottom:11px}
+  .toast{bottom:96px;left:12px;right:12px;transform:translateY(8px);max-width:none;
+    white-space:normal;text-align:center}
+  .toast.show{transform:translateY(0)}
+}
+@media print{
+  body::after{display:none!important}
+  .card,.stat{border:1px solid #d5dde1!important}
+  th{background:#f2f5f6!important}
+}
 </style>
 </head>
 <body>
@@ -2079,6 +2408,7 @@ function vPM(){
   });
   return `<div class="toolbar">
     ${isEng()?`<button class="btn" onclick="pmForm()">＋ ${lb('خطة صيانة جديدة||New PM Plan')}</button>
+    <button class="btn" style="background:linear-gradient(135deg,#7c3aed,#2563eb)" onclick="pmSmartGen()"> ${lb('توليد ذكي للصيانة||Smart PM Generator')}</button>
     <button class="btn ghost" onclick="runScheduler()"> ${lb('تشغيل الجدولة الآن||Run Scheduler Now')}</button>`:''}
     <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
   <p class="muted">${lb('عند استحقاق أي خطة، يُصدر النظام أمر شغل تلقائياً بقائمة الفحص للفني المسؤول.||When a plan is due, the system auto-issues a work order with its checklist.')}</p>
@@ -2123,6 +2453,428 @@ function pmDone(pid){const p=db.pms.find(x=>x.id===pid);if(!p)return;
   persist();paintTab();toast(lb(' سُجل الإنجاز. القادم: || Logged. Next: ')+fmtD(p.nextDue),'ok');}
 function delPm(pid){if(!confirm(lb('حذف الخطة؟||Delete plan?')))return;
   const i=db.pms.findIndex(x=>x.id===pid);if(i<0)return;db.pms.splice(i,1);persist();paintTab();}
+
+/* ============================================================
+   SMART PM GENERATOR — مكتبة قواعد محلية + تحسين اختياري بالذكاء الاصطناعي
+   ينشئ أصولاً نموذجية وخطط صيانة وقائية بعد سؤال المستخدم عمّا تحتويه المباني.
+   ============================================================ */
+/* كل نظام: الأصل/الأصول التي ينشئها + خطط الصيانة الافتراضية (ar||en) */
+const PM_LIB={
+  hvac_split:{label:'تكييف سبليت||Split A/C',defQty:3,asset:{name:'مكيف سبليت||Split A/C',cat:'تكييف سبليت'},
+    plans:[{name:'صيانة المكيفات — ربع سنوية||A/C service — quarterly',fv:3,fu:'months',tasks:[
+      'تنظيف أو تغيير الفلاتر||Clean or replace filters',
+      'فحص ضغط الفريون والتسريب||Check refrigerant pressure and leaks',
+      'تنظيف المبخر والمكثف||Clean evaporator and condenser coils',
+      'فحص تصريف التكثيف||Check condensate drain',
+      'اختبار الثرموستات والحرارة||Test thermostat and temperature']}]},
+  hvac_central:{label:'تكييف مركزي / دكت||Central A/C / ducts',defQty:1,asset:{name:'وحدة تكييف مركزي||Central A/C unit',cat:'تكييف مركزي / دكت'},
+    plans:[{name:'صيانة التكييف المركزي — ربع سنوية||Central A/C service — quarterly',fv:3,fu:'months',tasks:[
+      'تغيير فلاتر الدكت||Replace duct filters',
+      'فحص الأحزمة والبكرات||Inspect belts and pulleys',
+      'تنظيف المبخر والمكثف||Clean evaporator and condenser',
+      'فحص صرف التكثيف||Check condensate drainage',
+      'قياس ضغط الغاز والحرارة||Measure gas pressure and temperature']},
+      {name:'تنظيف وتعقيم الدكت — سنوي||Duct cleaning and sanitising — yearly',fv:1,fu:'months',tasks:[
+      'تنظيف شبكات ومجاري الهواء||Clean air ducts and grilles',
+      'تعقيم الدكت||Sanitise ducts']}]},
+  water_heater:{label:'سخان مياه||Water heater',defQty:1,asset:{name:'سخان مياه||Water heater',cat:'سخان مياه'},
+    plans:[{name:'صيانة السخان — سنوي||Water heater service — yearly',fv:1,fu:'months',tasks:[
+      'تفريغ الرواسب والكلس||Flush sediment and scale',
+      'فحص صمام الأمان والترموستات||Check safety valve and thermostat',
+      'فحص الوصلات والتسريب||Inspect connections for leaks']}]},
+  water_pump:{label:'مضخة مياه||Water pump',defQty:1,asset:{name:'مضخة مياه||Water pump',cat:'مضخة مياه'},
+    plans:[{name:'صيانة المضخة — ربع سنوية||Pump service — quarterly',fv:3,fu:'months',tasks:[
+      'فحص المانع الميكانيكي للتسريب||Check mechanical seal for leaks',
+      'تزييت المحامل||Lubricate bearings',
+      'قياس الضغط والتدفق||Measure pressure and flow',
+      'فحص لوحة التشغيل والكونتاكتور||Inspect control panel and contactor']}]},
+  plumbing:{label:'سباكة وصنابير||Plumbing and fixtures',defQty:1,asset:{name:'شبكة سباكة وتمديدات||Plumbing network',cat:'سباكة وصنابير'},
+    plans:[{name:'فحص السباكة — نصف سنوي||Plumbing inspection — semi-annual',fv:6,fu:'months',tasks:[
+      'فحص التسريبات في الوصلات والصنابير||Check joints and faucets for leaks',
+      'فحص ضغط الشبكة||Check network pressure',
+      'تنظيف مصافي ومصارف المياه||Clean water strainers and drains',
+      'فحص خزانات المياه والعوامات||Inspect tanks and float valves']}]},
+  electrical:{label:'لوحة كهرباء||Electrical panel',defQty:1,asset:{name:'لوحة الكهرباء الرئيسية||Main electrical panel',cat:'لوحة كهرباء'},
+    plans:[{name:'فحص اللوحة الكهربائية — سنوي||Electrical panel inspection — yearly',fv:1,fu:'months',tasks:[
+      'ربط وشد التوصيلات||Tighten and secure connections',
+      'فحص القواطع وفرق الحماية||Inspect breakers and RCDs',
+      'تصوير حراري للنقاط الساخنة||Thermal imaging for hot spots',
+      'تنظيف اللوحة من الغبار||Clean dust from the panel']}]},
+  lighting_in:{label:'إنارة داخلية||Indoor lighting',defQty:1,asset:{name:'إنارة داخلية||Indoor lighting',cat:'إنارة داخلية'},
+    plans:[{name:'فحص الإنارة الداخلية — نصف سنوي||Indoor lighting check — semi-annual',fv:6,fu:'months',tasks:[
+      'استبدال اللمبات والمصابيح التالفة||Replace failed lamps',
+      'تنظيف الكشافات والأغطية||Clean fixtures and diffusers',
+      'فحص المفاتيح والدوائر||Check switches and circuits']}]},
+  lighting_out:{label:'إنارة خارجية||Outdoor lighting',defQty:1,asset:{name:'إنارة خارجية||Outdoor lighting',cat:'إنارة خارجية'},
+    plans:[{name:'فحص الإنارة الخارجية — ربع سنوية||Outdoor lighting check — quarterly',fv:3,fu:'months',tasks:[
+      'استبدال الكشافات التالفة||Replace failed outdoor lamps',
+      'فحص حساسات الحركة والمؤقتات||Check motion sensors and timers',
+      'فحص أعمدة الإنارة والوصلات||Inspect poles and connections']}]},
+  fire_alarm:{label:'نظام إنذار حريق||Fire alarm system',defQty:1,asset:{name:'نظام إنذار حريق||Fire alarm system',cat:'نظام إنذار حريق'},
+    plans:[{name:'اختبار إنذار الحريق — ربع سنوي||Fire alarm test — quarterly',fv:3,fu:'months',tasks:[
+      'اختبار كواشف الدخان والحرارة||Test smoke and heat detectors',
+      'اختبار لوحة التحكم والإنذار الصوتي||Test control panel and sounders',
+      'فحص البطاريات الاحتياطية||Check backup batteries',
+      'تنظيف الكواشف||Clean detectors']}]},
+  smoke_detector:{label:'كاشف دخان||Smoke detector',defQty:1,asset:{name:'كاشف دخان||Smoke detector',cat:'كاشف دخان'},
+    plans:[{name:'فحص كواشف الدخان — نصف سنوي||Smoke detector check — semi-annual',fv:6,fu:'months',tasks:[
+      'اختبار عمل الكاشف||Test detector operation',
+      'تنظيف الكاشف من الغبار||Clean dust from detector',
+      'استبدال البطارية عند الحاجة||Replace battery as needed']}]},
+  fire_ext:{label:'طفاية حريق||Fire extinguisher',defQty:1,asset:{name:'طفاية حريق||Fire extinguisher',cat:'طفاية حريق'},
+    plans:[{name:'فحص طفايات الحريق — سنوي||Fire extinguisher inspection — yearly',fv:1,fu:'months',tasks:[
+      'فحص الضغط ومؤشر الصلاحية||Check pressure gauge',
+      'فحص الخرطوم والمقبض||Inspect hose and handle',
+      'التأكد من سهولة الوصول واللوحات الإرشادية||Verify access and signage']}]},
+  fire_sprinkler:{label:'شبكة إطفاء / رشاشات||Fire sprinkler network',defQty:1,asset:{name:'شبكة إطفاء ورشاشات||Sprinkler network',cat:'شبكة إطفاء / رشاشات'},
+    plans:[{name:'فحص شبكة الرشاشات — ربع سنوي||Sprinkler network check — quarterly',fv:3,fu:'months',tasks:[
+      'فحص ضغط الشبكة والمضخة||Check network and pump pressure',
+      'فحص الرشاشات للتسريب||Inspect sprinklers for leaks',
+      'اختبار الصمامات ومفاتيح التدفق||Test valves and flow switches']}]},
+  elevator:{label:'مصعد||Elevator',defQty:1,asset:{name:'مصعد||Elevator',cat:'مصعد'},
+    plans:[{name:'الصيانة الشهرية للمصعد||Elevator monthly service',fv:1,fu:'months',tasks:[
+      'فحص الأبواب والأقفال||Inspect doors and locks',
+      'تجربة زر ومساعد الطوارئ||Test emergency button and intercom',
+      'تزييت السكة والكابلات||Lubricate rails and cables',
+      'فحص غرفة الماكينة والتحكم||Inspect machine room and controller']}]},
+  generator:{label:'مولد احتياطي||Standby generator',defQty:1,asset:{name:'مولد احتياطي||Standby generator',cat:'مولد احتياطي'},
+    plans:[{name:'تشغيل وتحميل المولد — شهري||Generator load test — monthly',fv:1,fu:'months',tasks:[
+      'تشغيل المولد تحت الحمل||Run generator under load',
+      'فحص الوقود والزيوت والفلاتر||Check fuel, oil and filters',
+      'فحص البطاريات وسائل التبريد||Check batteries and coolant',
+      'فحص لوحة التحويل التلقائي (ATS)||Inspect automatic transfer switch']}]},
+  pool_pump:{label:'مضخة / فلتر مسبح||Pool pump and filter',defQty:1,asset:{name:'مضخة وفلتر المسبح||Pool pump and filter',cat:'مضخة / فلتر مسبح'},
+    plans:[{name:'صيانة المسبح — أسبوعي||Pool maintenance — weekly',fv:1,fu:'weeks',tasks:[
+      'قياس الكلور ودرجة الحموضة pH||Test chlorine and pH',
+      'غسل الفلتر الرملي عكسياً||Backwash the sand filter',
+      'تنظيف المصافي والسلال||Clean skimmer baskets',
+      'فحص المضخة والتسريب||Check pump and leaks']}]},
+  water_treatment:{label:'نظام معالجة مياه||Water treatment system',defQty:1,asset:{name:'نظام معالجة مياه||Water treatment system',cat:'نظام معالجة مياه'},
+    plans:[{name:'صيانة معالجة المياه — شهري||Water treatment service — monthly',fv:1,fu:'months',tasks:[
+      'فحص مستويات المواد الكيميائية||Check chemical levels',
+      'غسل/استبدال الفلاتر||Flush or replace filters',
+      'فحص المضخات والعدادات||Inspect pumps and meters']}]},
+  jacuzzi:{label:'جاكوزي / سبا||Jacuzzi / spa',defQty:1,asset:{name:'جاكوزي / سبا||Jacuzzi / spa',cat:'جاكوزي / سبا'},
+    plans:[{name:'صيانة الجاكوزي — شهري||Jacuzzi service — monthly',fv:1,fu:'months',tasks:[
+      'تعقيم الماء وضبط الكيمياء||Sanitise water and balance chemistry',
+      'تنظيف الفلاتر والفتحات||Clean filters and jets',
+      'فحص المضخة والسخان||Check pump and heater']}]},
+  gym:{label:'أجهزة الجيم||Gym equipment',defQty:1,asset:{name:'أجهزة الجيم||Gym equipment',cat:'أجهزة الجيم'},
+    plans:[{name:'صيانة أجهزة الجيم — ربع سنوية||Gym equipment service — quarterly',fv:3,fu:'months',tasks:[
+      'شد البراغي والأحزمة||Tighten bolts and belts',
+      'تزييت الأجزاء المتحركة||Lubricate moving parts',
+      'فحص الكابلات والبكرات||Inspect cables and pulleys',
+      'تنظيف الأجهزة وتعقيمها||Clean and sanitise equipment']}]},
+  gate:{label:'بوابة أوتوماتيكية||Automatic gate',defQty:1,asset:{name:'بوابة أوتوماتيكية||Automatic gate',cat:'بوابة أوتوماتيكية'},
+    plans:[{name:'صيانة البوابة — ربع سنوية||Gate service — quarterly',fv:3,fu:'months',tasks:[
+      'فحص الموتور والمسننات||Check motor and gears',
+      'تزييت المفصلات والمسار||Lubricate hinges and track',
+      'فحص حساسات الأمان والريموت||Test safety sensors and remote']}]},
+  civil:{label:'أعمال مدنية (أسقف/جدران/أرضيات)||Civil works (roofs/walls/floors)',defQty:1,asset:{name:'عناصر مدنية ومعمارية||Civil and architectural elements',cat:'أعمال مدنية'},
+    plans:[{name:'الفحص المدني — نصف سنوي||Civil inspection — semi-annual',fv:6,fu:'months',tasks:[
+      'فحص الأسقف والعزل وعلامات الرطوبة||Inspect roofs, waterproofing and damp',
+      'فحص الجدران والتشققات||Inspect walls and cracks',
+      'فحص الأرضيات والبلاط||Inspect floors and tiles',
+      'فحص الأبواب والنوافذ||Inspect doors and windows']}]},
+  furniture:{label:'أثاث ومفروشات||Furniture and fittings',defQty:1,asset:{name:'أثاث ومفروشات||Furniture and fittings',cat:'أثاث ومفروشات'},
+    plans:[{name:'فحص الأثاث — نصف سنوي||Furniture check — semi-annual',fv:6,fu:'months',tasks:[
+      'فحص التلف والكسر||Inspect for damage',
+      'شد البراغي والمفصلات||Tighten bolts and hinges',
+      'تنظيف وتلميع الأسطح||Clean and polish surfaces']}]},
+  pest:{label:'مكافحة حشرات||Pest control',defQty:1,asset:{name:'برنامج مكافحة حشرات||Pest control programme',cat:'مكافحة حشرات'},
+    plans:[{name:'مكافحة الحشرات — ربع سنوية||Pest control — quarterly',fv:3,fu:'months',tasks:[
+      'رش المناطق المشتركة والأسوار||Spray common areas and perimeter',
+      'فحص المطاعم والمطابخ والمخازن||Inspect kitchens, restaurants and stores',
+      'وضع الطعوم والمصائد||Place baits and traps',
+      'توثيق شهادة المكافحة||Document the control certificate']}]},
+  landscape:{label:'حدائق وري||Landscaping and irrigation',defQty:1,asset:{name:'شبكة ري وحدائق||Irrigation and landscape',cat:'حدائق وري'},
+    plans:[{name:'صيانة الري والحدائق — شهري||Irrigation and landscape — monthly',fv:1,fu:'months',tasks:[
+      'فحص الرشاشات والنقاطات||Inspect sprinklers and drippers',
+      'فحص مضخة الري والفلاتر||Check irrigation pump and filters',
+      'تقليم وتهذيب النباتات||Prune and trim plants',
+      'فحص التسريب في الشبكة||Check network for leaks']}]}
+};
+/* الأنظمة النموذجية حسب نوع المبنى */
+const PM_BTYPE_SYS={
+  villa:['hvac_split','water_heater','water_pump','plumbing','electrical','lighting_in','fire_ext','smoke_detector','civil','furniture'],
+  tower:['hvac_central','water_pump','elevator','fire_alarm','fire_sprinkler','fire_ext','generator','electrical','lighting_in','plumbing','civil','furniture','pest'],
+  mall:['hvac_central','elevator','fire_alarm','fire_sprinkler','fire_ext','generator','electrical','lighting_in','plumbing','civil','pest'],
+  area:['lighting_out','landscape','gate','civil','pest']
+};
+/* تخمين أنظمة المناطق العامة من اسمها (مسبح/جيم/خدمات…) */
+function areaSystems(b){
+  const n=(b&&b.name)||'', s=[];
+  if(/مسبح|pool/i.test(n))s.push('pool_pump','water_treatment','jacuzzi');
+  if(/جيم|gym|رياض/i.test(n))s.push('gym','hvac_split');
+  if(/سبا|spa|ساونا|sauna/i.test(n))s.push('jacuzzi','hvac_split');
+  if(/خدمات|service|مضخ|pump|كهرب|power/i.test(n))s.push('water_pump','generator','electrical');
+  if(/باركن|park|garage|مواقف/i.test(n))s.push('lighting_out','fire_ext');
+  if(/لوبي|lobby|مدخل|entrance|استقبال/i.test(n))s.push('hvac_central','lighting_in','fire_ext');
+  if(/حديق|garden|ري|irrig|خارج|external/i.test(n))s.push('landscape','lighting_out');
+  return [...new Set(s)];
+}
+let PMGEN=null;
+const PMG_CSS='<style>'
+ +'.pmg-grp{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}'
+ +'.pmg-gh{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}'
+ +'.pmg-gh b{font-size:13.5px}'
+ +'.pmg-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 10px;max-height:150px;overflow:auto}'
+ +'.pmg-item{display:flex;align-items:center;gap:6px;font-size:12.5px}'
+ +'.pmg-sysgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px}'
+ +'.pmg-sys{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;padding:3px 0}'
+ +'.pmg-sys label{display:flex;align-items:center;gap:6px}'
+ +'.pmg-sum{background:rgba(14,116,144,.08);border-radius:10px;padding:8px 12px;font-weight:700;font-size:13px;margin-bottom:10px}'
+ +'.pmg-plan{border-top:1px dashed var(--line);padding-top:6px;margin-top:6px;font-size:12.5px}'
+ +'.pmg-plan textarea{width:100%;margin-top:4px}'
+ +'</style>';
+function pmSmartGen(){
+  const act=activeCmp();
+  const blds=db.buildings.filter(b=>b.compoundId===act);
+  if(!blds.length)return toast(lb('أضف مبانٍ أو مناطق أولاً||Add buildings or areas first'),'err');
+  PMGEN={step:1,sel:{},sys:{},custom:[],aiState:'',aiNote:'',result:null};
+  blds.forEach(b=>{PMGEN.sel[b.id]=true;});
+  pmSyncSystems();
+  pmGenRender();
+}
+function pmGroups(){
+  const act=activeCmp();
+  const sel=db.buildings.filter(b=>b.compoundId===act&&PMGEN.sel[b.id]);
+  const groups=[],byType={};
+  sel.forEach(b=>{
+    const t=b.type||'area';
+    if(t==='area')groups.push({key:'B:'+b.id,type:'area',name:b.name,buildingIds:[b.id]});
+    else{(byType[t]=byType[t]||{key:'T:'+t,type:t,name:BTYPES[t]||t,buildingIds:[]}).buildingIds.push(b.id);}
+  });
+  Object.keys(byType).forEach(t=>groups.push(byType[t]));
+  return groups;
+}
+function pmGroupDefaults(g){
+  const o={};
+  if(g.type==='area'){
+    const b=db.buildings.find(x=>x.id===g.buildingIds[0])||{};
+    areaSystems(b).forEach(k=>{if(PM_LIB[k])o[k]=PM_LIB[k].defQty;});
+    ['lighting_out','civil','pest'].forEach(k=>{if(PM_LIB[k]&&o[k]==null)o[k]=1;});
+  }else{
+    (PM_BTYPE_SYS[g.type]||[]).forEach(k=>{if(PM_LIB[k])o[k]=PM_LIB[k].defQty;});
+  }
+  return o;
+}
+function pmSyncSystems(){
+  PMGEN.sys=PMGEN.sys||{};
+  pmGroups().forEach(g=>{if(!PMGEN.sys[g.key])PMGEN.sys[g.key]=pmGroupDefaults(g);});
+}
+function pmGenRender(){
+  const m=document.querySelector('.modal');
+  const st=m?m.scrollTop:0;
+  modal(pmGenHtml());
+  const m2=document.querySelector('.modal');
+  if(m2)m2.scrollTop=st;
+}
+function pmGenHtml(){
+  const body=PMGEN.step===1?pmStep1():PMGEN.step===2?pmStep2():pmStep3();
+  return PMG_CSS+body;
+}
+function pmStep1(){
+  const act=activeCmp();
+  const blds=db.buildings.filter(b=>b.compoundId===act);
+  const groups={};blds.forEach(b=>{const t=b.type||'area';(groups[t]=groups[t]||[]).push(b);});
+  let body='';
+  Object.keys(groups).forEach(t=>{
+    const list=groups[t];
+    body+='<div class="pmg-grp"><div class="pmg-gh"><b>'+esc(BTYPES[t]||t)+'</b><span class="muted">'+list.length+'</span>'
+      +'<button class="btn sm ghost" onclick="pmToggleType(\''+t+'\',true)">'+lb('تحديد الكل||All')+'</button>'
+      +'<button class="btn sm ghost" onclick="pmToggleType(\''+t+'\',false)">'+lb('إلغاء الكل||None')+'</button></div>'
+      +'<div class="pmg-list">'+list.map(b=>'<label class="pmg-item"><input type="checkbox" '+(PMGEN.sel[b.id]?'checked':'')
+        +' onchange="pmToggleB(\''+b.id+'\',this.checked)"> '+esc(b.name)+'</label>').join('')+'</div></div>';
+  });
+  const n=Object.keys(PMGEN.sel).filter(k=>PMGEN.sel[k]).length;
+  return '<h3>'+lb('مولّد جدول الصيانة الوقائية||Preventive Maintenance Generator')+'</h3>'
+   +'<p class="muted">'+lb('الخطوة 1 من 3 — اختر المباني/المناطق المشمولة.||Step 1 of 3 — select the buildings/areas to cover.')+'</p>'
+   +body
+   +'<div class="ma"><button class="btn ghost" onclick="closeModal()">'+lb('إلغاء||Cancel')+'</button>'
+   +'<button class="btn" '+(n?'':'disabled')+' onclick="pmGenNext()">'+lb('التالي: ما الذي تحتويه؟||Next: what is inside?')+' ('+n+')</button></div>';
+}
+function pmStep2(){
+  const groups=pmGroups();
+  let body='';
+  groups.forEach(g=>{
+    const sys=PMGEN.sys[g.key]||{};
+    const rows=Object.keys(PM_LIB).map(k=>{
+      const on=sys[k]>0;
+      return '<div class="pmg-sys"><label><input type="checkbox" '+(on?'checked':'')
+        +' onchange="pmSysToggle(\''+g.key+'\',\''+k+'\',this.checked)"> '+esc(lb(PM_LIB[k].label))+'</label>'
+        +'<input type="number" min="0" style="width:70px" value="'+(on?sys[k]:'')+'" '+(on?'':'disabled')
+        +' onchange="pmSysQty(\''+g.key+'\',\''+k+'\',this.value)"></div>';
+    }).join('');
+    body+='<div class="pmg-grp"><div class="pmg-gh"><b>'+esc(g.name)+'</b><span class="muted">'+g.buildingIds.length+' '+lb('مبنى||bldg')+'</span></div>'
+      +'<div class="pmg-sysgrid">'+rows+'</div></div>';
+  });
+  body+='<div class="pmg-grp"><div class="pmg-gh"><b>'+lb('عناصر إضافية||Custom items')+'</b></div>'
+   +(PMGEN.custom||[]).map((c,i)=>'<div class="pmg-sys"><span>'+esc(c.name)+' · '+(c.fv||1)+' '+esc(lb(FREQUNIT[c.fu]||c.fu))+'</span>'
+      +'<button class="btn sm danger" onclick="pmCustomDel('+i+')">'+ic('del',12)+'</button></div>').join('')
+   +'<button class="btn sm ghost" onclick="pmCustomAdd()">＋ '+lb('عنصر مخصص||Custom item')+'</button></div>';
+  return '<h3>'+lb('ما الذي تحتويه هذه المباني؟||What do these buildings contain?')+'</h3>'
+   +'<p class="muted">'+lb('الخطوة 2 من 3 — راجع الأنظمة وحدّد الكمية لكل مبنى. العناصر المؤشّرة ستُنشئ أصولاً وخطط صيانة.||Step 2 of 3 — review systems and set quantity per building. Checked items will create assets and PM plans.')+'</p>'
+   +body
+   +'<div class="ma"><button class="btn ghost" onclick="PMGEN.step=1;pmGenRender()">'+lb('السابق||Back')+'</button>'
+   +'<button class="btn" onclick="pmGenNext()">'+lb('التالي: مراجعة||Next: review')+'</button></div>';
+}
+function pmStep3(){
+  if(!PMGEN.result)PMGEN.result=pmGenBuild();
+  const list=PMGEN.result;
+  let na=0,np=0,rows='';
+  list.forEach((a,i)=>{
+    if(a.inc)na++;
+    np+=a.plans.length;
+    rows+='<tr class="'+(a.inc?'':'muted')+'">'
+      +'<td><input type="checkbox" '+(a.inc?'checked':'')+' onchange="pmInc('+i+',this.checked)"></td>'
+      +'<td>'+esc(a.buildingName)+'</td>'
+      +'<td><b>'+esc(a.name)+'</b><br><span class="muted">'+esc(a.cat)+'</span></td>'
+      +'<td>'+a.plans.map((p,pi)=>'<div class="pmg-plan">'+esc(p.name)
+        +'<div style="display:flex;gap:6px;margin-top:4px">'
+        +'<input type="number" min="1" value="'+p.fv+'" style="width:64px" onchange="pmPlanFreq('+i+','+pi+',this.value)">'
+        +'<select onchange="pmPlanUnit('+i+','+pi+',this.value)">'+Object.keys(FREQUNIT).map(u=>'<option value="'+u+'" '+(p.fu===u?'selected':'')+'>'+FREQUNIT[u]+'</option>').join('')+'</select></div>'
+        +'<details><summary class="muted">'+lb('قائمة الفحص||Checklist')+'</summary>'
+        +'<textarea rows="4" onchange="pmPlanTasks('+i+','+pi+',this.value)">'+esc(p.tasks||'')+'</textarea></details></div>').join('')+'</td></tr>';
+  });
+  const aiMsg=PMGEN.aiState==='loading'?lb('جارٍ التحسين…||Refining…')
+    :PMGEN.aiState==='done'?lb('تم التحسين بواسطة: ||Refined by: ')+(PMGEN.aiNote||'AI')
+    :PMGEN.aiState==='off'?lb('الذكاء الاصطناعي غير متاح — المكتبة المحلية مطبّقة||AI unavailable — local library applied'):'';
+  const nB=pmGroups().reduce((s,g)=>s+g.buildingIds.length,0);
+  return '<h3>'+lb('مراجعة واعتماد||Review & approve')+'</h3>'
+   +'<p class="muted">'+lb('الخطوة 3 من 3 — عدّل ما تشاء ثم اعتمد. لن يُحفظ شيء قبل الضغط على "إنشاء".||Step 3 of 3 — adjust then approve. Nothing is saved until you press Create.')+'</p>'
+   +'<div class="pmg-sum">'+lb('المباني||Buildings')+': '+nB+' · '+lb('الأصول||Assets')+': '+na+' · '+lb('الخطط||Plans')+': '+np+'</div>'
+   +'<div class="toolbar"><button class="btn ghost" onclick="pmGenAI()" '+(PMGEN.aiState==='loading'?'disabled':'')+'> '+lb('تحسين بالذكاء الاصطناعي||Refine with AI')+'</button>'
+   +'<span class="muted" style="align-self:center">'+esc(aiMsg)+'</span></div>'
+   +'<div class="tbl-wrap" style="max-height:46vh;overflow:auto"><table>'
+   +'<tr><th></th><th>'+lb('المبنى||Building')+'</th><th>'+lb('الأصل||Asset')+'</th><th>'+lb('خطة الصيانة||PM plan')+'</th></tr>'
+   +(rows||'<tr><td colspan="4"><div class="empty">'+lb('لا عناصر||No items')+'</div></td></tr>')+'</table></div>'
+   +'<div class="ma"><button class="btn ghost" onclick="PMGEN.step=2;PMGEN.result=null;pmGenRender()">'+lb('السابق||Back')+'</button>'
+   +'<button class="btn" '+(na?'':'disabled')+' onclick="pmGenCommit()">'+lb('إنشاء||Create')+' ('+na+'/'+np+')</button></div>';
+}
+function pmToggleB(id,on){PMGEN.sel[id]=!!on;PMGEN.result=null;pmSyncSystems();pmGenRender();}
+function pmToggleType(t,on){db.buildings.filter(b=>b.compoundId===activeCmp()&&(b.type||'area')===t).forEach(b=>{PMGEN.sel[b.id]=!!on;});PMGEN.result=null;pmSyncSystems();pmGenRender();}
+function pmGenNext(){
+  if(PMGEN.step===1){if(!Object.keys(PMGEN.sel).some(k=>PMGEN.sel[k]))return toast(lb('اختر مبنى واحداً على الأقل||Select at least one building'),'err');pmSyncSystems();PMGEN.step=2;}
+  else if(PMGEN.step===2){PMGEN.result=pmGenBuild();PMGEN.step=3;}
+  pmGenRender();
+}
+function pmSysToggle(gk,k,on){
+  PMGEN.sys[gk]=PMGEN.sys[gk]||{};
+  if(on)PMGEN.sys[gk][k]=PMGEN.sys[gk][k]>0?PMGEN.sys[gk][k]:(PM_LIB[k]?PM_LIB[k].defQty:1);
+  else PMGEN.sys[gk][k]=0;
+  PMGEN.result=null;pmGenRender();
+}
+function pmSysQty(gk,k,v){PMGEN.sys[gk]=PMGEN.sys[gk]||{};const n=Math.max(1,parseInt(v,10)||1);PMGEN.sys[gk][k]=n;PMGEN.result=null;pmGenRender();}
+function pmCustomAdd(){
+  const opts=Object.keys(FREQUNIT).map(u=>'<option value="'+u+'" '+(u==='months'?'selected':'')+'>'+FREQUNIT[u]+'</option>').join('');
+  modal('<h3>'+lb('عنصر مخصص||Custom item')+'</h3>'
+   +'<label>'+lb('الاسم *||Name *')+'</label><input id="pgc_n">'
+   +'<div class="fg"><div><label>'+lb('التصنيف||Category')+'</label><input id="pgc_c" value="أخرى"></div>'
+   +'<div><label>'+lb('الكمية لكل مبنى||Qty per building')+'</label><input type="number" min="1" id="pgc_q" value="1"></div>'
+   +'<div><label>'+lb('كل||Every')+'</label><div style="display:flex;gap:6px"><input type="number" min="1" id="pgc_fv" value="6" style="width:80px"><select id="pgc_fu">'+opts+'</select></div></div></div>'
+   +'<label>'+lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')+'</label><textarea id="pgc_t" rows="3"></textarea>'
+   +'<div class="ma"><button class="btn ghost" onclick="pmGenRender()">'+lb('إلغاء||Cancel')+'</button>'
+   +'<button class="btn" onclick="pmCustomSave()">'+lb('إضافة||Add')+'</button></div>');
+}
+function pmCustomSave(){
+  const n=$('pgc_n').value.trim();if(!n)return toast(lb('الاسم مطلوب||Name required'),'err');
+  (PMGEN.custom=PMGEN.custom||[]).push({name:n,cat:$('pgc_c').value.trim()||'أخرى',qty:Math.max(1,+$('pgc_q').value||1),
+    fv:Math.max(1,+$('pgc_fv').value||1),fu:$('pgc_fu').value,tasks:$('pgc_t').value});
+  PMGEN.result=null;pmGenRender();
+}
+function pmCustomDel(i){PMGEN.custom.splice(i,1);PMGEN.result=null;pmGenRender();}
+function pmGenBuild(){
+  const out=[];
+  pmGroups().forEach(g=>{
+    const sys=PMGEN.sys[g.key]||{};
+    const keys=Object.keys(sys).filter(k=>sys[k]>0&&PM_LIB[k]);
+    g.buildingIds.forEach(bid=>{
+      const b=db.buildings.find(x=>x.id===bid)||{};
+      keys.forEach(k=>{
+        const L=PM_LIB[k],qty=Math.max(1,sys[k]|0);
+        for(let i=1;i<=qty;i++)out.push({inc:true,sysKey:k,buildingId:bid,buildingName:b.name,buildingType:b.type,
+          name:lb(L.asset.name)+(qty>1?' '+i:''),cat:L.asset.cat,
+          plans:L.plans.map(p=>({inc:true,name:lb(p.name),fv:p.fv,fu:p.fu,tasks:p.tasks.map(lb).join('\n')}))});
+      });
+    });
+  });
+  const allB=pmGroups().reduce((s,g)=>s.concat(g.buildingIds),[]);
+  (PMGEN.custom||[]).forEach(c=>{
+    allB.forEach(bid=>{
+      const b=db.buildings.find(x=>x.id===bid)||{},qty=Math.max(1,+c.qty||1);
+      for(let i=1;i<=qty;i++)out.push({inc:true,sysKey:'custom',buildingId:bid,buildingName:b.name,buildingType:b.type,
+        name:c.name+(qty>1?' '+i:''),cat:c.cat||'أخرى',
+        plans:[{inc:true,name:c.name,fv:+c.fv||1,fu:c.fu||'months',tasks:c.tasks||''}]});
+    });
+  });
+  return out;
+}
+function pmInc(i,on){if(PMGEN.result[i])PMGEN.result[i].inc=!!on;pmGenRender();}
+function pmPlanFreq(i,pi,v){const p=PMGEN.result[i]&&PMGEN.result[i].plans[pi];if(p)p.fv=Math.max(1,parseInt(v,10)||1);pmGenRender();}
+function pmPlanUnit(i,pi,v){const p=PMGEN.result[i]&&PMGEN.result[i].plans[pi];if(p)p.fu=v;pmGenRender();}
+function pmPlanTasks(i,pi,v){const p=PMGEN.result[i]&&PMGEN.result[i].plans[pi];if(p)p.tasks=v;}
+function normFu(u){u=String(u||'').toLowerCase();return ['days','weeks','months'].includes(u)?u:'months';}
+function arrTasks(t){return Array.isArray(t)?t.map(s=>String(s).slice(0,200)).join('\n'):'';}
+function pmGenAIPayload(){
+  const groups=pmGroups(),systems=[];
+  groups.forEach(g=>{
+    const sys=PMGEN.sys[g.key]||{};
+    Object.keys(sys).filter(k=>sys[k]>0&&PM_LIB[k]).forEach(k=>{
+      const L=PM_LIB[k];
+      systems.push({system:k,label:L.label.split('||')[0],asset:L.asset.name.split('||')[0],
+        category:L.asset.cat,buildings:g.buildingIds.length,qty:sys[k]});
+    });
+  });
+  const nb=groups.reduce((s,g)=>s+g.buildingIds.length,0);
+  (PMGEN.custom||[]).forEach(c=>systems.push({system:'custom',label:c.name,asset:c.name,category:c.cat||'other',buildings:nb,qty:c.qty||1}));
+  return {lang:db.lang,compoundName:cmpName(activeCmp()),systems,
+    buildingTypes:groups.map(g=>({type:g.type,name:g.name,buildings:g.buildingIds.length}))};
+}
+function pmGenApplyAI(j){
+  const map={};
+  (j.plans||[]).forEach(p=>{if(p&&p.system)(map[String(p.system)]=map[String(p.system)]||[]).push(p);});
+  (PMGEN.result||[]).forEach(a=>{
+    const arr=map[a.sysKey];if(!arr||!arr.length)return;
+    const p=arr[0];
+    if(!a.plans.length)a.plans.push({inc:true,name:String(p.name||a.name).slice(0,120),fv:Math.max(1,+p.freqVal||1),fu:normFu(p.freqUnit),tasks:arrTasks(p.tasks)});
+    else{const t=a.plans[0];
+      if(p.name)t.name=String(p.name).slice(0,120);
+      t.fv=Math.max(1,+p.freqVal||t.fv||1);t.fu=normFu(p.freqUnit)||t.fu;
+      if(Array.isArray(p.tasks)&&p.tasks.length)t.tasks=p.tasks.map(s=>String(s).slice(0,200)).join('\n');}
+    for(let i=1;i<arr.length;i++){const q=arr[i];
+      a.plans.push({inc:true,name:String(q.name||lb('خطة إضافية||Extra plan')).slice(0,120),fv:Math.max(1,+q.freqVal||1),fu:normFu(q.freqUnit),tasks:arrTasks(q.tasks)});}
+  });
+}
+async function pmGenAI(){
+  PMGEN.aiState='loading';pmGenRender();
+  try{
+    const r=await api('/ai/pm-suggest',{method:'POST',body:JSON.stringify(pmGenAIPayload())});
+    const j=await r.json();
+    if(!j||!j.ok){PMGEN.aiState='off';PMGEN.aiNote=(j&&j.reason)||'';pmGenRender();
+      toast(lb('الذكاء الاصطناعي غير مهيأ — استُخدمت المكتبة المحلية||AI not configured — using the local library'),'err');return;}
+    pmGenApplyAI(j);PMGEN.aiState='done';PMGEN.aiNote=j.model||'AI';pmGenRender();
+    toast(lb('حسّن الذكاء الاصطناعي الجدول||AI refined the schedule'),'ok');
+  }catch(e){PMGEN.aiState='off';pmGenRender();toast(lb('تعذّر الاتصال بالذكاء الاصطناعي||AI request failed'),'err');}
+}
+function pmGenCommit(){
+  const act=activeCmp();let na=0,np=0;
+  (PMGEN.result||[]).forEach(a=>{
+    if(!a.inc)return;
+    if(db.assets.some(x=>x.compoundId===act&&x.building===a.buildingId&&x.name===a.name))return;
+    if(a.cat&&!db.categories.includes(a.cat))db.categories.push(a.cat);
+    const asset={id:uid('A'),name:a.name,category:a.cat,building:a.buildingId,compoundId:act,
+      floor:'',detail:'',model:'',serial:'',installdate:'',warrantyend:'',status:'ok',notes:'',projectId:'',photos:[],src:'pmgen'};
+    db.assets.push(asset);na++;
+    a.plans.forEach(p=>{
+      db.pms.push({id:uid('P'),name:p.name,assetId:asset.id,compoundId:act,freqVal:Math.max(1,+p.fv||1),
+        freqUnit:p.fu||'months',lastDone:todayISO(),assigneeId:'',assigneeName:'',tasks:p.tasks||'',src:'pmgen'});
+      np++;
+    });
+  });
+  persist();closeModal();paintTab();
+  toast(lb('أُنشئت '+na+' أصل و '+np+' خطة صيانة||Created '+na+' assets and '+np+' PM plans'),'ok');
+}
 
 /* ===== DASHBOARD ===== */
 function monthKey(msOrIso){const d=(typeof msOrIso==='string'&&msOrIso.length===10)?new Date(msOrIso+'T00:00:00'):new Date(msOrIso);

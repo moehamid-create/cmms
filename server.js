@@ -905,6 +905,128 @@ app.post('/api/market/compounds', roleGuard(['owner']), async (req,res)=>{
   } catch(e){ console.error('DB error on compounds:', e.message); return res.status(500).json({error:'DB'}); }
 });
 
+/* ============================================================
+   AI helper (اختياري) — توليد/تحسين خطط الصيانة الوقائية
+   يعمل مع Neon AI Gateway أو أي نقطة متوافقة مع OpenAI.
+   لا يُشترط أي مفتاح: عند غيابه ترجع الواجهة للمكتبة المحلية.
+   ============================================================ */
+function aiConfig(){
+  const nTok = process.env.NEON_AI_GATEWAY_TOKEN;
+  const nBase = process.env.NEON_AI_GATEWAY_BASE_URL;
+  if (nTok && nBase) {
+    return { url: nBase.replace(/\/+$/, '') + '/v1/chat/completions', key: nTok,
+      model: process.env.AI_MODEL || process.env.NEON_AI_MODEL || 'gpt-5-mini', provider: 'neon' };
+  }
+  const oKey = process.env.OPENAI_API_KEY;
+  if (oKey) {
+    const base = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
+    return { url: base + '/chat/completions', key: oKey,
+      model: process.env.AI_MODEL || 'gpt-4o-mini', provider: 'openai' };
+  }
+  return null;
+}
+function safeJson(txt){
+  if (!txt) return null;
+  let s = String(txt).trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) s = fence[1].trim();
+  try { return JSON.parse(s); } catch (e) { /* fall through */ }
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if (a >= 0 && b > a) { try { return JSON.parse(s.slice(a, b + 1)); } catch (e) {} }
+  return null;
+}
+const AI_SYSTEM = [
+  'You are a senior facilities-management engineer specialising in preventive maintenance (PM) planning for residential compounds and mixed-use properties in Saudi Arabia.',
+  'You receive a list of building types and the systems/equipment installed in them.',
+  'For EACH given system key, propose or refine ONE realistic PM plan.',
+  'Return STRICT JSON only, no prose, in this exact shape:',
+  '{"plans":[{"system":"<the system key exactly as given>","name":"<short plan name>","freqVal":<integer>,"freqUnit":"days|weeks|months","tasks":["<step>","<step>"]}]}',
+  'Rules: freqUnit must be one of days, weeks, months. Provide 4 to 8 concrete checklist tasks per plan. Use realistic intervals (e.g. split A/C filters every 3 months, elevator monthly, fire extinguishers yearly, pool filtration weekly).',
+  'Write names and tasks in the requested language (ar = Arabic, en = English).',
+].join(' ');
+
+app.get('/api/ai/status', (req, res) => {
+  const a = auth(req, res, { silent: true });
+  if (!a) return res.status(401).json({ error: 'AUTH' });
+  const c = aiConfig();
+  res.json({ ok: !!c, provider: c ? c.provider : null, model: c ? c.model : null });
+});
+
+const aiHits = new Map();
+app.post('/api/ai/pm-suggest', async (req, res) => {
+  const a = auth(req, res);
+  if (!a) return;
+  if (!['admin', 'engineer'].includes(a.session.role)) return res.status(403).json({ error: 'FORBIDDEN' });
+  const ip = req.ip || req.socket.remoteAddress || 'x';
+  if (!boundedHit(aiHits, ip, 60 * 60 * 1000, 40)) return res.status(429).json({ error: 'TOO_MANY' });
+  const c = aiConfig();
+  if (!c) return res.json({ ok: false, reason: 'AI_NOT_CONFIGURED' });
+  try {
+    const b = req.body || {};
+    const lang = b.lang === 'en' ? 'en' : 'ar';
+    const systems = (Array.isArray(b.systems) ? b.systems : []).slice(0, 80).map(s => ({
+      system: String((s && s.system) || '').slice(0, 40),
+      label: String((s && s.label) || '').slice(0, 120),
+      asset: String((s && s.asset) || '').slice(0, 120),
+      category: String((s && s.category) || '').slice(0, 80),
+      buildings: Number((s && s.buildings) || 1) || 1,
+      qty: Number((s && s.qty) || 1) || 1,
+    })).filter(s => s.system);
+    if (!systems.length) return res.status(400).json({ error: 'NO_SYSTEMS' });
+    const userMsg = JSON.stringify({
+      language: lang,
+      compound: String(b.compoundName || '').slice(0, 120),
+      buildingTypes: (Array.isArray(b.buildingTypes) ? b.buildingTypes : []).slice(0, 20).map(x => ({
+        type: String((x && x.type) || '').slice(0, 30),
+        name: String((x && x.name) || '').slice(0, 80),
+        buildings: Number((x && x.buildings) || 1) || 1,
+      })),
+      systems,
+    });
+    const body = {
+      model: c.model,
+      temperature: 0.2,
+      messages: [{ role: 'system', content: AI_SYSTEM }, { role: 'user', content: userMsg }],
+    };
+    let r = await aiFetch(c, Object.assign({}, body, { response_format: { type: 'json_object' } }));
+    if (!r.ok && (r.status === 400 || r.status === 422)) {
+      r = await aiFetch(c, body);   /* بعض المزودين لا يدعمون response_format */
+    }
+    if (!r.ok) {
+      const txt = await r.text().catch(() => '');
+      console.error('[ai] HTTP', r.status, String(txt).slice(0, 160));
+      return res.json({ ok: false, reason: 'AI_HTTP_' + r.status });
+    }
+    const j = await r.json();
+    const content = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+    const parsed = safeJson(content);
+    if (!parsed || !Array.isArray(parsed.plans)) return res.json({ ok: false, reason: 'AI_BAD_OUTPUT' });
+    const FU = ['days', 'weeks', 'months'];
+    const plans = parsed.plans.slice(0, 120).map(p => ({
+      system: String((p && p.system) || '').slice(0, 40),
+      name: String((p && p.name) || '').slice(0, 120),
+      freqVal: Math.max(1, Math.min(365, parseInt(p && p.freqVal, 10) || 1)),
+      freqUnit: FU.includes(String((p && p.freqUnit) || '').toLowerCase()) ? String(p.freqUnit).toLowerCase() : 'months',
+      tasks: (Array.isArray(p && p.tasks) ? p.tasks : []).slice(0, 12).map(t => String(t).slice(0, 200)).filter(Boolean),
+    })).filter(p => p.system && p.tasks.length);
+    res.json({ ok: true, provider: c.provider, model: c.model, plans });
+  } catch (e) {
+    console.error('[ai] error:', e.message);
+    res.json({ ok: false, reason: 'AI_ERROR' });
+  }
+});
+async function aiFetch(c, payload) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 25000);
+  try {
+    return await fetch(c.url, {
+      method: 'POST', signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + c.key },
+      body: JSON.stringify(payload),
+    });
+  } finally { clearTimeout(to); }
+}
+
 /* ---- 404 لأي مسار API غير معروف (JSON) ---- */
 app.use('/api', (req, res) => res.status(404).json({ error: 'NOT_FOUND' }));
 
