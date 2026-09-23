@@ -1667,6 +1667,7 @@ function loadDemo(){
   db.users.filter(u=>u.role==='tech').forEach(u=>{
     if(!u.phone)u.phone='0555 000 00'+(1+(db.users.indexOf(u)%8));
     if(!(u.cmpIds||[]).includes(act))u.cmpIds=[...(u.cmpIds||[]),act];});
+  loadSampleTemplates(true);
   db.seeded=true;persist();render();toast(lb('تم تحميل البيانات التجريبية ||Demo data loaded '),'ok');
 }
 
@@ -2983,12 +2984,38 @@ function vPMTemplates(){
   }).join('');
   return `<div class="toolbar">
     ${isPlanner()?`<button class="btn" onclick="tplForm()">＋ ${lb('قالب جديد||New Template')}</button>
+    <button class="btn ghost" onclick="loadSampleTemplates()"> ${lb('أمثلة جاهزة||Load examples')}</button>
     <button class="btn ghost" onclick="tplApplyAll()"> ${lb('مزامنة كل القوالب||Sync All Templates')}</button>`:''}
     <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
   <p class="muted">${lb('القالب يحدّد الإجراء والخطوات والقطع حسب التصنيف/الطراز، ثم يُطبّق على كل أصل مطابق. كل تعديل يرفع الإصدار مع حفظ السجل.||A template defines the procedure, steps and parts by category/model, then applies to every matching asset. Each edit bumps the version and keeps history.')}</p>
   <div class="card"><h2>${lb('قوالب الصيانة||PM Templates')} (${list.length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('القالب||Template')}</th><th>${lb('التكرار||Frequency')}</th><th>${lb('الإصدار||Version')}</th><th>${lb('أصول مطابقة||Matching assets')}</th><th>${lb('خطط ناتجة||Generated plans')}</th><th></th></tr>
   ${rows||`<tr><td colspan="6"><div class="empty">${lb('لا قوالب بعد||No templates yet')}</div></td></tr>`}</table></div></div>`;
+}
+function loadSampleTemplates(quiet){
+  if(!isPlanner())return 0;
+  const act=activeCmp();
+  const picks=[
+    ['hvac_split','high',30,[{name:lb('فلتر مكيف سبليت||Split A/C filter'),qty:2}]],
+    ['hvac_central','high',60,[]],['water_heater','normal',45,[]],['water_pump','high',45,[]],
+    ['elevator','high',60,[]],['fire_ext','high',30,[]],['fire_alarm','high',60,[]],['generator','high',45,[]],
+    ['pool_pump','normal',30,[]],['gym','normal',45,[]],['gate','normal',30,[]],['civil','normal',90,[]],
+    ['furniture','normal',45,[]],['pest','normal',30,[]],['landscape','normal',45,[]]
+  ];
+  let n=0;
+  picks.forEach(pk=>{
+    const L=PM_LIB[pk[0]];if(!L||!L.plans||!L.plans.length)return;
+    const p0=L.plans[0],name=lb(p0.name),cat=L.asset.cat;
+    if((db.pmTemplates||[]).some(t=>t.compoundId===act&&t.category===cat))return;
+    db.pmTemplates.push({id:uid('T'),name,category:cat,model:'',freqVal:p0.fv,freqUnit:p0.fu,mEvery:0,
+      priority:pk[1],estMins:pk[2],skills:'',tools:'',permits:'',safety:'',
+      tasks:p0.tasks.map(lb).join('\n'),parts:pk[3]||[],evidence:{photo:true,reading:false,sig:false},
+      active:true,version:1,history:[],compoundId:act,createdAt:Date.now(),updatedAt:Date.now(),updatedBy:me?me.name:''});
+    n++;
+  });
+  auditLog('create','tpl',lb('أمثلة قوالب||sample templates'),String(n));
+  if(!quiet){persist();paintTab();toast(n?lb('أُضيفت '+n+' قوالب جاهزة — راجعها ثم طبّقها||Added '+n+' sample templates — review then apply'):lb('القوالب الجاهزة موجودة مسبقاً||Sample templates already exist'),'ok');}
+  return n;
 }
 function tplForm(tid){
   const t=tid?db.pmTemplates.find(x=>x.id===tid)||{}:{};
