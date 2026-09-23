@@ -225,7 +225,7 @@ function seedState(){
     compounds:[{id:C,name:'مجمع الخير السكني - حي الروضة',loc:'',notes:'',createdAt:Date.now()}],
     buildings:[],units:[],tenants:[],contracts:[],assets:[],wos:[],inv:[],moves:[],
     pms:[],suppliers:[],prs:[],pos:[],projects:[],employees:[],shifts:[],notifs:[],
-    providers:[],rfqs:[]
+    providers:[],rfqs:[],pmTemplates:[],audit:[],orgs:[]
   };
   const addB=(name,type,floors)=>d.buildings.push({id:rid('B'),name,type,floors:floors.slice(),compoundId:C});
   for(let i=1;i<=34;i++)addB('فيلا '+i,'villa',['الدور الأرضي','الدور الأول','الملحق']);
@@ -259,6 +259,9 @@ async function readRow() {
 function normalizeState(d){
   if(!d) return d;
   ['providers','rfqs'].forEach(k=>{ if(!Array.isArray(d[k])) d[k]=[]; });
+  if(!Array.isArray(d.pmTemplates))d.pmTemplates=[];
+  if(!Array.isArray(d.audit))d.audit=[];
+  if(!Array.isArray(d.orgs))d.orgs=[];
   if(d.rfqSeq==null) d.rfqSeq=0;
   ['seq','prSeq','poSeq','rnSeq','prjSeq','ctSeq'].forEach(k=>{ if(d[k]==null) d[k]=0; });
   if(!Array.isArray(d.users)) d.users=[];
@@ -522,6 +525,9 @@ app.post('/api/state', async (req,res)=>{
   /* أدوار السوق لا تكتب الحالة كاملة — تعتمد على مسارات السوق المخصصة */
   if(cur.data && MARKET_ROLES.includes(actor.session.role))
     return res.status(403).json({error:'FORBIDDEN'});
+  /* دور "مُطّلع" للقراءة فقط — لا يكتب الحالة */
+  if(cur.data && actor.session.role==='viewer')
+    return res.status(403).json({error:'READONLY'});
   const {baseVer,data} = req.body || {};
   if(!data) return res.status(400).json({error:'NO_DATA'});
   if(cur.data && Number(baseVer) !== cur.ver)
@@ -1027,6 +1033,100 @@ async function aiFetch(c, payload) {
   } finally { clearTimeout(to); }
 }
 
+/* ============================================================
+   المجدول اليومي للصيانة الوقائية (خادمي)
+   - ينشئ أوامر شغل للأخطاء المستحقة خلال أفق زمني قابل للضبط
+   - يمنع التكرار، ويعلّم جاهزية القطع، ويضع الأمر بحالة "مخطّط"
+     بانتظار الاعتماد البشري (إلا إذا عُطِّل الاعتماد).
+   - متغيرات البيئة: PM_SCHEDULER=on|off · PM_HORIZON_DAYS=7 · PM_APPROVAL=on|off
+   ============================================================ */
+function isoDay(d){const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
+function addDaysISO(iso,n){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return isoDay(d);}
+function daysBetweenISO(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);}
+function pmIntervalDays(p){const n=Math.max(1,Number(p.freqVal)||1);return p.freqUnit==='days'?n:p.freqUnit==='weeks'?n*7:n*30;}
+function pmNextDue(p,today){if(p.nextDue)return p.nextDue;if(p.lastDone)return addDaysISO(p.lastDone,pmIntervalDays(p));return today;}
+function pmReqPartsMissing(d,p){
+  const out=[];
+  (p.parts||[]).forEach(rp=>{
+    const need=Number(rp.qty)||1;
+    const it=(d.inv||[]).find(i=>i.compoundId===(p.compoundId||'')&&String(i.name||'').toLowerCase()===String(rp.name||'').toLowerCase());
+    const have=it?(Number(it.qty)||0):0;
+    if(have<need)out.push({name:rp.name,need,have});
+  });
+  return out;
+}
+async function notifyWebhook(payload){
+  const url=process.env.NOTIFY_WEBHOOK_URL;
+  if(!url)return;
+  try{
+    const headers={'Content-Type':'application/json'};
+    if(process.env.NOTIFY_WEBHOOK_TOKEN)headers['Authorization']='Bearer '+process.env.NOTIFY_WEBHOOK_TOKEN;
+    const ctrl=new AbortController();const to=setTimeout(()=>ctrl.abort(),8000);
+    await fetch(url,{method:'POST',signal:ctrl.signal,headers,
+      body:JSON.stringify(Object.assign({source:'cmms',event:'pm_scheduler_run',at:new Date().toISOString()},payload))});
+    clearTimeout(to);
+    console.log('[notify] webhook delivered');
+  }catch(e){ console.error('[notify] webhook failed:',e.message); }
+}
+async function runPmScheduler(reason){
+  if(String(process.env.PM_SCHEDULER||'on').toLowerCase()==='off')return 0;
+  const horizon=Math.max(0,Math.min(60,Number(process.env.PM_HORIZON_DAYS||7)));
+  const approval=String(process.env.PM_APPROVAL||'on').toLowerCase()!=='off';
+  for(let attempt=0;attempt<5;attempt++){
+    let st;
+    try{ st=await getState(); }catch(e){ console.error('[pm-scheduler] state read failed:',e.message); return 0; }
+    const d=st.data;
+    if(!d||!Array.isArray(d.pms)||!d.pms.length)return 0;
+    const today=isoDay(new Date());
+    let created=0;
+    d.pms.forEach(p=>{
+      const due=pmNextDue(p,today);
+      if(daysBetweenISO(today,due)>horizon)return;
+      const active=(d.wos||[]).some(w=>w.pmId===p.id&&w.status!=='closed');
+      const dismissed=(d.wos||[]).some(w=>w.pmId===p.id&&w.dueDate===due&&w.approval==='rejected');
+      if(active||dismissed)return;
+      const ast=(d.assets||[]).find(a=>a.id===p.assetId)||{};
+      const bld=(d.buildings||[]).find(b=>b.id===ast.building);
+      const missing=pmReqPartsMissing(d,p);
+      const tasksStr=String(p.tasks||'');
+      d.seq=(d.seq||0)+1;
+      const y=new Date().getFullYear();
+      d.wos.unshift({
+        no:'WO-'+y+'-'+String(d.seq).padStart(4,'0'),
+        type:'pm',pmId:p.id,compoundId:p.compoundId||ast.compoundId||'',
+        title:(d.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name,
+        desc:tasksStr,assetId:p.assetId||'',assetName:ast.name||'',bname:bld?bld.name:'',
+        priority:p.priority||'normal',status:approval?'planned':'open',
+        approval:approval?'pending':'approved',auto:true,scheduledBy:'server',scheduledAt:Date.now(),
+        createdAt:Date.now(),startedAt:null,closedAt:null,projectId:'',unitId:'',unitCode:'',tenantName:'',
+        dueDate:due,assigneeId:p.assigneeId||'',assigneeName:p.assigneeName||'',
+        cost:0,closeNotes:'',parts:[],photos:[],sig:'',
+        estMins:p.estMins||0,skills:p.skills||'',tools:p.tools||'',permits:p.permits||'',safety:p.safety||'',
+        tplId:p.tplId||'',tplVersion:p.tplVersion||0,
+        reqParts:(p.parts||[]).map(x=>({name:x.name,qty:x.qty})),
+        partsReady:missing.length===0,missingParts:missing,
+        reportedBy:'Auto-scheduler',
+        checklist:tasksStr.split('\n').map(s=>s.trim()).filter(Boolean).map(t=>({t,done:false,v:''})),
+      });
+      if(!Array.isArray(d.audit))d.audit=[];
+      d.audit.unshift({id:'L'+crypto.randomBytes(4).toString('hex'),at:Date.now(),by:'Auto-scheduler',byId:'',role:'system',
+        action:'create',entity:'wo',ref:d.wos[0].no,details:'server scheduler (approval '+(approval?'required':'auto')+', horizon '+horizon+'d)',compoundId:p.compoundId||''});
+      if(d.audit.length>2000)d.audit.length=2000;
+      created++;
+    });
+    if(!created)return 0;
+    const ver=await setState(d,st.ver);
+    if(ver!=null){ console.log('[pm-scheduler] '+reason+': created '+created+' work order(s) (approval '+(approval?'required':'auto')+', horizon '+horizon+'d)'); notifyWebhook({created,approval,horizon,reason}).catch(()=>{}); return created; }
+  }
+  return 0;
+}
+app.post('/api/pm/run', async (req,res)=>{
+  const a=auth(req,res); if(!a) return;
+  if(!['admin','engineer'].includes(a.session.role)) return res.status(403).json({error:'FORBIDDEN'});
+  try{ const created=await runPmScheduler('manual'); res.json({ok:true,created}); }
+  catch(e){ console.error('DB error on POST /api/pm/run:',e.message); return res.status(500).json({error:'DB'}); }
+});
+
 /* ---- 404 لأي مسار API غير معروف (JSON) ---- */
 app.use('/api', (req, res) => res.status(404).json({ error: 'NOT_FOUND' }));
 
@@ -1048,6 +1148,11 @@ const server = app.listen(PORT, HOST, async ()=>{
   Object.keys(ifs).forEach(k=>(ifs[k]||[]).forEach(i=>{
     if(i.family==='IPv4' && !i.internal) console.log('   Network: http://'+i.address+':'+PORT);
   }));
+  /* المجدول اليومي: تشغيل أولي + كل 6 ساعات (قابل للتعطيل عبر PM_SCHEDULER=off) */
+  if(String(process.env.PM_SCHEDULER||'on').toLowerCase()!=='off'){
+    setTimeout(()=>{ runPmScheduler('startup').catch(()=>{}); }, 15000);
+    setInterval(()=>{ runPmScheduler('interval').catch(()=>{}); }, 6*60*60*1000).unref();
+  }
 });
 
 /* ---- graceful shutdown (Docker / Render) ---- */
