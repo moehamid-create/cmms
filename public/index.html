@@ -2720,11 +2720,13 @@ function pmSyncSystems(){
   pmGroups().forEach(g=>{if(!PMGEN.sys[g.key])PMGEN.sys[g.key]=pmGroupDefaults(g);});
 }
 function pmGenRender(){
-  const m=document.querySelector('.modal');
-  const st=m?m.scrollTop:0;
+  const bg=document.querySelector('.modal-bg'),m=document.querySelector('.modal');
+  const st=Math.max(bg?bg.scrollTop:0,m?m.scrollTop:0);
+  const ae=document.activeElement,fid=ae&&ae.id?ae.id:'';
   modal(pmGenHtml());
-  const m2=document.querySelector('.modal');
-  if(m2)m2.scrollTop=st;
+  const bg2=document.querySelector('.modal-bg'),m2=document.querySelector('.modal');
+  if(bg2)bg2.scrollTop=st; if(m2)m2.scrollTop=st;
+  if(fid){const el=document.getElementById(fid);if(el&&el.focus){try{el.focus({preventScroll:true});}catch(e){}}}
 }
 function pmGenHtml(){
   const body=PMGEN.step===1?pmStep1():PMGEN.step===2?pmStep2():pmStep3();
@@ -2757,9 +2759,10 @@ function pmStep2(){
     const sys=PMGEN.sys[g.key]||{};
     const rows=Object.keys(PM_LIB).map(k=>{
       const on=sys[k]>0;
-      return '<div class="pmg-sys"><label><input type="checkbox" '+(on?'checked':'')
+      const cid='pgs_'+g.key.replace(/[^A-Za-z0-9]/g,'_')+'_'+k;
+      return '<div class="pmg-sys"><label><input type="checkbox" id="'+cid+'" '+(on?'checked':'')
         +' onchange="pmSysToggle(\''+g.key+'\',\''+k+'\',this.checked)"> '+esc(lb(PM_LIB[k].label))+'</label>'
-        +'<input type="number" min="0" style="width:70px" value="'+(on?sys[k]:'')+'" '+(on?'':'disabled')
+        +'<input type="number" id="'+cid+'_q" min="0" style="width:70px" value="'+(on?sys[k]:'')+'" '+(on?'':'disabled')
         +' onchange="pmSysQty(\''+g.key+'\',\''+k+'\',this.value)"></div>';
     }).join('');
     body+='<div class="pmg-grp"><div class="pmg-gh"><b>'+esc(g.name)+'</b><span class="muted">'+g.buildingIds.length+' '+lb('مبنى||bldg')+'</span></div>'
@@ -2783,15 +2786,15 @@ function pmStep3(){
     if(a.inc)na++;
     np+=a.plans.length;
     rows+='<tr class="'+(a.inc?'':'muted')+'">'
-      +'<td><input type="checkbox" '+(a.inc?'checked':'')+' onchange="pmInc('+i+',this.checked)"></td>'
+      +'<td><input type="checkbox" id="pgi_'+i+'" '+(a.inc?'checked':'')+' onchange="pmInc('+i+',this.checked)"></td>'
       +'<td>'+esc(a.buildingName)+'</td>'
       +'<td><b>'+esc(a.name)+'</b><br><span class="muted">'+esc(a.cat)+'</span></td>'
       +'<td>'+a.plans.map((p,pi)=>'<div class="pmg-plan">'+esc(p.name)
         +'<div style="display:flex;gap:6px;margin-top:4px">'
-        +'<input type="number" min="1" value="'+p.fv+'" style="width:64px" onchange="pmPlanFreq('+i+','+pi+',this.value)">'
-        +'<select onchange="pmPlanUnit('+i+','+pi+',this.value)">'+Object.keys(FREQUNIT).map(u=>'<option value="'+u+'" '+(p.fu===u?'selected':'')+'>'+FREQUNIT[u]+'</option>').join('')+'</select></div>'
+        +'<input type="number" id="pgf_'+i+'_'+pi+'" min="1" value="'+p.fv+'" style="width:64px" onchange="pmPlanFreq('+i+','+pi+',this.value)">'
+        +'<select id="pgu_'+i+'_'+pi+'" onchange="pmPlanUnit('+i+','+pi+',this.value)">'+Object.keys(FREQUNIT).map(u=>'<option value="'+u+'" '+(p.fu===u?'selected':'')+'>'+FREQUNIT[u]+'</option>').join('')+'</select></div>'
         +'<details><summary class="muted">'+lb('قائمة الفحص||Checklist')+'</summary>'
-        +'<textarea rows="4" onchange="pmPlanTasks('+i+','+pi+',this.value)">'+esc(p.tasks||'')+'</textarea></details></div>').join('')+'</td></tr>';
+        +'<textarea id="pgt_'+i+'_'+pi+'" rows="4" onchange="pmPlanTasks('+i+','+pi+',this.value)">'+esc(p.tasks||'')+'</textarea></details></div>').join('')+'</td></tr>';
   });
   const aiMsg=PMGEN.aiState==='loading'?lb('جارٍ التحسين…||Refining…')
     :PMGEN.aiState==='done'?lb('تم التحسين بواسطة: ||Refined by: ')+(PMGEN.aiNote||'AI')
