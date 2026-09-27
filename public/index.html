@@ -2232,7 +2232,7 @@ function paintTab(){
   else if(TAB==='cmps')v.innerHTML=vCmps();
   else if(TAB==='assets'){v.innerHTML=vAssets();drawAssetsTable();}
   else if(TAB==='wos')v.innerHTML=vWOs();
-  else if(TAB==='pm'){v.innerHTML=vPM();aiRefresh();}
+  else if(TAB==='pm')v.innerHTML=vPM();
   else if(TAB==='proj')v.innerHTML=vProj();
   else if(TAB==='units')v.innerHTML=vUnits();
   else if(TAB==='contracts')v.innerHTML=vContracts();
@@ -2387,130 +2387,12 @@ function runScheduler(){const c=pmGen();paintTab();
 function togglePmApproval(){db.pmApproval=!(db.pmApproval!==false);persist();paintTab();
   toast(db.pmApproval!==false?lb('أوامر الصيانة الدورية ستحتاج اعتماداً||PM work orders will require approval'):lb('أوامر الصيانة الدورية تُصدر مباشرة||PM work orders issue immediately'),'ok');}
 function pmSetView(v){FILT.pmView=(v==='templates')?'templates':'plans';paintTab();}
-let AI_SET=null;
-function aiStatusHtml(){
-  const st=AI_SET;
-  if(!st)return lb('…||…');
-  if(st.ok)return `<span class="badge b-ok">${lb('جاهز||ready')}</span> ${esc(st.provider||'')}${st.model?' · '+esc(st.model):''}`;
-  return `<span class="badge b-wait">${lb('غير مهيأ — اختر أداة مجانية||not set up — pick a free tool')}</span>`;
-}
-async function aiRefresh(){
-  try{
-    let r=await api('/ai/settings');
-    if(!r.ok)r=await api('/ai/status');
-    AI_SET=r.ok?await r.json():{ok:false,providers:[]};
-  }catch(e){AI_SET={ok:false,providers:[]};}
-  const el=$('pmai_st');
-  if(el)el.innerHTML=aiStatusHtml();
-}
-function pmAiCard(){
-  return `<div class="card" style="border:1.5px solid rgba(124,58,237,.35);background:linear-gradient(135deg,rgba(124,58,237,.07),rgba(37,99,235,.07))">
-    <h2>✨ ${lb('توليد الصيانة بالذكاء الاصطناعي||AI maintenance generator')} <span id="pmai_st" style="font-weight:400;font-size:12px">${aiStatusHtml()}</span></h2>
-    <p class="muted">${lb('اكتب وصفاً بسيطاً (عدد الفلل/المباني وما تحتويه) واضغط توليد — سيقترح النظام الأصول وخطط الصيانة مع قوائم الفحص، ثم تراجعها وتنشئها.||Describe the property in plain words (counts and what it contains) and press Generate — the system proposes assets and PM plans with checklists, you review then create.')}</p>
-    <textarea id="pmai_txt" rows="3" placeholder="${lb('مثال: 34 فيلا، كل فيلا فيها 3 مكيفات سبليت وسخان مياه ومضخة، ومسبح ونادي جيم ومصعد في المبنى الإداري||e.g. 34 villas, each with 3 split A/Cs, a water heater and a pump; plus a pool, a gym and one elevator in the admin building')}"></textarea>
-    <div class="toolbar" style="margin-top:8px">
-      <button class="btn" style="background:linear-gradient(135deg,#7c3aed,#2563eb)" onclick="pmAiQuick()">✨ ${lb('توليد||Generate')}</button>
-      ${isEng()?`<button class="btn ghost" onclick="aiSetupModal()">${lb('إعداد الذكاء الاصطناعي||AI setup')}</button>`:''}
-    </div>
-  </div>`;
-}
-async function pmAiQuick(){
-  const box=$('pmai_txt');const t=(box&&box.value||'').trim();
-  if(t.length<5)return toast(lb('اكتب وصفاً للمبنى أولاً||Describe the property first'),'err');
-  if(!AI_SET||!AI_SET.ok){aiSetupModal();return toast(lb('اضبط أداة الذكاء الاصطناعي (مجانية) أولاً||Set up a (free) AI tool first'),'err');}
-  toast(lb('جارٍ التوليد…||Generating…'));
-  try{
-    const act=activeCmp();
-    const buildings=db.buildings.filter(b=>b.compoundId===act).map(b=>b.name);
-    const r=await api('/ai/pm-from-text',{method:'POST',body:JSON.stringify({text:t,lang:db.lang,buildings,categories:db.categories})});
-    const j=await r.json();
-    if(!j||!j.ok)return toast(lb('تعذّر التوليد: ||Generation failed: ')+(j&&j.reason||''),'err');
-    pmAiBuild(j.items);
-    if(!PMGEN||!PMGEN.result||!PMGEN.result.length)return toast(lb('لم يُرجع الذكاء الاصطناعي عناصر||AI returned no items'),'err');
-    PMGEN.step=3;pmGenRender();
-  }catch(e){toast(lb('خطأ في الاتصال بالذكاء الاصطناعي||AI connection error'),'err');}
-}
-function pmAiBuild(items){
-  const act=activeCmp();
-  const blds=db.buildings.filter(b=>b.compoundId===act);
-  const byName=n=>{const q=csvNorm(n);if(!q)return null;
-    return blds.find(b=>csvNorm(b.name)===q)||blds.find(b=>csvNorm(b.name).indexOf(q)>=0)||blds.find(b=>q.indexOf(csvNorm(b.name))>=0)||null;};
-  PMGEN=PMGEN||{step:3,sel:{},sys:{},custom:[],aiState:'',aiNote:'',result:null};
-  PMGEN.result=(items||[]).map(it=>{
-    const b=byName(it.building)||blds[0]||null;
-    return {inc:true,sysKey:'ai',buildingId:b?b.id:'',buildingName:b?b.name:(it.building||''),
-      name:it.asset,cat:(it.category||'').trim()||'أخرى',
-      plans:(it.plans||[]).map(p=>({inc:true,name:p.name||it.asset,fv:Math.max(1,+p.freqVal||1),fu:normFu(p.freqUnit),tasks:arrTasks(p.tasks)}))};
-  });
-  PMGEN.aiState='done';PMGEN.aiNote=lb('الذكاء الاصطناعي||AI');
-}
-function aiSetupModal(){
-  if(!isPlanner())return;
-  const s=AI_SET||{},saved=(s.saved||{});
-  const cur=saved.provider||s.provider||'gemini';
-  const provs=(s.providers||[]).map(p=>`<option value="${p.id}" ${cur===p.id?'selected':''}>${esc(p.label)}${p.free?' ✓':''}</option>`).join('');
-  modal(`<h3>${lb('إعداد الذكاء الاصطناعي||AI setup')}</h3>
-  <p class="muted">${lb('اختر أداة (المجانية تكفي) والصق مفتاح API. يُخزَّن المفتاح على الخادم فقط ولا يصل للمتصفح.||Pick a tool (free tiers are fine) and paste the API key. The key is stored on the server only and never sent to the browser.')}</p>
-  <div class="fg">
-    <div><label>${lb('المزوّد (✓ = مجاني)||Provider (✓ = free)')}</label><select id="ais_p" onchange="aiProvHint()">${provs}</select></div>
-    <div><label>${lb('الموديل (اختياري)||Model (optional)')}</label><input id="ais_m" dir="ltr" value="${esc(saved.model||'')}" placeholder="${lb('الافتراضي يكفي||default is fine')}"></div>
-    <div><label>${lb('مفتاح API||API key')}</label><input id="ais_k" type="password" dir="ltr" placeholder="${saved.hasKey?lb('محفوظ — اتركه فارغاً للإبقاء||saved — leave blank to keep'):'paste key here'}"></div>
-    <div><label>${lb('رابط مخصص (للمزوّد المخصص فقط)||Custom base URL')}</label><input id="ais_b" dir="ltr" value="${esc(saved.base||'')}" placeholder="https://.../v1"></div>
-  </div>
-  <p class="muted" id="ais_h"></p>
-  <div class="ma">
-    <button class="btn ghost sm" onclick="aiClearKey()">${lb('حذف المفتاح||Clear key')}</button>
-    <button class="btn ghost" onclick="aiTest()">${lb('اختبار||Test')}</button>
-    <button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button>
-    <button class="btn" onclick="aiSave()">${lb('حفظ||Save')}</button>
-  </div>`);
-  aiProvHint();
-}
-function aiProvHint(){
-  const id=$('ais_p')?$('ais_p').value:'';
-  const p=((AI_SET&&AI_SET.providers)||[]).find(x=>x.id===id)||{};
-  const el=$('ais_h');if(el)el.innerHTML=p.free?lb('✓ هذه الأداة لها طبقة مجانية — أنشئ مفتاحاً من موقعها ثم الصقه هنا.||✓ This tool has a free tier — create a key on its site and paste it here.'):'';
-  const m=$('ais_m');if(m&&!m.value&&p.model)m.placeholder=p.model;
-}
-async function aiSave(){
-  const body={provider:$('ais_p').value,model:$('ais_m').value.trim(),base:$('ais_b').value.trim(),apiKey:$('ais_k').value};
-  const r=await api('/ai/settings',{method:'POST',body:JSON.stringify(body)});
-  if(!r.ok){const j=await r.json().catch(()=>({}));return toast(lb('تعذّر الحفظ: ||Save failed: ')+(j.error||r.status),'err');}
-  AI_SET=await r.json();
-  closeModal();paintTab();toast(lb('حُفظت الإعدادات||Settings saved'),'ok');
-}
-async function aiTest(){
-  toast(lb('جارٍ الاختبار…||Testing…'));
-  const r=await api('/ai/test',{method:'POST',body:'{}'});
-  const j=await r.json().catch(()=>({}));
-  if(j&&j.ok)return toast(lb('نجح الاتصال: ||Connected: ')+(j.provider||'')+(j.reply?' · '+j.reply:''),'ok');
-  toast(lb('فشل: ||Failed: ')+((j&&(j.reason||j.detail))||r.status),'err');
-}
-async function aiClearKey(){
-  if(!confirm(lb('حذف المفتاح المحفوظ؟||Clear the saved API key?')))return;
-  const r=await api('/ai/settings',{method:'POST',body:JSON.stringify({clearKey:true})});
-  if(r.ok)AI_SET=await r.json();
-  closeModal();paintTab();toast(lb('حُذف المفتاح||Key cleared'),'ok');
-}
 function vPM(){
   const view=FILT.pmView||'plans';
-  const tplN=(db.pmTemplates||[]).filter(t=>!t.compoundId||t.compoundId===activeCmp()).length;
-  return pmAiCard()
-   + `<div class="toolbar" style="margin-bottom:8px">
+  return `<div class="toolbar" style="margin-bottom:8px">
     <button class="btn ${view==='plans'?'':'ghost'}" onclick="pmSetView('plans')">${lb('خطط الصيانة||PM Plans')}</button>
-    <button class="btn ${view==='templates'?'':'ghost'}" onclick="pmSetView('templates')">${lb('القوالب||Templates')}${tplN?' ('+tplN+')':''}</button>
-    ${isPlanner()?`<button class="btn ghost" onclick="pmForm()">＋ ${lb('خطة جديدة||New plan')}</button>`:''}
-    <details style="display:inline-block;position:relative">
-      <summary class="muted" style="cursor:pointer;list-style:none">⚙ ${lb('خيارات||Options')}</summary>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
-        ${isPlanner()?`<button class="btn ghost sm" onclick="pmSmartGen()">${lb('توليد يدوي (سؤال وجواب)||Manual wizard')}</button>
-        <button class="btn ghost sm" onclick="runScheduler()">${lb('تشغيل الجدولة||Run scheduler')}</button>
-        <button class="btn ghost sm" onclick="togglePmApproval()">${db.pmApproval!==false?lb('الاعتماد: مطلوب||Approval: required'):lb('الاعتماد: تلقائي||Approval: auto')}</button>`:''}
-        <button class="btn ghost sm" onclick="window.print()">${lb('طباعة||Print')}</button>
-      </div>
-    </details>
-   </div>`
-   + (view==='templates'?vPMTemplates():vPMPlans());
+    <button class="btn ${view==='templates'?'':'ghost'}" onclick="pmSetView('templates')">${lb('قوالب الصيانة||PM Templates')}${(db.pmTemplates||[]).filter(t=>!t.compoundId||t.compoundId===activeCmp()).length?' ('+(db.pmTemplates||[]).filter(t=>!t.compoundId||t.compoundId===activeCmp()).length+')':''}</button>
+  </div>` + (view==='templates'?vPMTemplates():vPMPlans());
 }
 function vPMPlans(){
   const act=activeCmp();
@@ -2528,7 +2410,13 @@ function vPMPlans(){
     <button class="btn sm ghost" onclick="pmForm('${p.id}')">${ic('edit',13)}</button>
     <button class="btn sm danger" onclick="delPm('${p.id}')">${ic('del',13)}</button>`:''}</td></tr>`;
   });
-  return `<p class="muted">${lb('عند استحقاق أي خطة، يُصدر النظام أمر شغل تلقائياً بقائمة الفحص للفني المسؤول.||When a plan is due, the system auto-issues a work order with its checklist.')}</p>
+  return `<div class="toolbar">
+    ${isPlanner()?`<button class="btn" onclick="pmForm()">＋ ${lb('خطة صيانة جديدة||New PM Plan')}</button>
+    <button class="btn" style="background:linear-gradient(135deg,#7c3aed,#2563eb)" onclick="pmSmartGen()"> ${lb('توليد ذكي للصيانة||Smart PM Generator')}</button>
+    <button class="btn ghost" onclick="runScheduler()"> ${lb('تشغيل الجدولة الآن||Run Scheduler Now')}</button>
+    <button class="btn ghost" onclick="togglePmApproval()"> ${db.pmApproval!==false?lb('الاعتماد: مطلوب||Approval: required'):lb('الاعتماد: تلقائي||Approval: auto')}</button>`:''}
+    <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
+  <p class="muted">${lb('عند استحقاق أي خطة، يُصدر النظام أمر شغل تلقائياً بقائمة الفحص للفني المسؤول.||When a plan is due, the system auto-issues a work order with its checklist.')}</p>
   <div class="card"><h2>${lb('خطط الصيانة الدورية||PM Plans')} (${db.pms.filter(p=>p.compoundId===act).length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الخطة||Plan')}</th><th>${lb('الأصل||Asset')}</th><th>${lb('التكرار||Frequency')}</th><th>${lb('آخر تنفيذ||Last Done')}</th><th>${lb('الاستحقاق القادم||Next Due')}</th><th>${lb('المسؤول||Assignee')}</th><th></th></tr>
   ${rows||`<tr><td colspan="7"><div class="empty">${lb('لا خطط بعد||No plans yet')}</div></td></tr>`}</table></div></div>`;
@@ -3097,7 +2985,8 @@ function vPMTemplates(){
   return `<div class="toolbar">
     ${isPlanner()?`<button class="btn" onclick="tplForm()">＋ ${lb('قالب جديد||New Template')}</button>
     <button class="btn ghost" onclick="loadSampleTemplates()"> ${lb('أمثلة جاهزة||Load examples')}</button>
-    <button class="btn ghost" onclick="tplApplyAll()"> ${lb('مزامنة كل القوالب||Sync All Templates')}</button>`:''}</div>
+    <button class="btn ghost" onclick="tplApplyAll()"> ${lb('مزامنة كل القوالب||Sync All Templates')}</button>`:''}
+    <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
   <p class="muted">${lb('القالب يحدّد الإجراء والخطوات والقطع حسب التصنيف/الطراز، ثم يُطبّق على كل أصل مطابق. كل تعديل يرفع الإصدار مع حفظ السجل.||A template defines the procedure, steps and parts by category/model, then applies to every matching asset. Each edit bumps the version and keeps history.')}</p>
   <div class="card"><h2>${lb('قوالب الصيانة||PM Templates')} (${list.length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('القالب||Template')}</th><th>${lb('التكرار||Frequency')}</th><th>${lb('الإصدار||Version')}</th><th>${lb('أصول مطابقة||Matching assets')}</th><th>${lb('خطط ناتجة||Generated plans')}</th><th></th></tr>
