@@ -225,7 +225,7 @@ function seedState(){
     compounds:[{id:C,name:'مجمع الخير السكني - حي الروضة',loc:'',notes:'',createdAt:Date.now()}],
     buildings:[],units:[],tenants:[],contracts:[],assets:[],wos:[],inv:[],moves:[],
     pms:[],suppliers:[],prs:[],pos:[],projects:[],employees:[],shifts:[],notifs:[],
-    providers:[],rfqs:[],pmTemplates:[],audit:[],orgs:[]
+    providers:[],rfqs:[],pmTemplates:[],audit:[],orgs:[],woPhotoReq:false
   };
   const addB=(name,type,floors)=>d.buildings.push({id:rid('B'),name,type,floors:floors.slice(),compoundId:C});
   for(let i=1;i<=34;i++)addB('فيلا '+i,'villa',['الدور الأرضي','الدور الأول','الملحق']);

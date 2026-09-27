@@ -1588,7 +1588,7 @@ function freshDb(){
    'إنارة خارجية','مولد احتياطي','بوابة أوتوماتيكية','مصعد','نظام إنذار حريق','كاشف دخان',
    'طفاية حريق','شبكة إطفاء / رشاشات','سباكة وصنابير','أخرى'],
    compounds:[],buildings:[],units:[],tenants:[],contracts:[],assets:[],wos:[],inv:[],moves:[],pms:[],suppliers:[],prs:[],pos:[],
-   projects:[],employees:[],shifts:[],notifs:[],providers:[],rfqs:[],pmTemplates:[],audit:[],orgs:[]};
+   projects:[],employees:[],shifts:[],notifs:[],providers:[],rfqs:[],pmTemplates:[],audit:[],orgs:[],woPhotoReq:false};
   const addB=(name,type,floors)=>d.buildings.push({id:uid('B'),name,type,floors:floors.slice()});
   for(let i=1;i<=34;i++)addB('فيلا '+i,'villa',['الدور الأرضي','الدور الأول','الملحق']);
   addB('المسبح','area',['حمام السباحة','غرفة الفلاتر والمعدات']);
@@ -4734,6 +4734,7 @@ function vWOs(){
   const ix=w=>db.wos.indexOf(w);
   const portalBadge=` <span class="badge b-open" title="${lb('من بوابة المستأجرين||From tenant portal')}">بوابة</span>`;
   return `<div class="toolbar">${isViewer()?'':`<button class="btn" onclick="woForm()">＋ ${lb('بلاغ عطل جديد||New Fault Report')}</button>`}
+    ${isAdmin()?`<button class="btn ghost" onclick="settingsModal()">⚙ ${db.woPhotoReq?lb('صور الإغلاق: مطلوبة||Close photos: required'):lb('صور الإغلاق: اختيارية||Close photos: optional')}</button>`:''}
     <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
   <div class="chips">${chip('all')}${chip('planned')}${chip('open')}${chip('inprog')}${chip('wait')}${chip('closed')}</div>
   <input class="searchbar" placeholder=" ${lb('بحث…||Search…')}" value="${esc(FILT.wos)}" oninput="FILT.wos=this.value;paintTab();sbFocus()">
