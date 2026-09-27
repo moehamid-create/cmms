@@ -1099,7 +1099,7 @@ window.addEventListener('error',e=>{
       body:JSON.stringify({msg,url:String(location.pathname||'/').slice(0,100)})}).catch(()=>{});
   }catch(_){}
 });
-let FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:'',pmView:'plans'};
+let FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:'',pmView:'plans',pmFcDays:30};
 let PRIO,WSTAT,ASTAT,ROLES,VILLA_FLOORS,PRSTAT,POSTAT,FREQUNIT,PRJSTAT,SHIFTK,BTYPES,UNITKIND,CTRSC,CYCLEK;
 const UNITKIND_NEW=['apt','villa','subunit','office','shop','annex','land'];
 const SUB_SUFFIX=['G','F1','F2','ANX','R'];
@@ -1490,6 +1490,21 @@ function migrate(d){
     if(!Array.isArray(d.orgs))d.orgs=[];
     (d.compounds||[]).forEach(c=>{if(c.orgId==null)c.orgId='';});
   }
+  /* ---- v13: حقول ماكسيمو لخطط الصيانة (تفعيل · مهلة · نافذة · خطوات عمل) ---- */
+  if(d.ver<13){
+    d.ver=13;
+    (d.pms||[]).forEach(p=>{
+      if(p.active==null)p.active=true;
+      if(p.leadDays==null)p.leadDays=null;
+      if(p.graceDays==null)p.graceDays=0;
+      if(!Array.isArray(p.steps))p.steps=[];
+      if(p.startDate==null)p.startDate='';
+      if(p.endDate==null)p.endDate='';
+      if(p.buildingId==null)p.buildingId='';
+      if(p.floor==null)p.floor='';
+    });
+    (d.pmTemplates||[]).forEach(t=>{if(!Array.isArray(t.steps))t.steps=[];});
+  }
   /* ---- شبكة أمان تُنفَّذ دائماً (حتى مع أحدث ver) لضمان بيانات قابلة للاستخدام ---- */
   ['compounds','buildings','units','tenants','contracts','assets','wos','inv','moves','pms',
    'suppliers','prs','pos','projects','employees','shifts','notifs','fuelLogs','utilityLogs','certs','providers','rfqs','pmTemplates','audit','orgs']
@@ -1704,7 +1719,7 @@ function activeCmp(){
 function cmpName(id){const c=db.compounds.find(x=>x.id===id);return c?c.name:'—';}
 function setCmp(id){
   me.activeCmp=id;PICK=false;TAB='dash';
-  FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:'',pmView:'plans'};
+  FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:'',pmView:'plans',pmFcDays:30};
   persist();pmGen();genSysNotifs();render();
 }
 
@@ -1996,10 +2011,10 @@ function genSysNotifs(){
     .forEach(w=>notify('',lb('أمر بانتظار المراجعة: ||WO awaiting review: ')+w.no+' — '+w.title,'wos','rev-'+w.no));
   db.wos.filter(w=>w.compoundId===act&&w.status!=='closed'&&w.status!=='planned'&&w.dueDate&&daysUntil(w.dueDate)<0)
     .forEach(w=>notify('',lb('أمر متأخر: ||WO overdue: ')+w.no+' ('+(-daysUntil(w.dueDate))+' '+lb('يوم||d')+')','wos','over-'+w.no));
-  db.pms.filter(p=>p.compoundId===act).forEach(p=>{
+  db.pms.filter(p=>p.compoundId===act&&pmActive(p)&&pmInWindow(p)).forEach(p=>{
     const d=daysUntil(nextDueOf(p));
-    if(d<=0)notify('',lb('صيانة دورية متأخرة: ||Overdue PM: ')+p.name,'pm','pm-'+p.id+'-late');
-    else if(d<=3)notify('',lb('صيانة قريبة: ||PM soon: ')+p.name+' ('+fmtD(nextDueOf(p))+')','pm','pm-'+p.id+'-soon');
+    if(d+pmGrace(p)<=0)notify('',lb('صيانة دورية متأخرة: ||Overdue PM: ')+p.name,'pm','pm-'+p.id+'-late');
+    else if(d<=pmLead(p)||d<=3)notify('',lb('صيانة قريبة: ||PM soon: ')+p.name+' ('+fmtD(nextDueOf(p))+')','pm','pm-'+p.id+'-soon');
   });
   db.inv.filter(it=>it.qty<=it.minQty&&it.compoundId===act).forEach(it=>
     notify('',lb('مخزون تحت الحد: ||Low stock: ')+it.name+' ('+it.qty+' '+it.unit+')','inv','low-'+it.id));
@@ -2349,28 +2364,63 @@ function meterDueIn(p){
   if(!a||a.meter==null||a.meter==='')return null;
   return ((p.lastMeter||0)+p.mEvery)-Number(a.meter);
 }
-function pmGen(){
+/* ===== MAXIMO-STYLE PM: تفعيل · نافذة صلاحية · مهلة إنشاء · فترة سماح · هدف موقع ===== */
+function pmActive(p){return p.active!==false;}
+function pmLead(p){return Math.max(0,+p.leadDays||0);}
+function pmGrace(p){return Math.max(0,+p.graceDays||0);}
+function pmInWindow(p,today){
+  const t=today||todayISO();
+  if(p.startDate&&t<p.startDate)return false;
+  if(p.endDate&&t>p.endDate)return false;
+  return true;
+}
+function pmTargetName(p){
+  if(p.assetId){const a=db.assets.find(x=>x.id===p.assetId);return a?a.name:lb('(أصل محذوف)||(deleted asset)');}
+  if(p.buildingId){const b=db.buildings.find(x=>x.id===p.buildingId);return lb('موقع||Location')+': '+(b?b.name:'—')+(p.floor?' / '+p.floor:'');}
+  return '—';
+}
+function pmSteps(p){return Array.isArray(p.steps)?p.steps:[];}
+function parseStepsTxt(txt){
+  return String(txt||'').split('\n').map(s=>s.trim()).filter(Boolean).map((l,i)=>{
+    const c=l.split('|').map(x=>x.trim());
+    return {seq:i+1,t:c[0]||'',mins:Math.max(0,+c[1]||0),trade:c[2]||'',mats:c[3]||'',tools:c[4]||'',safety:c[5]||''};
+  });
+}
+function stepsText(steps){
+  return (steps||[]).map(s=>[s.t||'',s.mins||'',s.trade||'',s.mats||'',s.tools||'',s.safety||''].join(' | ')).join('\n');
+}
+function stepsMins(steps){return (steps||[]).reduce((s,x)=>s+(+x.mins||0),0);}
+/* هل حان إنشاء أمر شغل؟ = الاستحقاق ناقص المهلة (أو استحقاق العدّاد) */
+function pmDueForGen(p,today){
+  const md=meterDueIn(p);
+  const meterDue=(md!=null&&md<=0);
+  const timeDue=daysUntil(nextDueOf(p))<=pmLead(p);
+  return {timeDue,meterDue,due:(timeDue||meterDue)};
+}
+function pmGen(onlyId,force){
   let created=0;
   db.pms.forEach(p=>{
-    const md=meterDueIn(p);
-    const timeDue=daysUntil(nextDueOf(p))<=0;
-    const meterDue=(md!=null&&md<=0);
-    if(timeDue||meterDue){
+    if(onlyId&&p.id!==onlyId)return;
+    if(!pmActive(p)||!pmInWindow(p))return;
+    const g=pmDueForGen(p);
+    if(force||g.due){
       const hasOpen=db.wos.some(w=>w.pmId===p.id&&w.status!=='closed');
       if(!hasOpen){
         db.seq++;const y=new Date().getFullYear();
         const ast=db.assets.find(a=>a.id===p.assetId)||{};
-        if(meterDue&&ast&&ast.meter!=null&&ast.meter!=='')p.lastMeter=Number(ast.meter);
+        const bld=db.buildings.find(b=>b.id===(ast.building||p.buildingId))||null;
+        if(g.meterDue&&ast&&ast.meter!=null&&ast.meter!=='')p.lastMeter=Number(ast.meter);
         db.wos.unshift({no:'WO-'+y+'-'+String(db.seq).padStart(4,'0'),type:'pm',pmId:p.id,compoundId:p.compoundId||activeCmp(),
-          title:(db.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name+(meterDue?' ':''),
+          title:(db.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name+(g.timeDue&&daysUntil(nextDueOf(p))<0?(db.lang==='ar'?' (متأخرة)':' (late)'):''),
           desc:p.tasks||'',assetId:p.assetId||'',assetName:ast?ast.name:'',
-          bname:ast?bName(ast.building):'',
+          bname:bld?bld.name:'',
           priority:p.priority||'normal',status:(db.pmApproval!==false)?'planned':'open',approval:(db.pmApproval!==false)?'pending':'approved',auto:true,createdAt:Date.now(),startedAt:null,closedAt:null,projectId:'',
           unitId:'',unitCode:'',tenantName:'',
-          dueDate:timeDue?nextDueOf(p):todayISO(),assigneeId:p.assigneeId||'',assigneeName:p.assigneeName||'',
+          dueDate:g.timeDue?nextDueOf(p):todayISO(),assigneeId:p.assigneeId||'',assigneeName:p.assigneeName||'',
           cost:0,closeNotes:'',parts:[],photos:[],sig:'',
-          estMins:p.estMins||0,skills:p.skills||'',tools:p.tools||'',permits:p.permits||'',safety:p.safety||'',
-          tplId:p.tplId||'',tplVersion:p.tplVersion||0,
+          estMins:p.estMins||stepsMins(p.steps)||0,skills:p.skills||'',tools:p.tools||'',permits:p.permits||'',safety:p.safety||'',
+          tplId:p.tplId||'',tplVersion:p.tplVersion||0,leadDays:pmLead(p),graceDays:pmGrace(p),
+          steps:(p.steps||[]).map(x=>Object.assign({},x)),
           reqParts:(p.parts||[]).map(x=>({name:x.name,qty:x.qty})),
           reportedBy:lb('الجدولة التلقائية||Auto-scheduler'),
           checklist:(p.tasks||'').split('\n').map(s=>s.trim()).filter(Boolean).map(t=>({t,done:false,v:''}))});
@@ -2386,13 +2436,87 @@ function runScheduler(){const c=pmGen();paintTab();
   toast(c?(pl?lb('أُصدرت '+c+' أوامر مخطّطة بانتظار الاعتماد||Issued '+c+' planned work orders awaiting approval'):lb('أُصدرت أوامر شغل دورية: '+c+'||PM work orders issued: '+c)):lb('لا صيانة مستحقة حالياً||Nothing due yet'),'ok');}
 function togglePmApproval(){db.pmApproval=!(db.pmApproval!==false);persist();paintTab();
   toast(db.pmApproval!==false?lb('أوامر الصيانة الدورية ستحتاج اعتماداً||PM work orders will require approval'):lb('أوامر الصيانة الدورية تُصدر مباشرة||PM work orders issue immediately'),'ok');}
-function pmSetView(v){FILT.pmView=(v==='templates')?'templates':'plans';paintTab();}
+/* ===== Maximo-style: توقعات PM · إنشاء فوري · بطاقة الخطة ===== */
+function pmOccurrences(fromISO,toISO){
+  const act=activeCmp();const out=[];
+  db.pms.filter(p=>p.compoundId===act&&pmActive(p)&&pmInWindow(p)).forEach(p=>{
+    const iv=intervalDays(p);
+    let due=nextDueOf(p),guard=0;
+    while(daysUntil(due)<0&&guard++<1000)due=addDays(due,iv);
+    guard=0;
+    while(due<=toISO&&guard++<400){
+      if(due>=fromISO)out.push({date:due,days:daysUntil(due),pm:p});
+      due=addDays(due,iv);
+    }
+    const md=meterDueIn(p);
+    if(md!=null&&md<=0)out.push({date:todayISO(),days:0,pm:p,meter:true});
+  });
+  return out.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:String(a.pm.name||'').localeCompare(String(b.pm.name||''),'ar'));
+}
+function pmGenerateNow(pid){
+  const p=db.pms.find(x=>x.id===pid);if(!p)return;
+  if(db.wos.some(w=>w.pmId===p.id&&w.status!=='closed'))return toast(lb('يوجد أمر مفتوح لهذه الخطة||An open work order already exists'),'err');
+  const c=pmGen(pid,true);
+  closeModal();paintTab();
+  toast(c?lb('أُنشئ أمر الشغل||Work order created'):lb('لم يُنشأ أمر||Not created'),c?'ok':'err');
+}
+function pmView(pid){
+  const p=db.pms.find(x=>x.id===pid);if(!p)return;
+  const steps=pmSteps(p);
+  const occ=pmOccurrences(todayISO(),addDays(todayISO(),90)).filter(o=>o.pm.id===p.id);
+  modal(`<h3>${esc(p.name)} ${p.active===false?`<span class="badge b-wait">${lb('متوقفة||Inactive')}</span>`:''} ${p.tplId?`<span class="badge b-open">${lb('قالب||template')} v${p.tplVersion||1}</span>`:''}</h3>
+  <p class="muted">${lb('الهدف||Target')}: <b>${esc(pmTargetName(p))}</b></p>
+  <table>
+    <tr><th>${lb('التكرار||Frequency')}</th><th>${lb('آخر تنفيذ||Last')}</th><th>${lb('الاستحقاق||Next due')}</th><th>${lb('مهلة||Lead')}</th><th>${lb('سماح||Grace')}</th><th>${lb('الأولوية||Priority')}</th></tr>
+    <tr><td>${p.freqVal} ${FREQUNIT[p.freqUnit]}${p.mEvery>0?' / '+p.mEvery:''}</td><td>${fmtD(p.lastDone)}</td>
+    <td>${fmtD(nextDueOf(p))}${daysUntil(nextDueOf(p))+pmGrace(p)<=0?` <span class="badge b-urgent">${lb('متأخرة||late')}</span>`:''}</td>
+    <td>${pmLead(p)} ${lb('يوم||d')}</td><td>${pmGrace(p)}</td>
+    <td><span class="badge b-${p.priority||'normal'}">${PRIO[p.priority||'normal']}</span></td></tr>
+  </table>
+  ${(p.startDate||p.endDate)?`<p class="muted">${lb('نافذة الصلاحية||Active window')}: ${fmtD(p.startDate)} → ${fmtD(p.endDate)}</p>`:''}
+  <h3>${lb('خطوات العمل||Job steps')} ${steps.length?`(${steps.length} · ${stepsMins(steps)} ${lb('دقيقة||min')})`:''}</h3>
+  ${steps.length?`<div class="tbl-wrap"><table><tr><th>#</th><th>${lb('المهمة||Task')}</th><th>${lb('دقائق||Min')}</th><th>${lb('التخصص||Trade')}</th><th>${lb('المواد||Materials')}</th><th>${lb('الأدوات||Tools')}</th><th>${lb('السلامة||Safety')}</th></tr>
+   ${steps.map(s=>`<tr><td>${s.seq||''}</td><td>${esc(s.t||'')}</td><td>${s.mins||''}</td><td>${esc(s.trade||'')}</td><td>${esc(s.mats||'')}</td><td>${esc(s.tools||'')}</td><td>${esc(s.safety||'')}</td></tr>`).join('')}</table></div>`:`<p class="muted">${lb('لا خطوات بعد — أضفها من زر التعديل||No steps yet — add them via Edit')}</p>`}
+  ${(p.tasks||'').trim()?`<label>${lb('قائمة الفحص||Checklist')}</label><ul style="padding-inline-start:18px">${p.tasks.split('\n').map(s=>s.trim()).filter(Boolean).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:''}
+  <label>${lb('التوقعات (90 يوم)||Forecast (90 days)')}</label>
+  ${occ.length?`<ul style="padding-inline-start:18px">${occ.slice(0,12).map(o=>`<li>${fmtD(o.date)} ${o.days<0?`<span class="badge b-urgent">${-o.days} ${lb('متأخرة||late')}</span>`:`(${o.days} ${lb('يوم||d')})`}</li>`).join('')}</ul>`:`<p class="muted">${lb('لا توقعات||none')}</p>`}
+  <div class="ma">
+    ${isPlanner()?`<button class="btn ghost" onclick="closeModal();pmForm('${p.id}')">${lb('تعديل||Edit')}</button>
+    <button class="btn ghost" onclick="pmDone('${p.id}');closeModal()">${lb('سجّل إنجاز||Log done')}</button>
+    <button class="btn" onclick="pmGenerateNow('${p.id}')">${lb('أنشئ أمر شغل||Generate WO')}</button>`:''}
+    <button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button></div>`);
+}
+function vPMForecast(){
+  const days=FILT.pmFcDays||30;
+  const from=todayISO(),to=addDays(from,days);
+  const occ=pmOccurrences(from,to);
+  const late=occ.filter(o=>o.days<0).length;
+  const rows=occ.map(o=>{
+    const p=o.pm,du=o.days;
+    return `<tr class="${du<0?'overdue':''}">
+      <td>${fmtD(o.date)}${du<0?` <span class="badge b-urgent">${-du} ${lb('متأخرة||late')}</span>`:(du<=3?` <span class="badge b-maint">${du} ${lb('يوم||d')}</span>`:'')}${o.meter?` <span class="badge b-open">${lb('عداد||meter')}</span>`:''}</td>
+      <td>${esc(pmTargetName(p))}</td>
+      <td><b>${esc(p.name)}</b>${p.priority&&p.priority!=='normal'?` <span class="badge b-${p.priority}">${PRIO[p.priority]}</span>`:''}</td>
+      <td>${p.freqVal} ${FREQUNIT[p.freqUnit]}</td>
+      <td>${esc(p.assigneeName||'—')}</td>
+      <td nowrap>${isPlanner()?`<button class="btn sm" onclick="pmGenerateNow('${p.id}')">${lb('أنشئ أمر||Generate')}</button>`:''}<button class="btn sm ghost" onclick="pmView('${p.id}')">${ic('view',13)}</button></td></tr>`;
+  }).join('');
+  const chip=d=>`<button class="chip ${days===d?'on':''}" onclick="FILT.pmFcDays=${d};paintTab()">${d} ${lb('يوم||d')}</button>`;
+  return `<div class="toolbar"><div class="chips">${chip(7)}${chip(30)}${chip(90)}</div></div>
+  <p class="muted">${lb('توقعات الصيانة الوقائية||PM forecast')}: ${fmtD(from)} → ${fmtD(to)} — ${occ.length} ${lb('استحقاق||occurrence(s)')}${late?` · <span class="badge b-urgent">${late} ${lb('متأخرة||late')}</span>`:''}</p>
+  <div class="card"><div class="tbl-wrap"><table>
+  <tr><th>${lb('التاريخ||Date')}</th><th>${lb('الهدف||Target')}</th><th>${lb('الخطة||Plan')}</th><th>${lb('التكرار||Frequency')}</th><th>${lb('المسؤول||Assignee')}</th><th></th></tr>
+  ${rows||`<tr><td colspan="6"><div class="empty">${lb('لا استحقاقات في هذه الفترة||Nothing due in this range')}</div></td></tr>`}</table></div></div>`;
+}
+function pmSetView(v){FILT.pmView=['plans','forecast','templates'].includes(v)?v:'plans';paintTab();}
 function vPM(){
   const view=FILT.pmView||'plans';
+  const tplN=(db.pmTemplates||[]).filter(t=>!t.compoundId||t.compoundId===activeCmp()).length;
   return `<div class="toolbar" style="margin-bottom:8px">
     <button class="btn ${view==='plans'?'':'ghost'}" onclick="pmSetView('plans')">${lb('خطط الصيانة||PM Plans')}</button>
-    <button class="btn ${view==='templates'?'':'ghost'}" onclick="pmSetView('templates')">${lb('قوالب الصيانة||PM Templates')}${(db.pmTemplates||[]).filter(t=>!t.compoundId||t.compoundId===activeCmp()).length?' ('+(db.pmTemplates||[]).filter(t=>!t.compoundId||t.compoundId===activeCmp()).length+')':''}</button>
-  </div>` + (view==='templates'?vPMTemplates():vPMPlans());
+    <button class="btn ${view==='forecast'?'':'ghost'}" onclick="pmSetView('forecast')">${lb('التوقعات||Forecast')}</button>
+    <button class="btn ${view==='templates'?'':'ghost'}" onclick="pmSetView('templates')">${lb('القوالب||Templates')}${tplN?' ('+tplN+')':''}</button>
+  </div>` + (view==='templates'?vPMTemplates():view==='forecast'?vPMForecast():vPMPlans());
 }
 function vPMPlans(){
   const act=activeCmp();
@@ -2400,13 +2524,12 @@ function vPMPlans(){
   [...db.pms].filter(p=>p.compoundId===act).sort((a,b)=>daysUntil(nextDueOf(a))-daysUntil(nextDueOf(b))).forEach((p,i)=>{
     const nd=nextDueOf(p),du=daysUntil(nd);
     const mdi=meterDueIn(p);
-    const ast=db.assets.find(a=>a.id===p.assetId)||null;
-    rows+=`<tr class="${du<0?'overdue':''}"><td><b>${esc(p.name)}</b>${p.priority&&p.priority!=='normal'?` <span class="badge b-${p.priority}">${PRIO[p.priority]||p.priority}</span>`:''}${p.tplId?` <span class="badge b-open" title="${lb('قالب||Template')}">v${p.tplVersion||1}</span>`:''}<br><span class="muted">${esc((p.tasks||'').split('\n')[0]||'')}…</span></td>
-    <td>${esc(ast?ast.name:'—')}</td><td>${p.freqVal} ${FREQUNIT[p.freqUnit]}${p.mEvery>0?`<br><span class="muted"> ${lb('كل||every')} ${p.mEvery}</span>`:''}</td>
+    rows+=`<tr class="${du<0?'overdue':''}"><td><b>${esc(p.name)}</b>${p.active===false?` <span class="badge b-wait">${lb('متوقفة||Inactive')}</span>`:''}${p.priority&&p.priority!=='normal'?` <span class="badge b-${p.priority}">${PRIO[p.priority]||p.priority}</span>`:''}${p.tplId?` <span class="badge b-open" title="${lb('قالب||Template')}">v${p.tplVersion||1}</span>`:''}${pmSteps(p).length?` <span class="badge b-prog" title="${lb('خطوات العمل||Job steps')}">${pmSteps(p).length} ${lb('خطوة||steps')}</span>`:''}${pmLead(p)>0?` <span class="badge b-normal" title="${lb('مهلة الإنشاء||Lead time')}">${lb('مهلة||lead')} ${pmLead(p)}</span>`:''}<br><span class="muted">${esc((p.tasks||'').split('\n')[0]||'')}…</span></td>
+    <td>${esc(pmTargetName(p))}</td><td>${p.freqVal} ${FREQUNIT[p.freqUnit]}${p.mEvery>0?`<br><span class="muted"> ${lb('كل||every')} ${p.mEvery}</span>`:''}</td>
     <td>${fmtD(p.lastDone)}</td>
-    <td>${du<0?`<span class="badge b-urgent">${lb('متأخرة||OVERDUE')} ${-du} ${lb('يوم||d')}</span> `:''}${fmtD(nd)}${mdi!=null?` <span class="badge ${mdi<=0?'b-urgent':'b-open'}"> ${mdi<=0?lb('حان||DUE'):mdi}</span>`:''}</td>
+    <td>${du+pmGrace(p)<0?`<span class="badge b-urgent">${lb('متأخرة||OVERDUE')} ${-(du+pmGrace(p))} ${lb('يوم||d')}</span> `:''}${fmtD(nd)}${mdi!=null?` <span class="badge ${mdi<=0?'b-urgent':'b-open'}"> ${mdi<=0?lb('حان||DUE'):mdi}</span>`:''}</td>
     <td>${esc(p.assigneeName||'—')}</td>
-    <td nowrap>${isPlanner()?`<button class="btn sm ghost" onclick="pmDone('${p.id}')"> ${lb('سجّل إنجاز||Log Done')}</button>
+    <td nowrap><button class="btn sm ghost" title="${lb('تفاصيل الخطة||Plan details')}" onclick="pmView('${p.id}')">${ic('view',13)}</button>${isPlanner()?`<button class="btn sm ghost" onclick="pmDone('${p.id}')"> ${lb('سجّل إنجاز||Log Done')}</button>
     <button class="btn sm ghost" onclick="pmForm('${p.id}')">${ic('edit',13)}</button>
     <button class="btn sm danger" onclick="delPm('${p.id}')">${ic('del',13)}</button>`:''}</td></tr>`;
   });
@@ -2418,37 +2541,71 @@ function vPMPlans(){
     <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
   <p class="muted">${lb('عند استحقاق أي خطة، يُصدر النظام أمر شغل تلقائياً بقائمة الفحص للفني المسؤول.||When a plan is due, the system auto-issues a work order with its checklist.')}</p>
   <div class="card"><h2>${lb('خطط الصيانة الدورية||PM Plans')} (${db.pms.filter(p=>p.compoundId===act).length})</h2><div class="tbl-wrap"><table>
-  <tr><th>${lb('الخطة||Plan')}</th><th>${lb('الأصل||Asset')}</th><th>${lb('التكرار||Frequency')}</th><th>${lb('آخر تنفيذ||Last Done')}</th><th>${lb('الاستحقاق القادم||Next Due')}</th><th>${lb('المسؤول||Assignee')}</th><th></th></tr>
+  <tr><th>${lb('الخطة||Plan')}</th><th>${lb('الهدف||Target')}</th><th>${lb('التكرار||Frequency')}</th><th>${lb('آخر تنفيذ||Last Done')}</th><th>${lb('الاستحقاق القادم||Next Due')}</th><th>${lb('المسؤول||Assignee')}</th><th></th></tr>
   ${rows||`<tr><td colspan="7"><div class="empty">${lb('لا خطط بعد||No plans yet')}</div></td></tr>`}</table></div></div>`;
 }
 function pmForm(pid){
   const p=pid?db.pms.find(x=>x.id===pid)||{}:{};
-  const opts=db.assets.filter(a=>a.compoundId===activeCmp()).map(a=>`<option value="${a.id}" ${p.assetId===a.id?'selected':''}>${esc(a.name)}</option>`).join('');
   const act=activeCmp();
+  const opts=db.assets.filter(a=>a.compoundId===act).map(a=>`<option value="${a.id}" ${p.assetId===a.id?'selected':''}>${esc(a.name)}</option>`).join('');
+  const bOpts=db.buildings.filter(b=>b.compoundId===act).map(b=>`<option value="${b.id}" ${p.buildingId===b.id?'selected':''}>${esc(b.name)}</option>`).join('');
   const techs=db.users.filter(u=>u.role==='tech'&&(u.cmpIds||[]).includes(act));
+  const loc=(p.buildingId||!p.assetId)?'location':'asset';
+  const lead=p.leadDays!=null?p.leadDays:'';
   modal(`<h3>${pid?lb('تعديل خطة||Edit Plan'):lb('خطة صيانة جديدة||New PM Plan')}</h3>
   ${p.tplId?`<p class="muted">${lb('من قالب||From template')}: ${esc(tplName(p.tplId))} v${p.tplVersion||1}</p>`:''}
   <label>${lb('اسم الخطة *||Plan Name *')}</label><input id="fp_n" value="${esc(p.name||'')}">
   <div class="fg">
-    <div><label>${lb('الأصل||Asset')}</label><select id="fp_a"><option value="">—</option>${opts}</select></div>
+    <div><label>${lb('الهدف||Target')}</label><select id="fp_tt" onchange="pmTgtToggle()">
+      <option value="asset" ${loc==='asset'?'selected':''}>${lb('أصل||Asset')}</option>
+      <option value="location" ${loc==='location'?'selected':''}>${lb('موقع (مبنى/منطقة)||Location (building/area)')}</option></select></div>
+    <div id="fp_aw"><label>${lb('الأصل||Asset')}</label><select id="fp_a"><option value="">—</option>${opts}</select></div>
+    <div id="fp_bw" style="display:none"><label>${lb('المبنى/المنطقة||Building/Area')}</label><select id="fp_b"><option value="">—</option>${bOpts}</select></div>
+    <div id="fp_fw" style="display:none"><label>${lb('الطابق/الجزء||Floor')}</label><input id="fp_f" value="${esc(p.floor||'')}"></div>
     <div><label>${lb('كرر كل||Repeat Every')}</label>
       <div style="display:flex;gap:6px"><input type="number" min="1" id="fp_fv" value="${p.freqVal||2}" style="width:80px">
       <select id="fp_fu">${Object.keys(FREQUNIT).map(k=>`<option value="${k}" ${(p.freqUnit||'weeks')===k?'selected':''}>${FREQUNIT[k]}</option>`).join('')}</select></div></div>
     <div><label>${lb('آخر تنفيذ (فارغ = اليوم)||Last Done (blank = today)')}</label><input type="date" id="fp_l" value="${p.lastDone||''}"></div>
-    <div><label> ${lb('كل كم من العداد؟ (اختياري)||Every how many meter units? (optional)')}</label><input type="number" min="0" id="fp_me" value="${p.mEvery||''}" placeholder="مثال: 500"></div>
+    <div><label>${lb('كل كم من العداد؟ (اختياري)||Meter every (optional)')}</label><input type="number" min="0" id="fp_me" value="${p.mEvery||''}" placeholder="500"></div>
+    <div><label>${lb('مهلة الإنشاء قبل الاستحقاق (يوم)||Lead time before due (days)')}</label><input type="number" min="0" id="fp_ld" value="${lead}" placeholder="7"></div>
+    <div><label>${lb('فترة سماح (يوم)||Grace period (days)')}</label><input type="number" min="0" id="fp_gr" value="${p.graceDays||''}"></div>
+    <div><label>${lb('يبدأ من (اختياري)||Start date (optional)')}</label><input type="date" id="fp_sd" value="${p.startDate||''}"></div>
+    <div><label>${lb('ينتهي في (اختياري)||End date (optional)')}</label><input type="date" id="fp_ed" value="${p.endDate||''}"></div>
+    <div><label>${lb('الأولوية||Priority')}</label><select id="fp_p">${['normal','high','urgent'].map(k=>`<option value="${k}" ${(p.priority||'normal')===k?'selected':''}>${PRIO[k]}</option>`).join('')}</select></div>
+    <div><label>${lb('المدة التقديرية (دقيقة)||Est. duration (min)')}</label><input type="number" min="0" id="fp_e" value="${p.estMins||''}"></div>
     <div><label>${lb('الفني المسؤول||Technician')}</label><select id="fp_as"><option value="">—</option>${techs.map(t=>`<option value="${t.id}" ${p.assigneeId===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
   </div>
-  <label>${lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')}</label>
-  <textarea id="fp_t" rows="4">${esc(p.tasks||'')}</textarea>
+  <label>${lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')}</label><textarea id="fp_t" rows="3">${esc(p.tasks||'')}</textarea>
+  <label>${lb('خطوات العمل (Job Plan): المهمة | دقائق | التخصص | المواد | الأدوات | السلامة||Job steps (Job Plan): task | mins | trade | materials | tools | safety')}</label>
+  <textarea id="fp_st" rows="3" placeholder="${lb('فك الفلتر | 15 | تكييف | فلتر جديد | مفكات | افصل الكهرباء||Remove filter | 15 | HVAC | new filter | screwdrivers | isolate power')}">${esc(stepsText(p.steps))}</textarea>
+  <label style="font-weight:400"><input type="checkbox" id="fp_ac" ${p.active!==false?'checked':''}> ${lb('فعّالة||Active')}</label>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="savePM('${pid||''}')">${lb('حفظ||Save')}</button></div>`);
+  pmTgtToggle();
+}
+function pmTgtToggle(){
+  const isLoc=($('fp_tt')&&$('fp_tt').value)==='location';
+  const aw=$('fp_aw'),bw=$('fp_bw'),fw=$('fp_fw');
+  if(aw)aw.style.display=isLoc?'none':'';
+  if(bw)bw.style.display=isLoc?'':'none';
+  if(fw)fw.style.display=isLoc?'':'none';
 }
 function savePM(pid){
   const n=$('fp_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const tech=db.users.find(u=>u.id===$('fp_as').value);
-  const o={name:n,assetId:$('fp_a').value,compoundId:activeCmp(),freqVal:Math.max(1,+$('fp_fv').value||1),freqUnit:$('fp_fu').value,
+  const tgt=$('fp_tt')?$('fp_tt').value:'asset';
+  const o={name:n,compoundId:activeCmp(),freqVal:Math.max(1,+$('fp_fv').value||1),freqUnit:$('fp_fu').value,
     lastDone:$('fp_l').value||todayISO(),assigneeId:$('fp_as').value||'',assigneeName:tech?tech.name:'',tasks:$('fp_t').value,
-    mEvery:+$('fp_me').value||0};
+    mEvery:+$('fp_me').value||0,
+    leadDays:$('fp_ld').value===''?null:Math.max(0,Math.min(365,+$('fp_ld').value||0)),
+    graceDays:Math.max(0,+$('fp_gr').value||0),
+    startDate:$('fp_sd').value||'',endDate:$('fp_ed').value||'',
+    priority:$('fp_p').value,estMins:+$('fp_e').value||0,
+    active:$('fp_ac')?$('fp_ac').checked:true,
+    steps:parseStepsTxt($('fp_st')?$('fp_st').value:'')};
+  if(tgt==='location'){o.assetId='';o.buildingId=$('fp_b')?$('fp_b').value:'';o.floor=$('fp_f')?$('fp_f').value.trim():'';}
+  else{o.assetId=$('fp_a').value;o.buildingId='';o.floor='';}
+  if(!o.assetId&&!o.buildingId)return toast(lb('اختر أصلاً أو موقعاً||Pick an asset or a location'),'err');
   if(pid){const ex=db.pms.find(x=>x.id===pid);if(!ex)return toast(lb(' الخطة غير موجودة|| Plan not found'),'err');Object.assign(ex,o);delete ex.nextDue;}
   else db.pms.push(Object.assign({id:uid('P')},o));
   auditLog(pid?'update':'create','pm',o.name);persist();closeModal();paintTab();toast(lb(' حُفظت الخطة|| Plan saved'),'ok');
@@ -2878,7 +3035,7 @@ function pmGenCommit(){
     db.assets.push(asset);na++;
     a.plans.forEach(p=>{
       db.pms.push({id:uid('P'),name:p.name,assetId:asset.id,compoundId:act,freqVal:Math.max(1,+p.fv||1),
-        freqUnit:p.fu||'months',lastDone:todayISO(),assigneeId:'',assigneeName:'',tasks:p.tasks||'',src:'pmgen'});
+        freqUnit:p.fu||'months',lastDone:todayISO(),assigneeId:'',assigneeName:'',tasks:p.tasks||'',active:true,steps:[],src:'pmgen'});
       np++;
     });
   });
@@ -2913,12 +3070,14 @@ function tplApply(tid){
         mEvery:t.mEvery||0,lastDone:todayISO(),assigneeId:'',assigneeName:'',tasks:t.tasks||'',
         priority:t.priority||'normal',estMins:t.estMins||0,skills:t.skills||'',tools:t.tools||'',
         permits:t.permits||'',safety:t.safety||'',parts:(t.parts||[]).map(x=>({name:x.name,qty:x.qty})),
+        steps:(t.steps||[]).map(x=>Object.assign({},x)),active:true,
         tplId:tid,tplVersion:t.version||1,src:'tpl'});
       created++;
     }else if((p.tplVersion||0)!==(t.version||1)){
       p.name=t.name;p.freqVal=t.freqVal;p.freqUnit=t.freqUnit;p.mEvery=t.mEvery||0;p.tasks=t.tasks||'';
       p.priority=t.priority||'normal';p.estMins=t.estMins||0;p.skills=t.skills||'';p.tools=t.tools||'';
       p.permits=t.permits||'';p.safety=t.safety||'';p.parts=(t.parts||[]).map(x=>({name:x.name,qty:x.qty}));
+      p.steps=(t.steps||[]).map(x=>Object.assign({},x));
       p.tplVersion=t.version||1;delete p.nextDue;updated++;
     }
   });
@@ -3038,6 +3197,8 @@ function tplForm(tid){
     <div><label>${lb('خطوات السلامة||Safety steps')}</label><input id="ft_sf" value="${esc(t.safety||'')}"></div>
   </div>
   <label>${lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')}</label><textarea id="ft_t" rows="4">${esc(t.tasks||'')}</textarea>
+  <label>${lb('خطوات العمل (Job Plan): المهمة | دقائق | التخصص | المواد | الأدوات | السلامة||Job steps (Job Plan): task | mins | trade | materials | tools | safety')}</label>
+  <textarea id="ft_st" rows="3" placeholder="${lb('فك الفلتر | 15 | تكييف | فلتر جديد | مفكات | افصل الكهرباء||Remove filter | 15 | HVAC | new filter | screwdrivers | isolate power')}">${esc(stepsText(t.steps))}</textarea>
   <label>${lb('قطع الغيار المطلوبة (اسم × كمية — سطر لكل قطعة)||Required parts (name × qty — one per line)')}</label><textarea id="ft_pt" rows="2">${esc(partsTxt(t.parts))}</textarea>
   <div class="fg" style="margin-top:8px">
     <div><label>${lb('التوثيق المطلوب||Required evidence')}</label>
@@ -3057,13 +3218,13 @@ function saveTemplate(tid){
   const base={name,category,model,freqVal:Math.max(1,+$('ft_fv').value||1),freqUnit:$('ft_fu').value,
     mEvery:+$('ft_me').value||0,priority:$('ft_p').value,estMins:+$('ft_e').value||0,
     skills:$('ft_sk').value.trim(),tools:$('ft_tl').value.trim(),permits:$('ft_pm').value.trim(),safety:$('ft_sf').value.trim(),
-    tasks:$('ft_t').value,parts:parsePartsTxt($('ft_pt').value),
+    tasks:$('ft_t').value,parts:parsePartsTxt($('ft_pt').value),steps:parseStepsTxt($('ft_st')?$('ft_st').value:''),
     evidence:{photo:$('ft_ev_ph').checked,reading:$('ft_ev_rd').checked,sig:$('ft_ev_sg').checked},
     active:$('ft_ac').checked,compoundId:activeCmp(),updatedAt:Date.now(),updatedBy:me?me.name:''};
   if(tid){
     const t=db.pmTemplates.find(x=>x.id===tid);if(!t)return toast(lb('القالب غير موجود||Template not found'),'err');
     const snap={version:t.version||1,at:t.updatedAt||t.createdAt,by:t.updatedBy||''};
-    ['name','category','model','freqVal','freqUnit','mEvery','priority','estMins','skills','tools','permits','safety','tasks','parts','evidence','active']
+    ['name','category','model','freqVal','freqUnit','mEvery','priority','estMins','skills','tools','permits','safety','tasks','parts','steps','evidence','active']
       .forEach(k=>snap[k]=JSON.parse(JSON.stringify(t[k]!=null?t[k]:'')));
     t.history=t.history||[];t.history.unshift(snap);if(t.history.length>20)t.history.length=20;
     Object.assign(t,base,{version:(t.version||1)+1});
@@ -3147,7 +3308,7 @@ function kpi(ic,num,lbl,tab,warn,extra){
     <div class="num">${num}</div><div class="lbl">${lbl}</div></div>`;
 }
 /* متأخرة؟ وقتاً أو عدّاداً */
-function pmIsLate(p){ if(daysUntil(nextDueOf(p))<=0)return true; const md=meterDueIn(p); return md!=null&&md<=0; }
+function pmIsLate(p){ if(!pmActive(p)||!pmInWindow(p))return false; if(daysUntil(nextDueOf(p))+pmGrace(p)<=0)return true; const md=meterDueIn(p); return md!=null&&md<=0; }
 /* قفزة من تنبيه الداشبورد إلى السجل المصفّى مباشرة */
 function goAlert(i){
   const a=(window._alerts||[])[i];if(!a)return;
@@ -4584,6 +4745,7 @@ function woView(i){
   ${w.deferReason?`<p class="muted"> ${lb('سبب التأجيل||Deferral reason')}: ${esc(w.deferReason)}</p>`:''}
   ${w.followUpNo?`<p class="muted"> ${lb('إجراء تصحيحي مرتبط||Linked follow-up')}: <b>${esc(w.followUpNo)}</b></p>`:''}
   ${(w.reqParts&&w.reqParts.length)?`<label>${lb('قطع مطلوبة||Required parts')}</label><ul style="padding-inline-start:18px">${w.reqParts.map(p=>`<li>${esc(p.name)} × ${p.qty}</li>`).join('')}</ul>`:''}
+  ${(w.steps&&w.steps.length)?`<label>${lb('خطوات العمل (Job Plan)||Job steps (Job Plan)')}</label><div class="tbl-wrap"><table><tr><th>#</th><th>${lb('المهمة||Task')}</th><th>${lb('دقائق||Min')}</th><th>${lb('التخصص||Trade')}</th><th>${lb('المواد||Materials')}</th><th>${lb('الأدوات||Tools')}</th><th>${lb('السلامة||Safety')}</th></tr>${w.steps.map(s=>`<tr><td>${s.seq||''}</td><td>${esc(s.t||'')}</td><td>${s.mins||''}</td><td>${esc(s.trade||'')}</td><td>${esc(s.mats||'')}</td><td>${esc(s.tools||'')}</td><td>${esc(s.safety||'')}</td></tr>`).join('')}</table></div>`:''}
   <table><tr><th>${lb('الأولوية||Priority')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الفني||Tech')}</th><th>${lb('التكلفة||Cost')}</th></tr>
   <tr><td><span class="badge b-${w.priority}">${PRIO[w.priority]}</span></td>
   <td><span class="badge ${WSTAT[w.status][1]}">${WSTAT[w.status][0]}</span></td>

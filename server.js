@@ -1080,13 +1080,18 @@ async function runPmScheduler(reason){
     const today=isoDay(new Date());
     let created=0;
     d.pms.forEach(p=>{
+      if(p.active===false)return;
+      if(p.startDate&&today<p.startDate)return;
+      if(p.endDate&&today>p.endDate)return;
       const due=pmNextDue(p,today);
-      if(daysBetweenISO(today,due)>horizon)return;
+      /* مهلة الإنشاء لكل خطة (Maximo lead time) — والاحتياطي هو الأفق العام */
+      const lead=(p.leadDays==null||p.leadDays==='')?horizon:Math.max(0,Math.min(365,Number(p.leadDays)||0));
+      if(daysBetweenISO(today,due)>lead)return;
       const active=(d.wos||[]).some(w=>w.pmId===p.id&&w.status!=='closed');
       const dismissed=(d.wos||[]).some(w=>w.pmId===p.id&&w.dueDate===due&&w.approval==='rejected');
       if(active||dismissed)return;
       const ast=(d.assets||[]).find(a=>a.id===p.assetId)||{};
-      const bld=(d.buildings||[]).find(b=>b.id===ast.building);
+      const bld=(d.buildings||[]).find(b=>b.id===(ast.building||p.buildingId));
       const missing=pmReqPartsMissing(d,p);
       const tasksStr=String(p.tasks||'');
       d.seq=(d.seq||0)+1;
@@ -1101,8 +1106,10 @@ async function runPmScheduler(reason){
         createdAt:Date.now(),startedAt:null,closedAt:null,projectId:'',unitId:'',unitCode:'',tenantName:'',
         dueDate:due,assigneeId:p.assigneeId||'',assigneeName:p.assigneeName||'',
         cost:0,closeNotes:'',parts:[],photos:[],sig:'',
-        estMins:p.estMins||0,skills:p.skills||'',tools:p.tools||'',permits:p.permits||'',safety:p.safety||'',
-        tplId:p.tplId||'',tplVersion:p.tplVersion||0,
+        estMins:p.estMins||((p.steps||[]).reduce((s,x)=>s+(Number(x.mins)||0),0))||0,
+        skills:p.skills||'',tools:p.tools||'',permits:p.permits||'',safety:p.safety||'',
+        tplId:p.tplId||'',tplVersion:p.tplVersion||0,leadDays:lead,graceDays:Math.max(0,Number(p.graceDays)||0),
+        steps:(p.steps||[]).map(x=>Object.assign({},x)),
         reqParts:(p.parts||[]).map(x=>({name:x.name,qty:x.qty})),
         partsReady:missing.length===0,missingParts:missing,
         reportedBy:'Auto-scheduler',
@@ -1110,7 +1117,7 @@ async function runPmScheduler(reason){
       });
       if(!Array.isArray(d.audit))d.audit=[];
       d.audit.unshift({id:'L'+crypto.randomBytes(4).toString('hex'),at:Date.now(),by:'Auto-scheduler',byId:'',role:'system',
-        action:'create',entity:'wo',ref:d.wos[0].no,details:'server scheduler (approval '+(approval?'required':'auto')+', horizon '+horizon+'d)',compoundId:p.compoundId||''});
+        action:'create',entity:'wo',ref:d.wos[0].no,details:'server scheduler (approval '+(approval?'required':'auto')+', lead '+lead+'d)',compoundId:p.compoundId||''});
       if(d.audit.length>2000)d.audit.length=2000;
       created++;
     });
