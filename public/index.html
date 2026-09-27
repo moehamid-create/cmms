@@ -1099,7 +1099,7 @@ window.addEventListener('error',e=>{
       body:JSON.stringify({msg,url:String(location.pathname||'/').slice(0,100)})}).catch(()=>{});
   }catch(_){}
 });
-let FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:'',pmView:'plans',pmFcDays:30};
+let FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:'',pmView:'plans',pmFcDays:30,pmGroup:'time',pmDisc:'all',pmCritF:'all',pmBld:'all'};
 let PRIO,WSTAT,ASTAT,ROLES,VILLA_FLOORS,PRSTAT,POSTAT,FREQUNIT,PRJSTAT,SHIFTK,BTYPES,UNITKIND,CTRSC,CYCLEK;
 const UNITKIND_NEW=['apt','villa','subunit','office','shop','annex','land'];
 const SUB_SUFFIX=['G','F1','F2','ANX','R'];
@@ -1505,6 +1505,24 @@ function migrate(d){
     });
     (d.pmTemplates||[]).forEach(t=>{if(!Array.isArray(t.steps))t.steps=[];});
   }
+  /* ---- v14: تصنيف خطط الصيانة (نوع الصيانة + الخطورة) ---- */
+  if(d.ver<14){
+    d.ver=14;
+    (d.pms||[]).forEach(p=>{
+      if(!p.disc){
+        let cat='';
+        if(p.assetId){const a=(d.assets||[]).find(x=>x.id===p.assetId);if(a)cat=a.category||'';}
+        if(!cat&&p.tplId){const t=(d.pmTemplates||[]).find(x=>x.id===p.tplId);if(t)cat=t.category||'';}
+        p.disc=discFromText(cat+' '+(p.skills||''));
+      }
+      if(!p.crit){
+        const a=p.assetId?(d.assets||[]).find(x=>x.id===p.assetId):null;
+        const ac=a&&a.critical;
+        p.crit=(ac==='critical'||ac==='high'||p.priority==='urgent'||p.priority==='high')?'high':'medium';
+      }
+    });
+    (d.pmTemplates||[]).forEach(t=>{if(!t.disc)t.disc='other';if(!t.crit)t.crit='medium';});
+  }
   /* ---- شبكة أمان تُنفَّذ دائماً (حتى مع أحدث ver) لضمان بيانات قابلة للاستخدام ---- */
   ['compounds','buildings','units','tenants','contracts','assets','wos','inv','moves','pms',
    'suppliers','prs','pos','projects','employees','shifts','notifs','fuelLogs','utilityLogs','certs','providers','rfqs','pmTemplates','audit','orgs']
@@ -1719,7 +1737,7 @@ function activeCmp(){
 function cmpName(id){const c=db.compounds.find(x=>x.id===id);return c?c.name:'—';}
 function setCmp(id){
   me.activeCmp=id;PICK=false;TAB='dash';
-  FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:'',pmView:'plans',pmFcDays:30};
+  FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:'',pmView:'plans',pmFcDays:30,pmGroup:'time',pmDisc:'all',pmCritF:'all',pmBld:'all'};
   persist();pmGen();genSysNotifs();render();
 }
 
@@ -2464,7 +2482,7 @@ function pmView(pid){
   const p=db.pms.find(x=>x.id===pid);if(!p)return;
   const steps=pmSteps(p);
   const occ=pmOccurrences(todayISO(),addDays(todayISO(),90)).filter(o=>o.pm.id===p.id);
-  modal(`<h3>${esc(p.name)} ${p.active===false?`<span class="badge b-wait">${lb('متوقفة||Inactive')}</span>`:''} ${p.tplId?`<span class="badge b-open">${lb('قالب||template')} v${p.tplVersion||1}</span>`:''}</h3>
+  modal(`<h3>${esc(p.name)} ${pmDiscBadge(p)} ${pmCritBadge(p)} ${p.active===false?`<span class="badge b-wait">${lb('متوقفة||Inactive')}</span>`:''} ${p.tplId?`<span class="badge b-open">${lb('قالب||template')} v${p.tplVersion||1}</span>`:''}</h3>
   <p class="muted">${lb('الهدف||Target')}: <b>${esc(pmTargetName(p))}</b></p>
   <table>
     <tr><th>${lb('التكرار||Frequency')}</th><th>${lb('آخر تنفيذ||Last')}</th><th>${lb('الاستحقاق||Next due')}</th><th>${lb('مهلة||Lead')}</th><th>${lb('سماح||Grace')}</th><th>${lb('الأولوية||Priority')}</th></tr>
@@ -2518,31 +2536,121 @@ function vPM(){
     <button class="btn ${view==='templates'?'':'ghost'}" onclick="pmSetView('templates')">${lb('القوالب||Templates')}${tplN?' ('+tplN+')':''}</button>
   </div>` + (view==='templates'?vPMTemplates():view==='forecast'?vPMForecast():vPMPlans());
 }
+/* ===== تجميع جدول الصيانة: الزمن · نوع الصيانة · الخطورة · الفيلا ===== */
+const PM_DISC={mech:'ميكانيك||Mechanical',elec:'كهرباء||Electrical',civil:'مدني||Civil',other:'متفرقات||Other'};
+const PM_CRIT={high:'عالية||High',medium:'متوسطة||Medium',low:'منخفضة||Low'};
+function discFromText(s){
+  s=String(s||'');
+  if(/كهرب|إنارة|انارة|مولد|لوحة|مصعد|electr|light|generator|lift/i.test(s))return 'elec';
+  if(/مدني|أثاث|اثاث|دهان|عزل|نجار|ألمنيوم|الومنيوم|civil|furniture|paint/i.test(s))return 'civil';
+  if(/تكييف|مكيف|مضخة|سخان|سباكة|مياه|معالجة|مسبح|جاكوزي|تهوية|hvac|a\/c|pump|plumb|water|pool|jacuzzi/i.test(s))return 'mech';
+  return 'other';
+}
+function pmCategory(p){
+  if(p.assetId){const a=db.assets.find(x=>x.id===p.assetId);if(a)return a.category||'';}
+  if(p.tplId){const t=(db.pmTemplates||[]).find(x=>x.id===p.tplId);if(t)return t.category||'';}
+  return '';
+}
+function pmDisc(p){return PM_DISC[p.disc]?p.disc:discFromText(pmCategory(p)+' '+(p.skills||''));}
+function pmCrit(p){
+  if(PM_CRIT[p.crit])return p.crit;
+  const a=p.assetId?db.assets.find(x=>x.id===p.assetId):null;
+  const ac=a&&a.critical;
+  if(ac==='critical'||ac==='high'||p.priority==='urgent'||p.priority==='high')return 'high';
+  return 'medium';
+}
+function pmBuilding(p){
+  if(p.assetId){const a=db.assets.find(x=>x.id===p.assetId);const b=a&&a.building?db.buildings.find(y=>y.id===a.building):null;return b?{id:b.id,name:b.name}:{id:'',name:''};}
+  if(p.buildingId){const b=db.buildings.find(y=>y.id===p.buildingId);return b?{id:b.id,name:b.name+(p.floor?' / '+p.floor:'')}:{id:'',name:''};}
+  return {id:'',name:''};
+}
+function pmTimeBucket(p){
+  const du=daysUntil(nextDueOf(p))+pmGrace(p);
+  if(du<0)return{k:'overdue',label:lb('متأخرة||Overdue'),o:0};
+  if(du<=7)return{k:'d7',label:lb('هذا الأسبوع (≤ 7 أيام)||This week (≤ 7d)'),o:1};
+  if(du<=30)return{k:'d30',label:lb('هذا الشهر (≤ 30 يوم)||This month (≤ 30d)'),o:2};
+  if(du<=90)return{k:'d90',label:lb('هذا الربع (≤ 90 يوم)||This quarter (≤ 90d)'),o:3};
+  return{k:'later',label:lb('لاحقاً||Later'),o:4};
+}
+function pmSetGroup(g){FILT.pmGroup=g;paintTab();}
+function pmGroupsOf(list){
+  const g=FILT.pmGroup||'time';
+  if(g==='none')return[{key:'all',label:lb('كل الخطط||All plans'),order:0,rows:list}];
+  const map={};
+  list.forEach(p=>{
+    let key,label,order;
+    if(g==='time'){const b=pmTimeBucket(p);key=b.k;label=b.label;order=b.o;}
+    else if(g==='disc'){const d=pmDisc(p);key=d;label=lb(PM_DISC[d]);order={mech:0,elec:1,civil:2,other:3}[d];}
+    else if(g==='crit'){const c=pmCrit(p);key=c;label=lb(PM_CRIT[c]);order={high:0,medium:1,low:2}[c];}
+    else{const b=pmBuilding(p);key=b.id||'none';label=b.name||lb('بدون مبنى||No building');order=0;}
+    (map[key]=map[key]||{key,label,order,rows:[]}).rows.push(p);
+  });
+  return Object.values(map).sort((a,b)=>(a.order-b.order)||String(a.label).localeCompare(String(b.label),'ar'));
+}
+function pmDiscBadge(p){const d=pmDisc(p);const cls={mech:'b-prog',elec:'b-open',civil:'b-maint',other:'b-normal'}[d]||'b-normal';return `<span class="badge ${cls}">${lb(PM_DISC[d])}</span>`;}
+function pmCritBadge(p){const c=pmCrit(p);const cls={high:'b-urgent',medium:'b-maint',low:'b-ok'}[c]||'b-normal';return `<span class="badge ${cls}">${lb(PM_CRIT[c])}</span>`;}
 function vPMPlans(){
   const act=activeCmp();
-  let rows='';
-  [...db.pms].filter(p=>p.compoundId===act).sort((a,b)=>daysUntil(nextDueOf(a))-daysUntil(nextDueOf(b))).forEach((p,i)=>{
-    const nd=nextDueOf(p),du=daysUntil(nd);
-    const mdi=meterDueIn(p);
-    rows+=`<tr class="${du<0?'overdue':''}"><td><b>${esc(p.name)}</b>${p.active===false?` <span class="badge b-wait">${lb('متوقفة||Inactive')}</span>`:''}${p.priority&&p.priority!=='normal'?` <span class="badge b-${p.priority}">${PRIO[p.priority]||p.priority}</span>`:''}${p.tplId?` <span class="badge b-open" title="${lb('قالب||Template')}">v${p.tplVersion||1}</span>`:''}${pmSteps(p).length?` <span class="badge b-prog" title="${lb('خطوات العمل||Job steps')}">${pmSteps(p).length} ${lb('خطوة||steps')}</span>`:''}${pmLead(p)>0?` <span class="badge b-normal" title="${lb('مهلة الإنشاء||Lead time')}">${lb('مهلة||lead')} ${pmLead(p)}</span>`:''}<br><span class="muted">${esc((p.tasks||'').split('\n')[0]||'')}…</span></td>
-    <td>${esc(pmTargetName(p))}</td><td>${p.freqVal} ${FREQUNIT[p.freqUnit]}${p.mEvery>0?`<br><span class="muted"> ${lb('كل||every')} ${p.mEvery}</span>`:''}</td>
-    <td>${fmtD(p.lastDone)}</td>
-    <td>${du+pmGrace(p)<0?`<span class="badge b-urgent">${lb('متأخرة||OVERDUE')} ${-(du+pmGrace(p))} ${lb('يوم||d')}</span> `:''}${fmtD(nd)}${mdi!=null?` <span class="badge ${mdi<=0?'b-urgent':'b-open'}"> ${mdi<=0?lb('حان||DUE'):mdi}</span>`:''}</td>
-    <td>${esc(p.assigneeName||'—')}</td>
-    <td nowrap><button class="btn sm ghost" title="${lb('تفاصيل الخطة||Plan details')}" onclick="pmView('${p.id}')">${ic('view',13)}</button>${isPlanner()?`<button class="btn sm ghost" onclick="pmDone('${p.id}')"> ${lb('سجّل إنجاز||Log Done')}</button>
-    <button class="btn sm ghost" onclick="pmForm('${p.id}')">${ic('edit',13)}</button>
-    <button class="btn sm danger" onclick="delPm('${p.id}')">${ic('del',13)}</button>`:''}</td></tr>`;
+  let list=[...db.pms].filter(p=>p.compoundId===act);
+  if(FILT.pmDisc&&FILT.pmDisc!=='all')list=list.filter(p=>pmDisc(p)===FILT.pmDisc);
+  if(FILT.pmCritF&&FILT.pmCritF!=='all')list=list.filter(p=>pmCrit(p)===FILT.pmCritF);
+  if(FILT.pmBld&&FILT.pmBld!=='all')list=list.filter(p=>pmBuilding(p).id===FILT.pmBld);
+  list.sort((a,b)=>(daysUntil(nextDueOf(a))+pmGrace(a))-(daysUntil(nextDueOf(b))+pmGrace(b)));
+  const groups=pmGroupsOf(list);
+  const gbtn=(k,t)=>`<button class="chip ${(FILT.pmGroup||'time')===k?'on':''}" onclick="pmSetGroup('${k}')">${t}</button>`;
+  const blds=db.buildings.filter(b=>b.compoundId===act);
+  let body='';
+  groups.forEach(gr=>{
+    body+=`<tr><td colspan="8" style="background:rgba(14,116,144,.10);font-weight:800">${esc(gr.label)} <span class="muted">(${gr.rows.length})</span></td></tr>`;
+    gr.rows.forEach(p=>{
+      const nd=nextDueOf(p),du=daysUntil(nd)+pmGrace(p);
+      const mdi=meterDueIn(p);
+      body+=`<tr class="${du<0?'overdue':''}">
+        <td><b>${esc(p.name)}</b>${p.active===false?` <span class="badge b-wait">${lb('متوقفة||Inactive')}</span>`:''}${pmSteps(p).length?` <span class="badge b-prog">${pmSteps(p).length} ${lb('خطوة||steps')}</span>`:''}${pmLead(p)>0?` <span class="badge b-normal">${lb('مهلة||lead')} ${pmLead(p)}</span>`:''}</td>
+        <td>${pmDiscBadge(p)}</td>
+        <td>${pmCritBadge(p)}</td>
+        <td>${esc(pmTargetName(p))}</td>
+        <td>${p.freqVal} ${FREQUNIT[p.freqUnit]}${p.mEvery>0?`<br><span class="muted">${lb('كل||every')} ${p.mEvery}</span>`:''}</td>
+        <td>${du<0?`<span class="badge b-urgent">${lb('متأخرة||OVERDUE')} ${-du} ${lb('يوم||d')}</span><br>`:''}${fmtD(nd)}${mdi!=null?` <span class="badge ${mdi<=0?'b-urgent':'b-open'}">${mdi<=0?lb('حان||DUE'):mdi}</span>`:''}</td>
+        <td>${esc(p.assigneeName||'—')}</td>
+        <td nowrap><button class="btn sm ghost" onclick="pmView('${p.id}')">${ic('view',13)}</button>${isPlanner()?`<button class="btn sm ghost" onclick="pmForm('${p.id}')">${ic('edit',13)}</button>
+        <button class="btn sm danger" onclick="delPm('${p.id}')">${ic('del',13)}</button>`:''}</td></tr>`;
+    });
   });
+  const od=list.filter(p=>daysUntil(nextDueOf(p))+pmGrace(p)<0).length;
+  const wk=list.filter(p=>{const d=daysUntil(nextDueOf(p))+pmGrace(p);return d>=0&&d<=7;}).length;
+  const discN=k=>list.filter(p=>pmDisc(p)===k).length;
   return `<div class="toolbar">
     ${isPlanner()?`<button class="btn" onclick="pmForm()">＋ ${lb('خطة صيانة جديدة||New PM Plan')}</button>
     <button class="btn" style="background:linear-gradient(135deg,#7c3aed,#2563eb)" onclick="pmSmartGen()"> ${lb('توليد ذكي للصيانة||Smart PM Generator')}</button>
     <button class="btn ghost" onclick="runScheduler()"> ${lb('تشغيل الجدولة الآن||Run Scheduler Now')}</button>
     <button class="btn ghost" onclick="togglePmApproval()"> ${db.pmApproval!==false?lb('الاعتماد: مطلوب||Approval: required'):lb('الاعتماد: تلقائي||Approval: auto')}</button>`:''}
     <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
-  <p class="muted">${lb('عند استحقاق أي خطة، يُصدر النظام أمر شغل تلقائياً بقائمة الفحص للفني المسؤول.||When a plan is due, the system auto-issues a work order with its checklist.')}</p>
-  <div class="card"><h2>${lb('خطط الصيانة الدورية||PM Plans')} (${db.pms.filter(p=>p.compoundId===act).length})</h2><div class="tbl-wrap"><table>
-  <tr><th>${lb('الخطة||Plan')}</th><th>${lb('الهدف||Target')}</th><th>${lb('التكرار||Frequency')}</th><th>${lb('آخر تنفيذ||Last Done')}</th><th>${lb('الاستحقاق القادم||Next Due')}</th><th>${lb('المسؤول||Assignee')}</th><th></th></tr>
-  ${rows||`<tr><td colspan="7"><div class="empty">${lb('لا خطط بعد||No plans yet')}</div></td></tr>`}</table></div></div>`;
+  <div class="toolbar" style="align-items:center">
+    <span class="muted">${lb('تقسيم حسب||Group by')}:</span>
+    ${gbtn('time',lb('الزمن||Time'))}${gbtn('disc',lb('نوع الصيانة||Discipline'))}${gbtn('crit',lb('الخطورة||Criticality'))}${gbtn('bld',lb('الفيلا/المبنى||Villa/Building'))}${gbtn('none',lb('بدون||None'))}
+  </div>
+  <div class="toolbar" style="align-items:center">
+    <span class="muted">${lb('تصفية||Filter')}:</span>
+    <select onchange="FILT.pmDisc=this.value;paintTab()" style="width:auto">
+      <option value="all">${lb('كل الأنواع||All types')}</option>
+      ${Object.keys(PM_DISC).map(k=>`<option value="${k}" ${FILT.pmDisc===k?'selected':''}>${lb(PM_DISC[k])}</option>`).join('')}</select>
+    <select onchange="FILT.pmCritF=this.value;paintTab()" style="width:auto">
+      <option value="all">${lb('كل الخطورة||All criticality')}</option>
+      ${Object.keys(PM_CRIT).map(k=>`<option value="${k}" ${FILT.pmCritF===k?'selected':''}>${lb(PM_CRIT[k])}</option>`).join('')}</select>
+    <select onchange="FILT.pmBld=this.value;paintTab()" style="width:auto">
+      <option value="all">${lb('كل الفلل/المباني||All villas/buildings')}</option>
+      ${blds.map(b=>`<option value="${b.id}" ${FILT.pmBld===b.id?'selected':''}>${esc(b.name)}</option>`).join('')}</select>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="num">${list.length}</div><div class="lbl">${lb('إجمالي الخطط||Total plans')}</div></div>
+    <div class="stat ${od?'warn':''}"><div class="num">${od}</div><div class="lbl">${lb('متأخرة||Overdue')}</div></div>
+    <div class="stat ${wk?'warn':''}"><div class="num">${wk}</div><div class="lbl">${lb('خلال 7 أيام||Within 7 days')}</div></div>
+    <div class="stat"><div class="num">${discN('mech')} / ${discN('elec')} / ${discN('civil')}</div><div class="lbl">${lb('ميكانيك / كهرباء / مدني||Mech / Elec / Civil')}</div></div>
+  </div>
+  <div class="card"><h2>${lb('خطط الصيانة الدورية||PM Plans')} (${list.length})</h2><div class="tbl-wrap"><table>
+  <tr><th>${lb('الخطة||Plan')}</th><th>${lb('النوع||Type')}</th><th>${lb('الخطورة||Criticality')}</th><th>${lb('الهدف||Target')}</th><th>${lb('التكرار||Frequency')}</th><th>${lb('الاستحقاق||Due')}</th><th>${lb('المسؤول||Assignee')}</th><th></th></tr>
+  ${body||`<tr><td colspan="8"><div class="empty">${lb('لا خطط مطابقة||No matching plans')}</div></td></tr>`}</table></div></div>`;
 }
 function pmForm(pid){
   const p=pid?db.pms.find(x=>x.id===pid)||{}:{};
@@ -2551,6 +2659,8 @@ function pmForm(pid){
   const bOpts=db.buildings.filter(b=>b.compoundId===act).map(b=>`<option value="${b.id}" ${p.buildingId===b.id?'selected':''}>${esc(b.name)}</option>`).join('');
   const techs=db.users.filter(u=>u.role==='tech'&&(u.cmpIds||[]).includes(act));
   const loc=(p.buildingId||!p.assetId)?'location':'asset';
+  const dcur=p.disc||(pid?pmDisc(p):'mech');
+  const ccur=p.crit||(pid?pmCrit(p):'medium');
   const lead=p.leadDays!=null?p.leadDays:'';
   modal(`<h3>${pid?lb('تعديل خطة||Edit Plan'):lb('خطة صيانة جديدة||New PM Plan')}</h3>
   ${p.tplId?`<p class="muted">${lb('من قالب||From template')}: ${esc(tplName(p.tplId))} v${p.tplVersion||1}</p>`:''}
@@ -2571,6 +2681,8 @@ function pmForm(pid){
     <div><label>${lb('فترة سماح (يوم)||Grace period (days)')}</label><input type="number" min="0" id="fp_gr" value="${p.graceDays||''}"></div>
     <div><label>${lb('يبدأ من (اختياري)||Start date (optional)')}</label><input type="date" id="fp_sd" value="${p.startDate||''}"></div>
     <div><label>${lb('ينتهي في (اختياري)||End date (optional)')}</label><input type="date" id="fp_ed" value="${p.endDate||''}"></div>
+    <div><label>${lb('نوع الصيانة||Discipline')}</label><select id="fp_dc">${Object.keys(PM_DISC).map(k=>`<option value="${k}" ${dcur===k?'selected':''}>${lb(PM_DISC[k])}</option>`).join('')}</select></div>
+    <div><label>${lb('الخطورة||Criticality')}</label><select id="fp_cr">${Object.keys(PM_CRIT).map(k=>`<option value="${k}" ${ccur===k?'selected':''}>${lb(PM_CRIT[k])}</option>`).join('')}</select></div>
     <div><label>${lb('الأولوية||Priority')}</label><select id="fp_p">${['normal','high','urgent'].map(k=>`<option value="${k}" ${(p.priority||'normal')===k?'selected':''}>${PRIO[k]}</option>`).join('')}</select></div>
     <div><label>${lb('المدة التقديرية (دقيقة)||Est. duration (min)')}</label><input type="number" min="0" id="fp_e" value="${p.estMins||''}"></div>
     <div><label>${lb('الفني المسؤول||Technician')}</label><select id="fp_as"><option value="">—</option>${techs.map(t=>`<option value="${t.id}" ${p.assigneeId===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
@@ -2601,6 +2713,7 @@ function savePM(pid){
     graceDays:Math.max(0,+$('fp_gr').value||0),
     startDate:$('fp_sd').value||'',endDate:$('fp_ed').value||'',
     priority:$('fp_p').value,estMins:+$('fp_e').value||0,
+    disc:$('fp_dc')?$('fp_dc').value:'mech',crit:$('fp_cr')?$('fp_cr').value:'medium',
     active:$('fp_ac')?$('fp_ac').checked:true,
     steps:parseStepsTxt($('fp_st')?$('fp_st').value:'')};
   if(tgt==='location'){o.assetId='';o.buildingId=$('fp_b')?$('fp_b').value:'';o.floor=$('fp_f')?$('fp_f').value.trim():'';}
@@ -3070,7 +3183,7 @@ function tplApply(tid){
         mEvery:t.mEvery||0,lastDone:todayISO(),assigneeId:'',assigneeName:'',tasks:t.tasks||'',
         priority:t.priority||'normal',estMins:t.estMins||0,skills:t.skills||'',tools:t.tools||'',
         permits:t.permits||'',safety:t.safety||'',parts:(t.parts||[]).map(x=>({name:x.name,qty:x.qty})),
-        steps:(t.steps||[]).map(x=>Object.assign({},x)),active:true,
+        steps:(t.steps||[]).map(x=>Object.assign({},x)),active:true,disc:t.disc||'other',crit:t.crit||'medium',
         tplId:tid,tplVersion:t.version||1,src:'tpl'});
       created++;
     }else if((p.tplVersion||0)!==(t.version||1)){
@@ -3078,6 +3191,7 @@ function tplApply(tid){
       p.priority=t.priority||'normal';p.estMins=t.estMins||0;p.skills=t.skills||'';p.tools=t.tools||'';
       p.permits=t.permits||'';p.safety=t.safety||'';p.parts=(t.parts||[]).map(x=>({name:x.name,qty:x.qty}));
       p.steps=(t.steps||[]).map(x=>Object.assign({},x));
+      p.disc=t.disc||p.disc||'other';p.crit=t.crit||p.crit||'medium';
       p.tplVersion=t.version||1;delete p.nextDue;updated++;
     }
   });
@@ -3181,6 +3295,7 @@ function tplForm(tid){
   const cats=db.categories.map(c=>`<option value="${esc(c)}" ${t.category===c?'selected':''}>${esc(c)}</option>`).join('');
   const fu=v=>`<option value="${v}" ${(t.freqUnit||'months')===v?'selected':''}>${FREQUNIT[v]}</option>`;
   const pv=(v,l)=>`<option value="${v}" ${(t.priority||'normal')===v?'selected':''}>${l}</option>`;
+  const tdc=t.disc||'other',tcr=t.crit||'medium';
   const ev=t.evidence||{};
   modal(`<h3>${lb('قالب صيانة||PM Template')}${tid?` <span class="badge b-open">v${t.version||1}</span>`:''}</h3>
   <label>${lb('اسم القالب *||Template name *')}</label><input id="ft_n" value="${esc(t.name||'')}">
@@ -3189,6 +3304,8 @@ function tplForm(tid){
     <div><label>${lb('الطراز (اختياري — جزء من الاسم)||Model (optional — substring)')}</label><input id="ft_m" value="${esc(t.model||'')}" placeholder="${lb('مثال: LG||e.g. LG')}"></div>
     <div><label>${lb('كرر كل||Repeat every')}</label><div style="display:flex;gap:6px"><input type="number" min="1" id="ft_fv" value="${t.freqVal||3}" style="width:80px"><select id="ft_fu">${fu('days')}${fu('weeks')}${fu('months')}</select></div></div>
     <div><label>${lb('كل كم من العداد؟ (اختياري)||Every how many meter units?')}</label><input type="number" min="0" id="ft_me" value="${t.mEvery||''}"></div>
+    <div><label>${lb('نوع الصيانة||Discipline')}</label><select id="ft_dc">${Object.keys(PM_DISC).map(k=>`<option value="${k}" ${tdc===k?'selected':''}>${lb(PM_DISC[k])}</option>`).join('')}</select></div>
+    <div><label>${lb('الخطورة||Criticality')}</label><select id="ft_cr">${Object.keys(PM_CRIT).map(k=>`<option value="${k}" ${tcr===k?'selected':''}>${lb(PM_CRIT[k])}</option>`).join('')}</select></div>
     <div><label>${lb('الأولوية||Priority')}</label><select id="ft_p">${pv('normal',PRIO.normal)}${pv('high',PRIO.high)}${pv('urgent',PRIO.urgent)}</select></div>
     <div><label>${lb('المدة التقديرية (دقيقة)||Estimated duration (min)')}</label><input type="number" min="0" id="ft_e" value="${t.estMins||''}"></div>
     <div><label>${lb('المهارات المطلوبة||Required skills')}</label><input id="ft_sk" value="${esc(t.skills||'')}"></div>
@@ -3217,6 +3334,7 @@ function saveTemplate(tid){
   if(!category&&!model)return toast(lb('حدّد التصنيف أو الطراز على الأقل||Set at least a category or model'),'err');
   const base={name,category,model,freqVal:Math.max(1,+$('ft_fv').value||1),freqUnit:$('ft_fu').value,
     mEvery:+$('ft_me').value||0,priority:$('ft_p').value,estMins:+$('ft_e').value||0,
+    disc:$('ft_dc')?$('ft_dc').value:'other',crit:$('ft_cr')?$('ft_cr').value:'medium',
     skills:$('ft_sk').value.trim(),tools:$('ft_tl').value.trim(),permits:$('ft_pm').value.trim(),safety:$('ft_sf').value.trim(),
     tasks:$('ft_t').value,parts:parsePartsTxt($('ft_pt').value),steps:parseStepsTxt($('ft_st')?$('ft_st').value:''),
     evidence:{photo:$('ft_ev_ph').checked,reading:$('ft_ev_rd').checked,sig:$('ft_ev_sg').checked},
@@ -3224,7 +3342,7 @@ function saveTemplate(tid){
   if(tid){
     const t=db.pmTemplates.find(x=>x.id===tid);if(!t)return toast(lb('القالب غير موجود||Template not found'),'err');
     const snap={version:t.version||1,at:t.updatedAt||t.createdAt,by:t.updatedBy||''};
-    ['name','category','model','freqVal','freqUnit','mEvery','priority','estMins','skills','tools','permits','safety','tasks','parts','steps','evidence','active']
+    ['name','category','model','freqVal','freqUnit','mEvery','priority','estMins','skills','tools','permits','safety','tasks','parts','steps','evidence','active','disc','crit']
       .forEach(k=>snap[k]=JSON.parse(JSON.stringify(t[k]!=null?t[k]:'')));
     t.history=t.history||[];t.history.unshift(snap);if(t.history.length>20)t.history.length=20;
     Object.assign(t,base,{version:(t.version||1)+1});
