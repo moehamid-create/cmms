@@ -3368,7 +3368,7 @@ function auditLog(action,entity,ref,details){
 function auditCan(){return isAdmin()||isEng();}
 function auditEntityLabel(e){
   const m={wo:lb('أمر شغل||Work order'),pm:lb('خطة صيانة||PM plan'),tpl:lb('قالب صيانة||PM template'),
-    asset:lb('أصل||Asset'),inv:lb('مخزون||Inventory'),user:lb('مستخدم||User')};
+    asset:lb('أصل||Asset'),inv:lb('مخزون||Inventory'),user:lb('مستخدم||User'),settings:lb('إعدادات||Settings')};
   return m[e]||e||'—';
 }
 function auditModal(filter){
@@ -4896,7 +4896,7 @@ function woCloseForm(i){
   <div class="fg">
     <div><label> ${lb('صور قبل الإصلاح||Photos BEFORE')}</label><div id="wpg_b" class="pgrid"></div>
       <button class="btn ghost sm" onclick="woAddPhotos('b')">＋ ${lb('إضافة صور||Add Photos')}</button></div>
-    <div><label> ${lb('صور بعد الإصلاح||Photos AFTER')}</label><div id="wpg_a" class="pgrid"></div>
+    <div><label> ${lb('صور بعد الإصلاح||Photos AFTER')} <span class="muted">${db.woPhotoReq?lb('(مطلوبة)||(required)'):lb('(اختيارية)||(optional)')}</span></label><div id="wpg_a" class="pgrid"></div>
       <button class="btn ghost sm" onclick="woAddPhotos('a')">＋ ${lb('إضافة صور||Add Photos')}</button></div>
   </div>
   <label> ${lb('توقيع المنفّذ (بالماوس أو باللمس)||Technician Signature (mouse or touch)')}</label>
@@ -4935,7 +4935,7 @@ function doCloseWO(i){
   const w=db.wos[i],used=[];
   const notes=$('wc_n').value.trim();
   if(!notes)return toast(lb(' اكتب ما الذي تم عمله قبل الإغلاق|| Describe what was done before closing'),'err');
-  if(!(window._woPhA||[]).length)return toast(lb(' صورة "بعد الإصلاح" مطلوبة للتوثيق|| An AFTER photo is required for documentation'),'err');
+  if(db.woPhotoReq && !(window._woPhA||[]).length)return toast(lb(' صورة "بعد الإصلاح" مطلوبة للتوثيق (مفعّلة من الإعدادات)|| An AFTER photo is required for documentation (enabled in Settings)'),'err');
   for(const r of [...document.querySelectorAll('#prows .partrow')]){
     const it=invQ().find(x=>x.id===r.querySelector('.pr_i').value);
     const q=+r.querySelector('.pr_q').value||0;
@@ -6068,11 +6068,26 @@ function certCsv(){
 }
 
 /* ===== USERS ===== */
+/* ===== إعدادات النظام (للمدير) ===== */
+function settingsModal(){
+  if(!isAdmin())return;
+  modal(`<h3>⚙ ${lb('الإعدادات||Settings')}</h3>
+  <label style="font-weight:400"><input type="checkbox" id="set_wophoto" ${db.woPhotoReq?'checked':''}> ${lb('إلزام صورة "بعد الإصلاح" عند إغلاق أمر الشغل||Require an AFTER photo when closing a work order')}</label>
+  <p class="muted">${lb('عند الإلغاء يمكن إغلاق أمر الشغل بدون صور (اختياري). القيمة الافتراضية: اختياري.||When unchecked, a work order can be closed without photos (optional). Default: optional.')}</p>
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" onclick="saveSettings()">${lb('حفظ||Save')}</button></div>`);
+}
+function saveSettings(){
+  db.woPhotoReq=!!($('set_wophoto')&&$('set_wophoto').checked);
+  auditLog('update','settings',lb('إعدادات أوامر الشغل||WO settings'),db.woPhotoReq?'photo required':'photo optional');
+  persist();closeModal();toast(lb('حُفظت الإعدادات||Settings saved'),'ok');
+}
 function vUsers(){
   if(!isAdmin())return '';
   const act=activeCmp();
   return `<div class="toolbar"><button class="btn" onclick="userForm()">＋ ${lb('مستخدم جديد||New User')}</button>
-    <button class="btn ghost" onclick="auditModal('')">${lb('سجل التدقيق||Audit log')}</button></div>
+    <button class="btn ghost" onclick="auditModal('')">${lb('سجل التدقيق||Audit log')}</button>
+    <button class="btn ghost" onclick="settingsModal()">⚙ ${lb('الإعدادات||Settings')}</button></div>
   <div class="card"><h2>${lb('المستخدمون||Users')} (${db.users.length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الاسم||Name')}</th><th>${lb('الدخول||Username')}</th><th>${lb('الدور||Role')}</th><th>${lb('الجوال||Mobile')}</th><th>${lb('المجمعات||Compounds')}</th><th></th></tr>
   ${db.users.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td>${esc(u.u)}${u.email?`<br><span class="muted" dir="ltr">${esc(u.email)}</span>`:''}</td>
