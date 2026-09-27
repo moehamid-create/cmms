@@ -1182,9 +1182,44 @@ function openWhatsApp(w){
   window.open(url,'_blank');
   toast(lb(' فُتح واتساب — الرسالة جاهزة، اضغط إرسال|| WhatsApp opened — message ready, press send'),'ok');
 }
-function waBtn(i){const w=db.wos[i];
-  if(!w.assigneeId)return toast(lb(' أسند البلاغ لفني أولاً|| Assign a technician first'),'err');
-  openWhatsApp(w);}
+function waBtn(i){const w=db.wos[i];if(!w)return;
+  const u=db.users.find(x=>x.id===w.assigneeId);
+  const ph=normPhone(u&&u.phone);
+  if(ph&&ph.length>=10)return openWhatsApp(w);
+  waModal(i);}
+/* قائمة مستلمي واتساب: الفني المسند · الفنيون · الموظفون · مزوّد الخدمة */
+function waRecipients(w){
+  const out=[],seen={},act=w.compoundId||activeCmp();
+  const add=(name,phone,kind)=>{const ph=normPhone(phone);if(!ph||ph.length<10||seen[ph])return;seen[ph]=1;out.push({name:name||'—',phone:ph,kind});};
+  const u=db.users.find(x=>x.id===w.assigneeId);
+  if(u)add(u.name,u.phone,lb('المسند إليه||Assigned'));
+  db.users.filter(x=>x.role==='tech'&&(x.cmpIds||[]).includes(act)).forEach(x=>add(x.name,x.phone,lb('فني||Tech')));
+  db.employees.filter(e=>e.compoundId===act&&e.active!==false).forEach(e=>add(e.name,e.phone,lb('موظف||Employee')));
+  const a=w.assetId?db.assets.find(x=>x.id===w.assetId):null;
+  if(a&&a.provider){const s=db.suppliers.find(x=>x.name===a.provider);if(s)add(s.name,s.phone,lb('مزوّد الخدمة||Provider'));}
+  return out;
+}
+function waModal(i){
+  const w=db.wos[i];if(!w)return;
+  const list=waRecipients(w);
+  const opts=list.map(r=>`<option value="${r.phone}">${esc(r.name)} — ${esc(r.kind)} (${esc(r.phone)})</option>`).join('');
+  modal(`<h3> ${lb('إرسال أمر الشغل عبر واتساب||Send work order via WhatsApp')} — ${esc(w.no)}</h3>
+  ${list.length?`<label>${lb('المستلم||Recipient')}</label><select id="wa_to">${opts}</select>`:`<p class="muted">${lb('لا توجد أرقام محفوظة — أدخل الرقم يدوياً بالأسفل.||No saved numbers — enter one below.')}</p>`}
+  <label>${lb('أو رقم آخر (اختياري)||Or another number (optional)')}</label><input id="wa_ph" dir="ltr" placeholder="05xxxxxxxx">
+  <p class="muted">${lb('سيُفتح واتساب برسالة جاهزة، ثم تضغط إرسال.||WhatsApp opens with a ready message; press send.')}</p>
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="waSend(${i})">${lb('فتح واتساب||Open WhatsApp')}</button></div>`);
+}
+function waSend(i){
+  const w=db.wos[i];if(!w)return;
+  const manual=$('wa_ph')?$('wa_ph').value.trim():'';
+  const sel=$('wa_to')?$('wa_to').value:'';
+  const phone=normPhone(manual||sel||'');
+  if(!phone||phone.length<10)return toast(lb('أدخل رقم جوال صحيح||Enter a valid mobile'),'err');
+  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(woMsg(w)),'_blank');
+  closeModal();
+  toast(lb('فُتح واتساب — الرسالة جاهزة، اضغط إرسال||WhatsApp opened — message ready, press send'),'ok');
+}
 
 /* ===== PHOTOS & SIGNATURE ===== */
 const PH={};let _phSeq=0;
@@ -4757,7 +4792,7 @@ function vWOs(){
       acts+=`<button class="btn sm" title="${lb('اعتماد المراجعة||Approve review')}" onclick="woReview(${ix(w)})">${ic('check',13)} ${lb('مراجعة||Review')}</button>`;
     if(isEng()){acts+=`<button class="btn sm ghost" onclick="woForm('${ix(w)}')">${ic('edit',13)}</button>
       <button class="btn sm danger" onclick="woDel(${ix(w)})">${ic('del',13)}</button>`;}
-    const wa=(w.status!=='closed'&&w.assigneeId)?`<button class="btn sm ghost" title="${lb('إرسال واتساب||Send WhatsApp')}" onclick="waBtn(${ix(w)})">${ic('chat',13)}</button>`:'';
+    const wa=(w.status!=='closed')?`<button class="btn sm ghost" title="${lb('إرسال واتساب||Send WhatsApp')}" onclick="waBtn(${ix(w)})">${ic('chat',13)}</button>`:'';
     return `<tr class="${od?'overdue':''}"><td>${w.no}${w.type==='pm'?' <span class="badge b-maint">PM</span>':''}${w.status==='planned'?` <span class="badge b-open">${lb('مخطّط||Planned')}</span>`:''}${w.auto?` <span class="badge b-wait" title="${lb('أُنشئ تلقائياً||Auto-generated')}">${lb('تلقائي||Auto')}</span>`:''}${w.partsReady===false?` <span class="badge b-urgent" title="${lb('قطع غير متوفرة||Parts not ready')}">${lb('نقص قطع||Parts')}</span>`:''}${(w.status==='wait'&&w.deferReason)?` <span class="badge b-maint" title="${esc(w.deferReason)}">${lb('مؤجّل||Deferred')}</span>`:''}${(w.status==='closed'&&w.review==='pending')?` <span class="badge b-wait">${lb('بانتظار المراجعة||Review')}</span>`:''}${w.source==='portal'?portalBadge:''}${w.source==='corrective'?` <span class="badge b-down">${lb('تصحيحي||Corrective')}</span>`:''}${w.projectId?' <span class="badge b-open">مشروع</span>':''}${w.unitCode?' <span class="badge b-ok">وحدة</span>':''}</td>
     <td><b>${esc(w.title)}</b><br><span class="muted">${esc((w.desc||'').slice(0,55))}</span></td>
     <td>${esc(w.assetName||'—')}<br><span class="muted">${esc([w.bname,w.unitCode,w.tenantName].filter(Boolean).join(' · ')||'')}</span></td>
@@ -4822,8 +4857,7 @@ function saveWO(idxStr){
   }
   if(o.assigneeId)notify('',lb('إسناد أمر: ||Work order assigned: ')+(isNew?db.wos[0].no:db.wos[idxStr].no)+' — '+t,'wos','asg-'+(isNew?db.wos[0].no:db.wos[idxStr].no)+'-'+o.assigneeId);
   persist();closeModal();paintTab();toast(lb(' تم حفظ البلاغ|| Saved'),'ok');
-  const w=db.wos[0];
-  if(isNew&&o.assigneeId&&confirm(lb(' إرسال البلاغ للفني عبر واتساب الآن؟|| Send this report to the technician via WhatsApp now?')))openWhatsApp(w);
+  if(isNew&&o.assigneeId&&confirm(lb(' إرسال البلاغ للفني عبر واتساب الآن؟|| Send this report to the technician via WhatsApp now?')))waBtn(0);
 }
 function woSet(i,st){const w=db.wos[i];w.status=st;
   if(st==='inprog'&&!w.startedAt)w.startedAt=Date.now();
@@ -4878,7 +4912,7 @@ function woView(i){
   <div class="ma">
   ${(w.status==='planned'&&canAppr())?`<button class="btn" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="closeModal();woApprove(${i})">${lb('اعتماد||Approve')}</button>
   <button class="btn ghost" onclick="closeModal();woDismiss(${i})">${lb('رفض||Dismiss')}</button>`:''}
-  ${(w.status!=='closed'&&w.status!=='planned'&&w.assigneeId)?`<button class="btn ghost" onclick="waBtn(${i})"> ${lb('واتساب||WhatsApp')}</button>`:''}
+  ${(w.status!=='closed')?`<button class="btn ghost" onclick="closeModal();waModal(${i})"> ${lb('واتساب||WhatsApp')}</button>`:''}
   <button class="btn ghost" onclick="closeModal()">${lb('إغلاق النافذة||Close Window')}</button></div>`);
 }
 function woCloseForm(i){
