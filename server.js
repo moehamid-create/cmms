@@ -63,16 +63,24 @@ if (USE_PG) {
     ver     INTEGER NOT NULL DEFAULT 1,
     updated TEXT
   )`);
+  sqlite.exec(`CREATE TABLE IF NOT EXISTS appconfig(
+    key     TEXT PRIMARY KEY,
+    val     TEXT
+  )`);
   DB_LABEL = 'sqlite:' + DB_PATH;
 }
 
-/* Ensure the Postgres table exists (runs once at startup) */
+/* Ensure the Postgres tables exist (runs once at startup) */
 async function pgInit() {
   await pgPool.query(`CREATE TABLE IF NOT EXISTS appstate(
     id      INTEGER PRIMARY KEY CHECK(id=1),
     data    TEXT NOT NULL,
     ver     INTEGER NOT NULL DEFAULT 1,
     updated TIMESTAMPTZ DEFAULT now()
+  )`);
+  await pgPool.query(`CREATE TABLE IF NOT EXISTS appconfig(
+    key     TEXT PRIMARY KEY,
+    val     TEXT
   )`);
 }
 
@@ -319,6 +327,31 @@ async function setState(data, expectedVer) {
 }
 /* ---- تشفير كلمات المرور (PBKDF2-SHA256 — مدمج في Node، بلا مكتبات) ----
    التخزين بصيغة: pbkdf2$iterations$salt$hash — لا يمكن عكسها لكلمة المرور */
+/* ---- إعدادات الخادم العامة (مفاتيح سرية لا تُرسل للمتصفح أبداً) ---- */
+async function getConfig(key){
+  try{
+    if (USE_PG) {
+      const r = await pgPool.query('SELECT val FROM appconfig WHERE key=$1', [key]);
+      return r.rows[0] ? r.rows[0].val : null;
+    }
+    const r = sqlite.prepare('SELECT val FROM appconfig WHERE key=?').get(key);
+    return r ? r.val : null;
+  }catch(e){ return null; }
+}
+async function setConfig(key, val){
+  try{
+    if (USE_PG) {
+      await pgPool.query(
+        `INSERT INTO appconfig(key,val) VALUES($1,$2) ON CONFLICT(key) DO UPDATE SET val=EXCLUDED.val`,
+        [key, val == null ? '' : String(val)]);
+      return true;
+    }
+    sqlite.prepare(
+      `INSERT INTO appconfig(key,val) VALUES(?,?)
+       ON CONFLICT(key) DO UPDATE SET val=excluded.val`).run(key, val == null ? '' : String(val));
+    return true;
+  }catch(e){ console.error('config write failed:', e.message); return false; }
+}
 const HASH_ITERS = 100000;
 function isHash(s){ return typeof s === 'string' && s.indexOf('pbkdf2$') === 0; }
 function hashPassword(pw){
@@ -916,20 +949,51 @@ app.post('/api/market/compounds', roleGuard(['owner']), async (req,res)=>{
    يعمل مع Neon AI Gateway أو أي نقطة متوافقة مع OpenAI.
    لا يُشترط أي مفتاح: عند غيابه ترجع الواجهة للمكتبة المحلية.
    ============================================================ */
-function aiConfig(){
-  const nTok = process.env.NEON_AI_GATEWAY_TOKEN;
-  const nBase = process.env.NEON_AI_GATEWAY_BASE_URL;
-  if (nTok && nBase) {
-    return { url: nBase.replace(/\/+$/, '') + '/v1/chat/completions', key: nTok,
-      model: process.env.AI_MODEL || process.env.NEON_AI_MODEL || 'gpt-5-mini', provider: 'neon' };
+const AI_PROVIDERS = {
+  gemini:     { label:'Google Gemini (مجاني)',        free:true,  base:'https://generativelanguage.googleapis.com/v1beta/openai', model:'gemini-2.0-flash' },
+  groq:       { label:'Groq (مجاني)',                 free:true,  base:'https://api.groq.com/openai/v1', model:'llama-3.3-70b-versatile' },
+  openrouter: { label:'OpenRouter (موديلات مجانية)',  free:true,  base:'https://openrouter.ai/api/v1', model:'meta-llama/llama-3.3-70b-instruct:free' },
+  cerebras:   { label:'Cerebras (مجاني)',             free:true,  base:'https://api.cerebras.ai/v1', model:'llama-3.3-70b' },
+  mistral:    { label:'Mistral (مجاني)',              free:true,  base:'https://api.mistral.ai/v1', model:'mistral-small-latest' },
+  openai:     { label:'OpenAI',                       free:false, base:'https://api.openai.com/v1', model:'gpt-4o-mini' },
+  neon:       { label:'Neon AI Gateway',              free:false, base:'', model:'gpt-5-mini' },
+  custom:     { label:'مخصص (OpenAI-compatible)',     free:true,  base:'', model:'' },
+};
+const AI_ENV_KEYS = { gemini:'GEMINI_API_KEY', groq:'GROQ_API_KEY', openrouter:'OPENROUTER_API_KEY',
+  cerebras:'CEREBRAS_API_KEY', mistral:'MISTRAL_API_KEY', openai:'OPENAI_API_KEY' };
+function aiBuildUrl(base){
+  const b = String(base||'').replace(/\/+$/,'');
+  return b ? b + '/chat/completions' : '';
+}
+async function aiConfig(){
+  /* 1) Neon AI Gateway عبر متغيرات البيئة */
+  const nTok = process.env.NEON_AI_GATEWAY_TOKEN, nBase = process.env.NEON_AI_GATEWAY_BASE_URL;
+  if (nTok && nBase) return { url: nBase.replace(/\/+$/,'') + '/v1/chat/completions', key:nTok,
+    model: process.env.AI_MODEL || process.env.NEON_AI_MODEL || 'gpt-5-mini', provider:'neon', source:'env' };
+  /* 2) الإعدادات المحفوظة على الخادم (من الواجهة) */
+  const sProv = await getConfig('ai_provider'), sKey = await getConfig('ai_key');
+  if (sProv && sKey) {
+    const preset = AI_PROVIDERS[sProv] || AI_PROVIDERS.custom;
+    const base = (await getConfig('ai_base')) || preset.base;
+    const model = (await getConfig('ai_model')) || preset.model || 'gpt-4o-mini';
+    const url = aiBuildUrl(base);
+    if (url) return { url, key:sKey, model, provider:sProv, source:'saved' };
   }
-  const oKey = process.env.OPENAI_API_KEY;
-  if (oKey) {
-    const base = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
-    return { url: base + '/chat/completions', key: oKey,
-      model: process.env.AI_MODEL || 'gpt-4o-mini', provider: 'openai' };
+  /* 3) مفاتيح المزوّدين في متغيرات البيئة */
+  for (const prov of Object.keys(AI_ENV_KEYS)) {
+    const k = process.env[AI_ENV_KEYS[prov]];
+    if (!k) continue;
+    const preset = AI_PROVIDERS[prov];
+    const base = (prov==='openai' && process.env.OPENAI_BASE_URL) ? process.env.OPENAI_BASE_URL : preset.base;
+    const url = aiBuildUrl(base);
+    if (url) return { url, key:k, model: process.env.AI_MODEL || preset.model, provider:prov, source:'env' };
   }
   return null;
+}
+async function aiSettingsView(){
+  const c = await aiConfig();
+  return { ok: !!c, provider: c?c.provider:null, model: c?c.model:null, source: c?c.source:'none',
+    providers: Object.keys(AI_PROVIDERS).map(id=>({ id, label:AI_PROVIDERS[id].label, free:!!AI_PROVIDERS[id].free, model:AI_PROVIDERS[id].model })) };
 }
 function safeJson(txt){
   if (!txt) return null;
@@ -951,11 +1015,53 @@ const AI_SYSTEM = [
   'Write names and tasks in the requested language (ar = Arabic, en = English).',
 ].join(' ');
 
-app.get('/api/ai/status', (req, res) => {
+app.get('/api/ai/status', async (req, res) => {
   const a = auth(req, res, { silent: true });
   if (!a) return res.status(401).json({ error: 'AUTH' });
-  const c = aiConfig();
-  res.json({ ok: !!c, provider: c ? c.provider : null, model: c ? c.model : null });
+  res.json(await aiSettingsView());
+});
+
+/* ---- إعداد مزوّد الذكاء الاصطناعي من الواجهة (يُخزَّن على الخادم فقط) ---- */
+async function aiSettingsFull(){
+  const v = await aiSettingsView();
+  v.saved = { provider: await getConfig('ai_provider'), model: await getConfig('ai_model'),
+    base: await getConfig('ai_base'), hasKey: !!(await getConfig('ai_key')) };
+  return v;
+}
+app.get('/api/ai/settings', async (req, res) => {
+  const a = auth(req, res, { silent: true });
+  if (!a) return res.status(401).json({ error: 'AUTH' });
+  if (!['admin','engineer'].includes(a.session.role)) return res.status(403).json({ error: 'FORBIDDEN' });
+  res.json(await aiSettingsFull());
+});
+app.post('/api/ai/settings', async (req, res) => {
+  const a = auth(req, res);
+  if (!a) return;
+  if (!['admin','engineer'].includes(a.session.role)) return res.status(403).json({ error: 'FORBIDDEN' });
+  const b = req.body || {};
+  const provider = String(b.provider || '').trim();
+  if (provider && !AI_PROVIDERS[provider]) return res.status(400).json({ error: 'BAD_PROVIDER' });
+  if (provider) await setConfig('ai_provider', provider);
+  if (b.model != null) await setConfig('ai_model', String(b.model).trim().slice(0, 120));
+  if (b.base != null) await setConfig('ai_base', String(b.base).trim().slice(0, 300));
+  if (b.apiKey != null && String(b.apiKey).trim() !== '') await setConfig('ai_key', String(b.apiKey).trim().slice(0, 400));
+  if (b.clearKey) await setConfig('ai_key', '');
+  res.json(await aiSettingsFull());
+});
+app.post('/api/ai/test', async (req, res) => {
+  const a = auth(req, res);
+  if (!a) return;
+  if (!['admin','engineer'].includes(a.session.role)) return res.status(403).json({ error: 'FORBIDDEN' });
+  const c = await aiConfig();
+  if (!c) return res.json({ ok:false, reason:'AI_NOT_CONFIGURED' });
+  try {
+    const r = await aiFetch(c, { model:c.model, max_tokens:16, temperature:0,
+      messages:[{role:'user',content:'Reply with the single word: OK'}] });
+    if (!r.ok) { const t = await r.text().catch(()=>'' ); return res.json({ ok:false, reason:'AI_HTTP_'+r.status, detail:String(t).slice(0,160) }); }
+    const j = await r.json();
+    const txt = (j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
+    res.json({ ok:true, provider:c.provider, model:c.model, reply:String(txt).slice(0,60) });
+  } catch(e){ res.json({ ok:false, reason:'AI_ERROR', detail:String(e.message||e).slice(0,160) }); }
 });
 
 const aiHits = new Map();
@@ -965,7 +1071,7 @@ app.post('/api/ai/pm-suggest', async (req, res) => {
   if (!['admin', 'engineer'].includes(a.session.role)) return res.status(403).json({ error: 'FORBIDDEN' });
   const ip = req.ip || req.socket.remoteAddress || 'x';
   if (!boundedHit(aiHits, ip, 60 * 60 * 1000, 40)) return res.status(429).json({ error: 'TOO_MANY' });
-  const c = aiConfig();
+  const c = await aiConfig();
   if (!c) return res.json({ ok: false, reason: 'AI_NOT_CONFIGURED' });
   try {
     const b = req.body || {};
@@ -1019,6 +1125,55 @@ app.post('/api/ai/pm-suggest', async (req, res) => {
   } catch (e) {
     console.error('[ai] error:', e.message);
     res.json({ ok: false, reason: 'AI_ERROR' });
+  }
+});
+const AI_QUICK_SYSTEM = [
+  'You are a senior facilities-management engineer in Saudi Arabia.',
+  'From the user description of a property or compound, produce a practical preventive-maintenance schedule.',
+  'Return STRICT JSON only, no prose: {"items":[{"building":"<one of the given building names, or empty>","asset":"<asset name>","category":"<category>","plans":[{"name":"<plan name>","freqVal":<integer>,"freqUnit":"days|weeks|months","priority":"normal|high|urgent","tasks":["<step>","<step>"]}]}]}',
+  'Rules: if the description mentions quantities per building (e.g. 3 A/C units), create one item per unit. Use the given building names when relevant, else leave building empty. Prefer the given categories when they fit. Give 3 to 7 concrete tasks per plan. Use realistic intervals (split A/C filters every 3 months, elevator monthly, fire extinguishers yearly, pool filtration weekly).',
+  'Write asset names, categories, plan names and tasks in the requested language (ar = Arabic, en = English).',
+].join(' ');
+app.post('/api/ai/pm-from-text', async (req, res) => {
+  const a = auth(req, res);
+  if (!a) return;
+  if (!['admin','engineer'].includes(a.session.role)) return res.status(403).json({ error: 'FORBIDDEN' });
+  const ip = req.ip || req.socket.remoteAddress || 'x';
+  if (!boundedHit(aiHits, ip, 60 * 60 * 1000, 40)) return res.status(429).json({ error: 'TOO_MANY' });
+  const c = await aiConfig();
+  if (!c) return res.json({ ok: false, reason: 'AI_NOT_CONFIGURED' });
+  const b = req.body || {};
+  const text = String(b.text || '').trim().slice(0, 2000);
+  if (text.length < 5) return res.status(400).json({ error: 'NO_TEXT' });
+  const lang = b.lang === 'en' ? 'en' : 'ar';
+  const buildings = (Array.isArray(b.buildings) ? b.buildings : []).slice(0, 80).map(x => String(x).slice(0, 80));
+  const categories = (Array.isArray(b.categories) ? b.categories : []).slice(0, 80).map(x => String(x).slice(0, 60));
+  try {
+    const r = await aiFetch(c, { model: c.model, temperature: 0.3,
+      messages: [{ role:'system', content: AI_QUICK_SYSTEM },
+                 { role:'user', content: JSON.stringify({ language: lang, description: text, buildings, categories }) }] });
+    if (!r.ok) { const t = await r.text().catch(()=>''); console.error('[ai] quick HTTP', r.status, String(t).slice(0,160)); return res.json({ ok:false, reason:'AI_HTTP_'+r.status }); }
+    const j = await r.json();
+    const content = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+    const parsed = safeJson(content);
+    if (!parsed || !Array.isArray(parsed.items)) return res.json({ ok:false, reason:'AI_BAD_OUTPUT' });
+    const FU = ['days','weeks','months'], PR = ['normal','high','urgent'];
+    const items = parsed.items.slice(0, 400).map(it => ({
+      building: String((it && it.building) || '').slice(0, 80),
+      asset: String((it && it.asset) || '').slice(0, 120),
+      category: String((it && it.category) || '').slice(0, 60),
+      plans: (Array.isArray(it && it.plans) ? it.plans : []).slice(0, 6).map(p => ({
+        name: String((p && p.name) || '').slice(0, 120),
+        freqVal: Math.max(1, Math.min(365, parseInt(p && p.freqVal, 10) || 1)),
+        freqUnit: FU.includes(String((p && p.freqUnit) || '').toLowerCase()) ? String(p.freqUnit).toLowerCase() : 'months',
+        priority: PR.includes(String((p && p.priority) || '').toLowerCase()) ? String(p.priority).toLowerCase() : 'normal',
+        tasks: (Array.isArray(p && p.tasks) ? p.tasks : []).slice(0, 10).map(t => String(t).slice(0, 200)).filter(Boolean),
+      })).filter(p => p.tasks.length),
+    })).filter(it => it.asset && it.plans.length);
+    res.json({ ok:true, provider:c.provider, model:c.model, items });
+  } catch (e) {
+    console.error('[ai] quick error:', e.message);
+    res.json({ ok:false, reason:'AI_ERROR' });
   }
 });
 async function aiFetch(c, payload) {
