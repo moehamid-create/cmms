@@ -2104,10 +2104,50 @@ function loginHtml(){
 }
 
 /* ===== NOTIFICATIONS ===== */
+/* ===== NOTIFICATIONS =====
+   المفتاح = النوع:الأصل:المعرّف[:الشرط] — يمنع التكرار حتى بعد القراءة أو الإزاحة،
+   ويُحلّ (resolved) عند زوال الشرط ليعود التنبيه عند تكراره لاحقاً. */
+function notifKeysMap(){ if(!db.notifKeys||typeof db.notifKeys!=='object')db.notifKeys={}; return db.notifKeys; }
+function notifResolve(key){
+  if(!key)return;
+  const k=notifKeysMap();
+  if(k[key])k[key].resolved=true;
+  (db.notifs||[]).forEach(n=>{if(n.key===key)n.resolved=true;});
+}
+function notifResolveWo(w){
+  if(!w)return;
+  const cmp=w.compoundId||activeCmp()||'';
+  ['urg','plan','rev','over','done'].forEach(k=>notifResolve(k+':'+cmp+':'+w.no));
+  Object.keys(notifKeysMap()).forEach(k=>{if(k.indexOf('asg:'+cmp+':'+w.no+':')===0)notifResolve(k);});
+}
+function notifResolvePm(p){
+  if(!p)return;
+  const cmp=p.compoundId||activeCmp()||'';
+  notifResolve('pm:'+cmp+':'+p.id+':late');
+  notifResolve('pm:'+cmp+':'+p.id+':soon');
+}
+const NOTIF_GEN_PREFIXES=['urg:','plan:','rev:','over:','pm:','low:','pr:','ctre:','lea:','veh:','cert:'];
+function notifIsGenerated(key){return NOTIF_GEN_PREFIXES.some(p=>String(key||'').indexOf(p)===0);}
+/* إزاحة التنبيهات: تُفضّل حذف المقروء أولاً ثم الأقدم — والمفاتيح تحفظ منع التكرار بعد الإزاحة */
+function evictNotifs(){
+  const MAX=200;
+  if((db.notifs||[]).length<=MAX)return;
+  const sorted=[...db.notifs].sort((a,b)=>(a.at||0)-(b.at||0));
+  const excess=db.notifs.length-MAX,drop=new Set();
+  for(const n of sorted){if(drop.size>=excess)break;if(n.read)drop.add(n.id);}
+  for(const n of sorted){if(drop.size>=excess)break;drop.add(n.id);}
+  db.notifs=db.notifs.filter(n=>!drop.has(n.id));
+}
 function notify(icon,text,tab,key){
-  if(key&&db.notifs.some(n=>n.key===key&&!n.read))return;
-  db.notifs.unshift({id:uid('N'),icon,text,tab:tab||'dash',key:key||'',at:Date.now(),read:false,compoundId:activeCmp()||''});
-  if(db.notifs.length>200)db.notifs.length=200;
+  if(key){
+    const k=notifKeysMap();
+    if(k[key]&&!k[key].resolved)return;      /* نفس الشرط موجود ولم يُحلّ — لا تكرار */
+    k[key]={at:Date.now(),resolved:false};
+    const keys=Object.keys(k);
+    if(keys.length>500)keys.sort((a,b)=>(k[a].at||0)-(k[b].at||0)).slice(0,keys.length-500).forEach(x=>{delete k[x];});
+  }
+  db.notifs.unshift({id:uid('N'),icon,text,tab:tab||'dash',key:key||'',at:Date.now(),read:false,resolved:false,compoundId:activeCmp()||''});
+  evictNotifs();
 }
 /* التحقق من كلمة المرور محلياً (وضع عدم الاتصال): يدعم المشفّرة pbkdf2$ والنص القديم */
 async function verifyLocalPw(pw, stored){
@@ -2235,42 +2275,47 @@ async function doLogin(e){
   PICK = true;
   persist(); pmGen(); genSysNotifs(); render();
 }
+function notifCompoundOf(key){const p=String(key||'').split(':');return p.length>1?p[1]:'';}
 function genSysNotifs(){
   const act=activeCmp();
+  const wanted={};
+  const raise=(key,icon,text,tab)=>{wanted[key]=1;notify(icon,text,tab,key);};
   db.wos.filter(w=>w.status!=='closed'&&w.priority==='urgent'&&w.compoundId===act&&(isTech()?w.assigneeId===me.id:true))
-    .forEach(w=>notify('',lb('طارئ مفتوح: ||Open urgent: ')+w.title,'wos','urg-'+w.no));
+    .forEach(w=>raise('urg:'+act+':'+w.no,'',lb('طارئ مفتوح: ||Open urgent: ')+w.title,'wos'));
   if(canAppr())db.wos.filter(w=>w.status==='planned'&&w.compoundId===act)
-    .forEach(w=>notify('',lb('أمر مخطّط بانتظار الاعتماد: ||Planned WO awaiting approval: ')+w.no+' — '+w.title,'wos','plan-'+w.no));
+    .forEach(w=>raise('plan:'+act+':'+w.no,'',lb('أمر مخطّط بانتظار الاعتماد: ||Planned WO awaiting approval: ')+w.no+' — '+w.title,'wos'));
   if(canAppr())db.wos.filter(w=>w.compoundId===act&&w.status==='closed'&&w.review==='pending')
-    .forEach(w=>notify('',lb('أمر بانتظار المراجعة: ||WO awaiting review: ')+w.no+' — '+w.title,'wos','rev-'+w.no));
+    .forEach(w=>raise('rev:'+act+':'+w.no,'',lb('أمر بانتظار المراجعة: ||WO awaiting review: ')+w.no+' — '+w.title,'wos'));
   db.wos.filter(w=>w.compoundId===act&&w.status!=='closed'&&w.status!=='planned'&&w.dueDate&&daysUntil(w.dueDate)<0)
-    .forEach(w=>notify('',lb('أمر متأخر: ||WO overdue: ')+w.no+' ('+(-daysUntil(w.dueDate))+' '+lb('يوم||d')+')','wos','over-'+w.no));
+    .forEach(w=>raise('over:'+act+':'+w.no,'',lb('أمر متأخر: ||WO overdue: ')+w.no+' ('+(-daysUntil(w.dueDate))+' '+lb('يوم||d')+')','wos'));
   db.pms.filter(p=>p.compoundId===act&&pmActive(p)&&pmInWindow(p)).forEach(p=>{
     const d=daysUntil(nextDueOf(p));
-    if(d+pmGrace(p)<=0)notify('',lb('صيانة دورية متأخرة: ||Overdue PM: ')+p.name,'pm','pm-'+p.id+'-late');
-    else if(d<=pmLead(p)||d<=3)notify('',lb('صيانة قريبة: ||PM soon: ')+p.name+' ('+fmtD(nextDueOf(p))+')','pm','pm-'+p.id+'-soon');
+    if(d+pmGrace(p)<=0)raise('pm:'+act+':'+p.id+':late','',lb('صيانة دورية متأخرة: ||Overdue PM: ')+p.name,'pm');
+    else if(d<=pmLead(p)||d<=3)raise('pm:'+act+':'+p.id+':soon','',lb('صيانة قريبة: ||PM soon: ')+p.name+' ('+fmtD(nextDueOf(p))+')','pm');
   });
   db.inv.filter(it=>it.qty<=it.minQty&&it.compoundId===act).forEach(it=>
-    notify('',lb('مخزون تحت الحد: ||Low stock: ')+it.name+' ('+it.qty+' '+it.unit+')','inv','low-'+it.id));
+    raise('low:'+act+':'+it.id,'',lb('مخزون تحت الحد: ||Low stock: ')+it.name+' ('+it.qty+' '+it.unit+')','inv'));
   if(canAppr())db.prs.filter(pr=>pr.status==='pending'&&pr.compoundId===act).forEach(pr=>
-    notify('',lb('طلب شراء بانتظار الموافقة: ||PR awaiting approval: ')+pr.title+' ('+pr.no+')','proc','pr-'+pr.no));
+    raise('pr:'+act+':'+pr.no,'',lb('طلب شراء بانتظار الموافقة: ||PR awaiting approval: ')+pr.title+' ('+pr.no+')','proc'));
   if(canAppr()){
     db.contracts.filter(c=>c.compoundId===act).forEach(c=>{const dd=daysUntil(c.end);
-      if(dd<=30)notify('',(dd<0?lb('عقد منتهٍ: ||Expired contract: '):lb('عقد ينتهي قريباً: ||Contract expiring: '))+c.vendor+' ('+fmtD(c.end)+')','contracts','ctre-'+c.id+'-'+c.end);});
+      if(dd<=30)raise('ctre:'+act+':'+c.id+':'+c.end,'',(dd<0?lb('عقد منتهٍ: ||Expired contract: '):lb('عقد ينتهي قريباً: ||Contract expiring: '))+c.vendor+' ('+fmtD(c.end)+')','contracts');});
     db.tenants.forEach(x=>{const u=db.units.find(y=>y.id===x.unitId);
       const b=u?db.buildings.find(y=>y.id===u.buildingId):null;
       if(!b||b.compoundId!==act)return;
       const dd=daysUntil(x.leaseEnd);
-      if(dd<=45)notify('',(dd<0?lb('عقد إيجار منتهٍ: ||Expired lease: '):lb('إيجار ينتهي قريباً: ||Lease expiring: '))+x.name+' ('+fmtD(x.leaseEnd)+')','units','lea-'+x.id+'-'+x.leaseEnd);});
+      if(dd<=45)raise('lea:'+act+':'+x.id+':'+x.leaseEnd,'',(dd<0?lb('عقد إيجار منتهٍ: ||Expired lease: '):lb('إيجار ينتهي قريباً: ||Lease expiring: '))+x.name+' ('+fmtD(x.leaseEnd)+')','units');});
   }
   /* تنبيهات انتهاء وثائق المركبات وشهادات الامتثال */
   db.assets.filter(a=>a.compoundId===act).forEach(a=>{
     [['insExp',lb('تأمين مركبة||Vehicle insurance')],['regExp',lb('استمارة مركبة||Vehicle registration')]].forEach(kv=>{
       const d=a[kv[0]];if(!d)return;const dd=daysUntil(d);
-      if(dd<=45)notify('',(dd<0?lb('منتهٍ: ||Expired: '):lb('ينتهي قريباً: ||Expiring soon: '))+kv[1]+' — '+a.name+' ('+fmtD(d)+')','assets','veh-'+a.id+'-'+kv[0]+'-'+d);});});
+      if(dd<=45)raise('veh:'+act+':'+a.id+':'+kv[0]+':'+d,'',(dd<0?lb('منتهٍ: ||Expired: '):lb('ينتهي قريباً: ||Expiring soon: '))+kv[1]+' — '+a.name+' ('+fmtD(d)+')','assets');});});
   (db.certs||[]).filter(c=>c.compoundId===act).forEach(c=>{
     if(!c.expires)return;const dd=daysUntil(c.expires);
-    if(dd<=45)notify('',(dd<0?lb('شهادة منتهية: ||Expired certificate: '):lb('شهادة تنتهي قريباً: ||Certificate expiring: '))+(CERTTL()[c.type||'other'])+' ('+fmtD(c.expires)+')','certs','cert-'+c.id+'-'+c.expires);});
+    if(dd<=45)raise('cert:'+act+':'+c.id+':'+c.expires,'',(dd<0?lb('شهادة منتهية: ||Expired certificate: '):lb('شهادة تنتهي قريباً: ||Certificate expiring: '))+(CERTTL()[c.type||'other'])+' ('+fmtD(c.expires)+')','certs');});
+  /* حلّ التنبيهات المولّدة التي زال شرطها (لنفس الأصل فقط) لتعود عند تكراره */
+  Object.keys(notifKeysMap()).forEach(k=>{ if(notifIsGenerated(k)&&!wanted[k]&&notifCompoundOf(k)===act)notifResolve(k); });
   persist();
 }
 function unreadCount(){const act=activeCmp();return db.notifs.filter(n=>!n.read&&n.compoundId===act).length;}
@@ -3011,6 +3056,7 @@ function savePM(pid){
 function pmDone(pid){const p=db.pms.find(x=>x.id===pid);if(!p)return;
   p.lastDone=todayISO();
   p.nextDue=pmNextDueAfterDone(p);
+  notifResolvePm(p);
   auditLog('done','pm',p.name,todayISO());
   persist();paintTab();toast(lb(' سُجل الإنجاز. القادم: || Logged. Next: ')+fmtD(p.nextDue),'ok');}
 function delPm(pid){if(!confirm(lb('حذف الخطة؟||Delete plan?')))return;
@@ -5098,6 +5144,7 @@ function syncLoc(keep){
 }
 function saveWO(idxStr){
   const isNew=(idxStr===''||idxStr==null);
+  const prevAssignee=isNew?'':(db.wos[idxStr]||{}).assigneeId||'';
   const t=$('fw_t').value.trim();if(!t)return toast(lb(' العنوان مطلوب|| Title required'),'err');
   const aid=$('fw_a').value,a=db.assets.find(x=>x.id===aid);
   const tech=db.users.find(u=>u.id===$('fw_as').value);
@@ -5114,7 +5161,12 @@ function saveWO(idxStr){
       reportedBy:me.name},o));
     notify('',lb('بلاغ جديد: ||New fault: ')+t,'wos','');
   }
-  if(o.assigneeId)notify('',lb('إسناد أمر: ||Work order assigned: ')+(isNew?db.wos[0].no:db.wos[idxStr].no)+' — '+t,'wos','asg-'+(isNew?db.wos[0].no:db.wos[idxStr].no)+'-'+o.assigneeId);
+  if(o.assigneeId){
+    const cmp=activeCmp()||'',woNo=isNew?db.wos[0].no:db.wos[idxStr].no;
+    if(!isNew&&prevAssignee&&prevAssignee!==o.assigneeId)
+      Object.keys(notifKeysMap()).forEach(k=>{if(k.indexOf('asg:'+cmp+':'+woNo+':')===0)notifResolve(k);});
+    notify('',lb('إسناد أمر: ||Work order assigned: ')+woNo+' — '+t,'wos','asg:'+cmp+':'+woNo+':'+o.assigneeId);
+  }
   persist();closeModal();paintTab();toast(lb(' تم حفظ البلاغ|| Saved'),'ok');
   if(isNew&&o.assigneeId&&confirm(lb(' إرسال البلاغ للفني عبر واتساب الآن؟|| Send this report to the technician via WhatsApp now?')))waBtn(0);
 }
@@ -5124,6 +5176,7 @@ function woSet(i,st){const w=db.wos[i];w.status=st;
 function woApprove(i){
   const w=db.wos[i];if(!w)return;
   w.status='open';w.approval='approved';w.approvedBy=me?me.name:'';w.approvedAt=Date.now();
+  notifResolveWo(w);
   auditLog('approve','wo',w.no);persist();paintTab();toast(lb('اعتُمد الأمر وجُدول||Approved and scheduled'),'ok');
 }
 function woDismiss(i){
@@ -5135,6 +5188,7 @@ function woDismiss(i){
   w.status='closed';w.approval='rejected';w.closedAt=Date.now();
   w.closeNotes=(w.closeNotes?w.closeNotes+' — ':'')+lb('مرفوض من الجدولة: ')+reason;
   skipPlanCycleFor(w,lb('رفض أمر||dismissed WO'));
+  notifResolveWo(w);
   auditLog('dismiss','wo',w.no,reason);persist();paintTab();toast(lb('رُفض الأمر||Dismissed'),'ok');
 }
 /* تخطي دورة الخطة عند رفض/حذف أمر شغل مولّد تلقائياً من الصيانة الدورية */
@@ -5146,7 +5200,7 @@ function skipPlanCycleFor(w,why){
   auditLog('skip','pm',p.name,lb('تخطي دورة (')+(why||'')+lb(') — الاستحقاق القادم ')+next);
   return next;
 }
-function woDel(i){if(!confirm(lb('حذف البلاغ؟||Delete report?')))return;const w=db.wos[i];skipPlanCycleFor(w,lb('حذف أمر||deleted WO'));db.wos.splice(i,1);if(w)auditLog('delete','wo',w.no,'');persist();paintTab();}
+function woDel(i){if(!confirm(lb('حذف البلاغ؟||Delete report?')))return;const w=db.wos[i];skipPlanCycleFor(w,lb('حذف أمر||deleted WO'));notifResolveWo(w);db.wos.splice(i,1);if(w)auditLog('delete','wo',w.no,'');persist();paintTab();}
 function woView(i){
   const w=db.wos[i];
   const pj=w.projectId?db.projects.find(p=>p.id===w.projectId):null;
@@ -5266,7 +5320,8 @@ function doCloseWO(i){
     const p=db.pms.find(x=>x.id===w.pmId);
     if(p){p.lastDone=todayISO();p.nextDue=pmNextDueAfterDone(p);
       const wa=db.assets.find(a=>a.id===w.assetId);
-      if(wa&&wa.meter!=null&&wa.meter!=='')p.lastMeter=Number(wa.meter);}
+      if(wa&&wa.meter!=null&&wa.meter!=='')p.lastMeter=Number(wa.meter);
+      notifResolvePm(p);}
   }
   /* إجراء تصحيحي تلقائي عند الحاجة */
   const fu=$('wc_fu')?$('wc_fu').checked:false;
@@ -5287,7 +5342,8 @@ function doCloseWO(i){
   w.review=canAppr()?'reviewed':'pending';
   if(w.review==='reviewed'){w.reviewedBy=me?me.name:'';w.reviewedAt=Date.now();}
   auditLog('close','wo',w.no,notes.slice(0,80));
-  notify('',lb('اكتمل أمر: ||Work order completed: ')+w.no,'wos','done-'+w.no);
+  notifResolveWo(w);
+  notify('',lb('اكتمل أمر: ||Work order completed: ')+w.no,'wos','done:'+(w.compoundId||activeCmp()||'')+':'+w.no);
   persist();closeModal();paintTab();toast(lb(' أُغلق الأمر|| Closed'),'ok');
 }
 
@@ -5456,7 +5512,7 @@ function savePr(iStr){
     const no='PR-'+y+'-'+String(db.prSeq).padStart(4,'0');
     db.prs.push({no,title:t,by:me.name,date:todayISO(),status:'pending',approver:'',approverDate:'',
       compoundId:activeCmp(),notes:$('fpr_n').value.trim(),poNo:'',items:items.map(it=>Object.assign({q:[]},it))});
-    if(canAppr())notify('',lb('طلب شراء جديد بانتظار الموافقة: ||New PR awaiting approval: ')+t,'proc','pr-'+no);
+    if(canAppr())notify('',lb('طلب شراء جديد بانتظار الموافقة: ||New PR awaiting approval: ')+t,'proc','pr:'+(activeCmp()||'')+':'+no);
   }else{const pr=db.prs[iStr];pr.title=t;pr.notes=$('fpr_n').value.trim();
     pr.items=items.map((it,j)=>Object.assign({q:(pr.items[j]&&pr.items[j].q)||[]},it));}
   persist();closeModal();paintTab();toast(lb(' حُفظ الطلب|| Saved'),'ok');
