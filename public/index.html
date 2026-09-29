@@ -1105,14 +1105,29 @@ async function api(pathname,opts={}){
 }
 
 let db=null,me=null,TAB='dash',PICK=false;
-/* تتبع أخطاء الواجهة (بدون بيانات شخصية) — تُرسل للسيرفر للمراقبة */
-window.addEventListener('error',e=>{
+/* تتبع أخطاء الواجهة (بدون بيانات شخصية) — حد ~5 تقارير/دقيقة + منع تكرار الرسالة */
+const ERR_REPORT={hits:[],seen:{},max:5,windowMs:60000};
+function reportClientError(msg,src){
   try{
-    const msg=String((e&&e.message)||'err').slice(0,200);
+    msg=String(msg||'err').slice(0,200);
     if(!msg||/Script error/.test(msg))return;
+    const now=Date.now();
+    ERR_REPORT.hits=ERR_REPORT.hits.filter(t=>now-t<ERR_REPORT.windowMs);
+    if(ERR_REPORT.hits.length>=ERR_REPORT.max)return;
+    const key=msg+'|'+(src||'');
+    if(ERR_REPORT.seen[key]&&now-ERR_REPORT.seen[key]<ERR_REPORT.windowMs)return;
+    ERR_REPORT.seen[key]=now;
+    ERR_REPORT.hits.push(now);
+    const keys=Object.keys(ERR_REPORT.seen);
+    if(keys.length>100)keys.slice(0,keys.length-100).forEach(k=>{delete ERR_REPORT.seen[k];});
     fetch(API_BASE+'/client-errors',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({msg,url:String(location.pathname||'/').slice(0,100)})}).catch(()=>{});
   }catch(_){}
+}
+window.addEventListener('error',e=>reportClientError((e&&e.message)||'err','error'));
+window.addEventListener('unhandledrejection',e=>{
+  const r=e&&e.reason;
+  reportClientError((r&&(r.message||r))||'unhandledrejection','promise');
 });
 let FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:'',pmView:'plans',pmFcDays:30,pmGroup:'time',pmDisc:'all',pmCritF:'all',pmBld:'all'};
 let PRIO,WSTAT,ASTAT,ROLES,VILLA_FLOORS,PRSTAT,POSTAT,FREQUNIT,PRJSTAT,SHIFTK,BTYPES,UNITKIND,CTRSC,CYCLEK;
@@ -6506,7 +6521,7 @@ function delUser(id){if(!confirm(lb('حذف المستخدم؟||Delete user?')))
    سوق أملاكي — منصة الملاك والمقدّمين (Owner / Contractor / Supplier)
    بياناته تُقرأ وتُكتب عبر مسارات /api/market/* المعزولة حسب الدور.
    ============================================================ */
-let MKT=null, MKT_TAB='dash';
+let MKT=null, MKT_TAB='dash', MKT_ERR=null;
 const SPEC_L={hvac:['تكييف وتبريد','HVAC'],electrical:['كهرباء','Electrical'],plumbing:['سباكة','Plumbing'],
   general:['مقاولات عامة','General Construction'],carpentry:['نجارة','Carpentry'],painting:['دهانات','Painting'],
   landscape:['تنسيق حدائق','Landscaping'],lifts:['مصاعد','Elevators'],security:['أنظمة أمن وسلامة','Security Systems'],other:['أخرى','Other']};
@@ -6525,9 +6540,23 @@ function ptypeL(k){const e=PTYPE_L[k]||PTYPE_L.contractor;return lb(e[0]+'||'+e[
 function jobBadge(js){const map={pending:'b-wait',inprogress:'b-prog',completed:'b-done',paid:'b-ok'};return `<span class="badge ${map[js]||'b-wait'}">${jobL(js)}</span>`;}
 function ratingStr(r){return (Number(r)||0).toFixed(1)+' / 5';}
 
+/* تحميل مساحة عمل السوق: مهلة 10 ثوانٍ · 401 → الدخول · غير ذلك → حالة خطأ مع إعادة المحاولة */
 async function marketBootstrap(){
-  try{ const r=await api('/market/me'); if(r.ok){ MKT=await r.json(); MKT_TAB=(MKT_TAB==='dash')?'dash':MKT_TAB; } else { MKT=null; } }
-  catch(e){ MKT=null; }
+  MKT_ERR=null;
+  try{
+    const ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    const to=ctrl?setTimeout(()=>{try{ctrl.abort();}catch(e){}},10000):null;
+    let r;
+    try{ r=await api('/market/me',ctrl?{signal:ctrl.signal}:{}); }
+    finally{ if(to)clearTimeout(to); }
+    if(r.ok){ MKT=await r.json(); MKT_TAB=(MKT_TAB==='dash')?'dash':MKT_TAB; return true; }
+    if(r.status===401){ MKT=null; MKT_ERR='auth'; sessionExpired(); return false; }
+    MKT=null; MKT_ERR='error'; return false;
+  }catch(e){
+    MKT=null;
+    MKT_ERR=(e&&e.name==='AbortError')?'timeout':'error';
+    return false;
+  }
 }
 async function marketRefresh(){ await marketBootstrap(); render(); }
 
@@ -6544,8 +6573,13 @@ function marketNav(){
     ['profile','gear',lb('ملفي التجاري||My Profile')]];
 }
 function marketShell(){
-  if(!MKT) return `<div class="login-wrap"><div class="login-card property-picker"><h1>${lb('أملاكي||Amlaki')}</h1><div class="empty">${lb('جارِ تحميل مساحة العمل…||Loading your workspace…')}</div>
-    <div style="text-align:center;margin-top:14px"><button class="btn ghost sm" onclick="logout()">${lb('خروج||Logout')}</button></div></div></div>`;
+  if(!MKT) return `<div class="login-wrap"><div class="login-card property-picker"><h1>${lb('أملاكي||Amlaki')}</h1>
+    ${MKT_ERR?`<div class="empty">${MKT_ERR==='timeout'?lb('انتهت مهلة تحميل مساحة العمل.||Loading your workspace timed out.'):lb('تعذّر تحميل مساحة العمل.||Could not load your workspace.')}</div>
+    <div style="text-align:center;margin-top:14px"><button class="btn" onclick="marketRefresh()">${lb('إعادة المحاولة||Retry')}</button>
+    <button class="btn ghost" onclick="logout()">${lb('خروج||Logout')}</button></div>`
+    :`<div class="empty">${lb('جارِ تحميل مساحة العمل…||Loading your workspace…')}</div>
+    <div style="text-align:center;margin-top:14px"><button class="btn ghost sm" onclick="logout()">${lb('خروج||Logout')}</button></div>`}
+    </div></div>`;
   const nav=marketNav();
   const initials=(MKT.user&&MKT.user.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('');
   const cur=nav.find(n=>n[0]===MKT_TAB)||nav[0];
