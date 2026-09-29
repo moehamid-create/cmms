@@ -1094,10 +1094,8 @@ function offlineAllowed(){
 }
 /* كلمات المرور الافتراضية '1234' للعرض المحلي فقط — في النسخة المستضافة تُولَّد قيمة عشوائية غير قابلة للتخمين */
 function demoPass(){ return IS_FILE_DEMO ? '1234' : ('!'+Math.random().toString(36).slice(2)+Date.now().toString(36)); }
-/* TODO(server): لا يوجد قفل حساب بعد محاولات فاشلة متكررة، ولا انتهاء صلاحية لكلمة المرور الافتراضية،
-   ولا نقطة مخصّصة لتغيير كلمة مرور المستخدم نفسه (تغيير المستخدمين محصور بالمدير في /state).
-   TODO(server): no account lockout, no default-password expiry, and no self-service password endpoint
-   (user changes in /state are admin-only). */
+/* الخادم الآن يدعم: قفل تسجيل الدخول (LOGIN_LOCK_MAX/LOCK_MS)، انتهاء صلاحية كلمة المرور الافتراضية
+   (DEFAULT_PW_MAX_AGE_DAYS)، وتغيير كلمة مرور المستخدم لنفسه عبر POST /api/password. */
 function mustChangeNow(){ return !!(me&&(AUTH.mustChange||me.defaultPw)); }
 async function api(pathname,opts={}){
   const headers=Object.assign({'Content-Type':'application/json'},AUTH.csrf?{'X-CSRF-Token':AUTH.csrf}: {}, opts.headers||{});
@@ -1268,10 +1266,21 @@ function compressImg(file){return new Promise(res=>{
     img.onerror=()=>res(null);
     img.src=e.target.result;};
   r.readAsDataURL(file);});}
+/* رفع وسائط إلى الخادم وتخزينها في قاعدة البيانات → نُخزّن رابطاً بدل base64 داخل الحالة.
+   عند فشل الرفع (غير متصل/خطأ) نُبقي البيانات المضمّنة كخطة بديلة. */
+async function uploadMedia(dataUrl,name){
+  try{
+    if(!dataUrl||String(dataUrl).indexOf('data:')!==0)return dataUrl;   /* ليس data URL */
+    const r=await api('/uploads',{method:'POST',body:JSON.stringify({data:dataUrl,name:name||'',compoundId:activeCmp()||''})});
+    if(!r.ok)return dataUrl;
+    const j=await r.json();
+    return (j&&j.url)?j.url:dataUrl;
+  }catch(e){ return dataUrl; }
+}
 function pickImages(cb){
   const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
   inp.onchange=async()=>{const out=[];toast(lb(' جارٍ معالجة الصور…|| Processing photos…'));
-    for(const f of inp.files){const d=await compressImg(f);if(d)out.push({d,n:''});}
+    for(const f of inp.files){const d=await compressImg(f);if(d)out.push({d:await uploadMedia(d,f.name),n:''});}
     if(out.length)cb(out);};
   inp.click();}
 function demoImg(txt,c1,c2){const cv=document.createElement('canvas');cv.width=640;cv.height=420;
@@ -1351,11 +1360,8 @@ function initLangMaps(){
 const SAVE={state:'saved',dirt:false,inflight:null,retry:0,timer:0,usersIntent:false};
 const SAVE_RETRY_MS=[1000,3000,10000];
 const LS_MAX_CHARS=2*1024*1024;   /* حد نسخة المتصفح — الصور والتوقيعات لا تُنسخ محلياً */
-/* TODO(server): الصور والتوقيعات ما زالت تُرسَل داخل /state مع كل حفظ، وهذا سبب 413 المحتمل.
-   الحل الجذري: نقطة رفع منفصلة (POST /api/uploads) تُرجع روابط، ثم يُخزَّن الرابط فقط.
-   لم يُبنَ بعد — يحتاج موافقة وعملاً على الخادم.
-   TODO(server): photos/signatures still ride inside /state on every save (likely 413 cause).
-   Real fix: a separate upload endpoint (POST /api/uploads) returning URLs; not built yet. */
+/* الصور والتوقيعات تُرفع إلى الخادم (POST /api/uploads) ويُخزَّن رابطها بدل base64 داخل الحالة.
+   عند تعذّر الرفع نُبقي النسخة المضمّنة كخطة بديلة. */
 function stripHeavyForLocal(d){
   const c=Object.assign({},d);
   c.wos=(d.wos||[]).map(w=>{const x=Object.assign({},w);x.photos=[];x.sig='';return x;});
@@ -2211,6 +2217,8 @@ function forcePwHtml(){
           <h1 class="auth-title">${lb('تغيير كلمة المرور مطلوب||Password change required')}</h1>
           <p class="auth-sub">${lb('حسابك يستخدم كلمة المرور الافتراضية — اختر كلمة مرور جديدة للمتابعة.||Your account uses the default password — choose a new one to continue.')}</p>
         </div>
+        <label>${lb('كلمة المرور الحالية||Current password')}</label>
+        <input id="fpw_0" type="password" autocomplete="current-password">
         <label>${lb('كلمة المرور الجديدة||New password')}</label>
         <input id="fpw_1" type="password" autocomplete="new-password">
         <label>${lb('تأكيد كلمة المرور||Confirm password')}</label>
@@ -2222,27 +2230,60 @@ function forcePwHtml(){
     </div>
   </div>`;
 }
+/* تغيير كلمة مرور الحساب الحالي عبر الخادم (يعمل لكل الأدوار) */
+async function changeMyPassword(cur,next){
+  const r=await api('/password',{method:'POST',body:JSON.stringify({current:cur,next:next})});
+  let j=null;try{j=await r.json();}catch(e){}
+  if(!r.ok)return { ok:false, error:(j&&j.error)||('HTTP_'+r.status) };
+  AUTH.mustChange=false;
+  const u=db.users.find(x=>x.id===(me&&me.id));if(u)u.defaultPw=false;
+  try{
+    const s=await(await api('/state')).json();
+    if(s&&s.data){AUTH.ver=s.ver;db=migrate(s.data);AUTH.usersRaw=JSON.parse(JSON.stringify(s.data.users||[]));me=db.users.find(x=>x.id===(me&&me.id))||me;}
+  }catch(e){}
+  saveLocalCopy();render();
+  return { ok:true };
+}
 async function forcePwSave(){
+  const cur=($('fpw_0')&&$('fpw_0').value)||'';
   const p1=($('fpw_1')&&$('fpw_1').value)||'';
   const p2=($('fpw_2')&&$('fpw_2').value)||'';
+  if(!cur)return toast(lb('أدخل كلمة المرور الحالية||Enter your current password'),'err');
   if(p1.length<6)return toast(lb('كلمة المرور 6 أحرف على الأقل||Password must be at least 6 characters'),'err');
   if(p1!==p2)return toast(lb('كلمتا المرور غير متطابقتين||Passwords do not match'),'err');
   if(p1==='1234')return toast(lb('اختر كلمة مرور أقوى من الافتراضية||Choose a password stronger than the default'),'err');
-  const u=db.users.find(x=>x.id===(me&&me.id));
-  if(!u)return toast(lb('تعذّر العثور على الحساب||Account not found'),'err');
-  const oldP=u.p,oldDefault=!!u.defaultPw;
-  u.p=await hashLocalPw(p1);u.defaultPw=false;AUTH.mustChange=false;
-  SAVE.usersIntent=true;
-  SAVE.dirt=true;
-  await queueSave();
-  if(SAVE.state!=='saved'){
-    u.p=oldP;u.defaultPw=oldDefault;AUTH.mustChange=true;
-    render();
-    return toast(lb('تعذّر حفظ كلمة المرور — تغيير المستخدمين محصور بالمدير (يتطلب نقطة خادم مخصّصة)||Could not save the password — user changes are admin-only (needs a dedicated server endpoint)'),'err');
+  const res=await changeMyPassword(cur,p1);
+  if(!res.ok){
+    if(res.error==='BAD_CURRENT')return toast(lb('كلمة المرور الحالية غير صحيحة||Current password is incorrect'),'err');
+    if(res.error==='TOO_MANY')return toast(lb('محاولات كثيرة — انتظر قليلاً||Too many attempts — wait a moment'),'err');
+    return toast(lb('تعذّر تغيير كلمة المرور||Could not change the password'),'err');
   }
-  saveLocalCopy();
   toast(lb('تم تحديث كلمة المرور||Password updated'),'ok');
-  render();
+}
+/* تغيير كلمة المرور من داخل النظام (اختياري للمستخدم) */
+function myPwForm(){
+  modal(`<h3>${lb('تغيير كلمة المرور||Change password')}</h3>
+  <label>${lb('كلمة المرور الحالية||Current password')}</label><input id="mp_0" type="password" autocomplete="current-password">
+  <label>${lb('كلمة المرور الجديدة||New password')}</label><input id="mp_1" type="password" autocomplete="new-password">
+  <label>${lb('تأكيد كلمة المرور||Confirm password')}</label><input id="mp_2" type="password" autocomplete="new-password">
+  <p class="muted">${lb('6 أحرف على الأقل.||At least 6 characters.')}</p>
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" onclick="myPwSave()">${lb('حفظ||Save')}</button></div>`);
+}
+async function myPwSave(){
+  const cur=($('mp_0')&&$('mp_0').value)||'';
+  const p1=($('mp_1')&&$('mp_1').value)||'';
+  const p2=($('mp_2')&&$('mp_2').value)||'';
+  if(!cur)return toast(lb('أدخل كلمة المرور الحالية||Enter your current password'),'err');
+  if(p1.length<6)return toast(lb('كلمة المرور 6 أحرف على الأقل||Password must be at least 6 characters'),'err');
+  if(p1!==p2)return toast(lb('كلمتا المرور غير متطابقتين||Passwords do not match'),'err');
+  const res=await changeMyPassword(cur,p1);
+  if(!res.ok){
+    if(res.error==='BAD_CURRENT')return toast(lb('كلمة المرور الحالية غير صحيحة||Current password is incorrect'),'err');
+    if(res.error==='TOO_MANY')return toast(lb('محاولات كثيرة — انتظر قليلاً||Too many attempts — wait a moment'),'err');
+    return toast(lb('تعذّر تغيير كلمة المرور||Could not change the password'),'err');
+  }
+  closeModal();toast(lb('تم تحديث كلمة المرور||Password updated'),'ok');
 }
 async function doLogin(e){
   e.preventDefault();
@@ -2377,8 +2418,8 @@ function markAllRead(){notifsQ().forEach(n=>n.read=true);persist();closeModal();
 function render(){
   document.body.dir=db.lang==='ar'?'rtl':'ltr';
   document.body.lang=db.lang==='ar'?'ar':'en';
-  /* فرض تغيير كلمة المرور قبل أي استخدام — للمدير فقط (تغيير مستخدم آخر يحتاج نقطة خادم مخصّصة) */
-  if(me&&isAdmin()&&mustChangeNow()){ $('app').innerHTML=forcePwHtml(); renderSaveState(); return; }
+  /* فرض تغيير كلمة المرور قبل أي استخدام (جميع الأدوار — الخادم يدعم تغيير كلمة مرور المستخدم لنفسه) */
+  if(me&&mustChangeNow()){ $('app').innerHTML=forcePwHtml(); renderSaveState(); return; }
   /* بوابة السوق (مالك / مقاول / مورّد) — واجهة مستقلة ومعزولة */
   if(me&&isMarketRole()){
     $('app').innerHTML=marketShell();
@@ -2522,6 +2563,7 @@ function shell(){
           <span class="uinfo"><span class="nm">${esc(me.name)}</span><br><span class="rl">${ROLES[me.role]}</span></span>
         </div>
         <div class="sideacts">
+          <button class="btn ghost sm" title="${lb('تغيير كلمة المرور||Change password')}" onclick="myPwForm()">${ic('shield',14)}</button>
           ${isAdmin()?`<button class="btn ghost sm" title="${lb('نسخة احتياطية الآن||Backup now')}" onclick="bkNow()">${lb('نسخة||Backup')}</button>`:''}
           <button class="btn ghost sm" title="${lb('الوضع الليلي||Night mode')}" onclick="toggleTheme()">${ic(document.documentElement.classList.contains('dark')?'sun':'moon',14)}</button>
           <button class="btn ghost sm" title="${lb('اللغة||Language')}" onclick="toggleLang()">${db.lang==='ar'?'EN':'ع'}</button>
@@ -2679,10 +2721,7 @@ function delCmp(cid){const c=db.compounds.find(x=>x.id===cid);if(!c)return;
 
 /* ===== PREVENTIVE MAINTENANCE ===== */
 /* حساب الفترات: الأشهر تقويمية (12 شهراً = سنة) والأيام والأسابيع كما هي.
-   TODO(server): الخادم ما زال يحسب الشهر 30 يوماً (pmIntervalDays) — يجب مواءمته مع الحساب التقويمي هنا
-   حتى لا تختلف تواريخ التوليد بين العميل والخادم.
-   TODO(server): server-side pmIntervalDays still treats a month as 30 days; align it with this
-   calendar-month math so client and server agree on due dates. */
+   الخادم يستخدم نفس الحساب (pmAddIntervalISO) — لا فرق بين العميل والخادم. */
 function addMonthsISO(iso,n){
   const d=new Date(iso+'T12:00:00');
   const day=d.getDate();
@@ -4287,7 +4326,7 @@ function vDash(){
     ${kpi(ic('box',19),low.length,lb('أصناف تحت الحد||Low Stock'),'inv',low.length>0)}`;
 
   /* تنبيه غير حاجب: غير المدير لا يستطيع تغيير كلمة مروره من الواجهة (يحتاج نقطة خادم مخصّصة) */
-  const pwBanner=(!isAdmin()&&((me&&me.defaultPw)||AUTH.mustChange))?`<div class="card" style="border:1.5px solid var(--red)"><b>${lb('حسابك يستخدم كلمة المرور الافتراضية — اطلب من مدير النظام تغييرها||Your account uses the default password — ask a system admin to change it')}</b></div>`:'';
+  const pwBanner=(!isAdmin()&&((me&&me.defaultPw)||AUTH.mustChange))?`<div class="card" style="border:1.5px solid var(--red)"><b>${lb('حسابك يستخدم كلمة المرور الافتراضية — غيّرها الآن لحماية النظام||Your account uses the default password — change it now to secure the system')}</b> <button class="btn sm" onclick="myPwForm()">${lb('تغيير كلمة المرور||Change password')}</button></div>`:'';
 
   if(isTech()){
     return `<div class="stats">${stats}</div>
@@ -5330,7 +5369,7 @@ function pmFillReqParts(i){
   });
   toast(n?lb('أُضيفت '+n+' قطعة مطابقة||Added '+n+' matching parts'):lb('لا تطابق في المخزون||No inventory match'),'ok');
 }
-function doCloseWO(i){
+async function doCloseWO(i){
   const w=db.wos[i],used=[];
   const notes=$('wc_n').value.trim();
   if(!notes)return toast(lb(' اكتب ما الذي تم عمله قبل الإغلاق|| Describe what was done before closing'),'err');
@@ -5354,7 +5393,7 @@ function doCloseWO(i){
   (window._woPhB||[]).forEach(p=>phs.push({id:uid('PH'),tag:'before',d:p.d,n:p.n||'',at:Date.now()}));
   (window._woPhA||[]).forEach(p=>phs.push({id:uid('PH'),tag:'after',d:p.d,n:p.n||'',at:Date.now()}));
   if(phs.length)w.photos=phs;
-  if(sigHasInk())w.sig=$('sigpad').toDataURL('image/png');
+  if(sigHasInk())w.sig=await uploadMedia($('sigpad').toDataURL('image/png'),'signature.png');
   w.closeNotes=notes;w.cost=+$('wc_c').value||0;
   w.status='closed';w.closedAt=Date.now();if(!w.startedAt)w.startedAt=w.closedAt;
   if(w.type==='pm'&&w.pmId){

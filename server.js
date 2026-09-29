@@ -63,16 +63,42 @@ if (USE_PG) {
     ver     INTEGER NOT NULL DEFAULT 1,
     updated TEXT
   )`);
+  sqlite.exec(`CREATE TABLE IF NOT EXISTS appconfig(
+    key     TEXT PRIMARY KEY,
+    val     TEXT
+  )`);
+  sqlite.exec(`CREATE TABLE IF NOT EXISTS files(
+    id          TEXT PRIMARY KEY,
+    compound_id TEXT,
+    name        TEXT,
+    mime        TEXT,
+    size        INTEGER,
+    data        BLOB,
+    created     BIGINT
+  )`);
   DB_LABEL = 'sqlite:' + DB_PATH;
 }
 
-/* Ensure the Postgres table exists (runs once at startup) */
+/* Ensure the Postgres tables exist (runs once at startup) */
 async function pgInit() {
   await pgPool.query(`CREATE TABLE IF NOT EXISTS appstate(
     id      INTEGER PRIMARY KEY CHECK(id=1),
     data    TEXT NOT NULL,
     ver     INTEGER NOT NULL DEFAULT 1,
     updated TIMESTAMPTZ DEFAULT now()
+  )`);
+  await pgPool.query(`CREATE TABLE IF NOT EXISTS appconfig(
+    key     TEXT PRIMARY KEY,
+    val     TEXT
+  )`);
+  await pgPool.query(`CREATE TABLE IF NOT EXISTS files(
+    id          TEXT PRIMARY KEY,
+    compound_id TEXT,
+    name        TEXT,
+    mime        TEXT,
+    size        INTEGER,
+    data        BYTEA,
+    created     BIGINT
   )`);
 }
 
@@ -319,6 +345,36 @@ async function setState(data, expectedVer) {
 }
 /* ---- تشفير كلمات المرور (PBKDF2-SHA256 — مدمج في Node، بلا مكتبات) ----
    التخزين بصيغة: pbkdf2$iterations$salt$hash — لا يمكن عكسها لكلمة المرور */
+/* ---- إعدادات/حالة الخادم العامة (لا تُرسل للمتصفح) — تُستخدم لقفل تسجيل الدخول ---- */
+async function getConfig(key){
+  try{
+    if (USE_PG) { const r = await pgPool.query('SELECT val FROM appconfig WHERE key=$1', [key]); return r.rows[0] ? r.rows[0].val : null; }
+    const r = sqlite.prepare('SELECT val FROM appconfig WHERE key=?').get(key);
+    return r ? r.val : null;
+  }catch(e){ return null; }
+}
+async function setConfig(key, val){
+  try{
+    if (USE_PG) { await pgPool.query(`INSERT INTO appconfig(key,val) VALUES($1,$2) ON CONFLICT(key) DO UPDATE SET val=EXCLUDED.val`, [key, val == null ? '' : String(val)]); return true; }
+    sqlite.prepare(`INSERT INTO appconfig(key,val) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET val=excluded.val`).run(key, val == null ? '' : String(val));
+    return true;
+  }catch(e){ console.error('config write failed:', e.message); return false; }
+}
+/* ---- ملفات الوسائط (صور وتوقيعات) مخزّنة في قاعدة البيانات ---- */
+const MAX_UPLOAD = Number(process.env.MAX_UPLOAD_BYTES || 8 * 1024 * 1024);   /* 8MB للملف */
+async function putFile(row){
+  if (USE_PG) {
+    await pgPool.query('INSERT INTO files(id,compound_id,name,mime,size,data,created) VALUES($1,$2,$3,$4,$5,$6,$7)',
+      [row.id, row.compound_id, row.name, row.mime, row.size, row.data, row.created]);
+    return;
+  }
+  sqlite.prepare('INSERT INTO files(id,compound_id,name,mime,size,data,created) VALUES(?,?,?,?,?,?,?)')
+    .run(row.id, row.compound_id, row.name, row.mime, row.size, row.data, row.created);
+}
+async function getFileById(id){
+  if (USE_PG) { const r = await pgPool.query('SELECT mime,data FROM files WHERE id=$1', [id]); return r.rows[0] || null; }
+  return sqlite.prepare('SELECT mime,data FROM files WHERE id=?').get(id) || null;
+}
 const HASH_ITERS = 100000;
 function isHash(s){ return typeof s === 'string' && s.indexOf('pbkdf2$') === 0; }
 function hashPassword(pw){
@@ -348,6 +404,18 @@ function canonUsers(users) {
     Object.keys(u || {}).sort().forEach(k => { o[k] = u[k]; });
     return o;
   }));
+}
+/* تطبيع حقول المستخدمين (يطابق شبكة أمان العميل) — يمنع رفض الحفظ بسبب فروق تنسيقية */
+function normalizeUserList(users, compounds) {
+  const defC = (compounds && compounds[0] && compounds[0].id) || '';
+  (users || []).forEach(u => {
+    if (!u || typeof u !== 'object') return;
+    if (u.phone == null) u.phone = '';
+    if (u.email == null) u.email = '';
+    if (!Array.isArray(u.cmpIds)) u.cmpIds = (u.role === 'admin') ? [] : (defC ? [defC] : []);
+    if (u.activeCmp == null) u.activeCmp = '';
+  });
+  return users || [];
 }
 function getCookie(req, name) {
   const raw = String(req.headers.cookie || '');
@@ -466,6 +534,21 @@ function rfqViewFor(actor, rfq, includeBids){
   return base;
 }
 
+/* ---- قفل تسجيل الدخول: 5 محاولات فاشلة لكل (مستخدم+IP) خلال 15 دقيقة ---- */
+const LOCK_MAX_FAILS = Number(process.env.LOGIN_LOCK_MAX || 5);
+const LOCK_MS = Number(process.env.LOGIN_LOCK_MS || 15 * 60 * 1000);
+const PW_MAX_AGE_DAYS = Number(process.env.DEFAULT_PW_MAX_AGE_DAYS || 0);   /* 0 = معطّل */
+function lockKeyFor(u, req){ const ip = req.ip || req.socket.remoteAddress || 'x'; return 'lock:' + String(u || '').toLowerCase() + '|' + ip; }
+async function lockState(key){
+  const raw = await getConfig(key);
+  if (!raw) return { fails: 0, until: 0 };
+  try { const o = JSON.parse(raw); return { fails: Number(o.fails) || 0, until: Number(o.until) || 0 }; } catch (e) { return { fails: 0, until: 0 }; }
+}
+function pwAgeDays(u){
+  const t = Number(u && (u.pwChangedAt || u.createdAt)) || 0;
+  if (!t) return 0;
+  return (Date.now() - t) / 86400000;
+}
 /* ---- تسجيل الدخول ---- */
 app.post('/api/login', loginRateLimit, async (req,res)=>{
   let st;
@@ -476,18 +559,84 @@ app.post('/api/login', loginRateLimit, async (req,res)=>{
     return res.status(400).json({error:'BAD_LOGIN'});
   const rawU = String(u||'').trim().toLowerCase();
   const uname = rawU.includes('@') ? rawU.split('@')[0] : rawU;
+  const lkKey = lockKeyFor(rawU, req);
+  const lk = await lockState(lkKey);
+  if (lk.until > Date.now())
+    return res.status(429).json({error:'LOCKED', until:lk.until, retryAfterSec:Math.ceil((lk.until-Date.now())/1000)});
   /* الدخول باسم المستخدم أو البريد الإلكتروني */
   const user = (st.data.users||[]).find(x => {
     const uu = String(x.u || '').toLowerCase();
     const em = String(x.email || '').toLowerCase();
     return (uu === rawU || uu === uname || (em && em === rawU)) && verifyPassword(String(p||''), x.p);
   });
-  if(!user)  return res.status(401).json({error:'BAD_LOGIN'});
+  if(!user){
+    const fails = lk.fails + 1;
+    await setConfig(lkKey, JSON.stringify({ fails, until: fails >= LOCK_MAX_FAILS ? Date.now() + LOCK_MS : 0 }));
+    if (fails >= LOCK_MAX_FAILS) return res.status(429).json({error:'LOCKED', retryAfterSec:Math.ceil(LOCK_MS/1000)});
+    return res.status(401).json({error:'BAD_LOGIN'});
+  }
+  await setConfig(lkKey, JSON.stringify({ fails: 0, until: 0 }));   /* نجاح → تصفير العدّاد */
   const token = crypto.randomBytes(32).toString('hex');
   const csrf = csrfToken(token);
   sessions.set(token,{userId:user.id, role:user.role || 'viewer', at:Date.now()});
   res.cookie(sessionCookie, token, { httpOnly:true, secure:isProduction, sameSite:'lax', maxAge:SESSION_TTL, path:'/' });
-  res.json({userId:user.id, user:{id:user.id,name:user.name,role:user.role}, csrf, ver:st.ver, mustChange:!!user.defaultPw});
+  const expired = PW_MAX_AGE_DAYS > 0 && pwAgeDays(user) > PW_MAX_AGE_DAYS;
+  res.json({userId:user.id, user:{id:user.id,name:user.name,role:user.role}, csrf, ver:st.ver, mustChange:(!!user.defaultPw)||expired});
+});
+
+/* ---- تغيير كلمة المرور للفرد (يعمل لجميع الأدوار — يتحقق من الحالية) ---- */
+app.post('/api/password', async (req,res)=>{
+  const a = auth(req,res); if(!a) return;
+  const ip = req.ip || req.socket.remoteAddress || 'x';
+  if (!boundedHit(loginHits, 'pwd:' + ip, 10 * 60 * 1000, 20)) return res.status(429).json({error:'TOO_MANY'});
+  const b = req.body || {};
+  const current = String(b.current || '');
+  const next = String(b.next || '');
+  if (next.length < 6 || next.length > 200) return res.status(400).json({error:'BAD_NEW'});
+  if (current.length > 200) return res.status(400).json({error:'BAD_CURRENT'});
+  try {
+    const st = await getState();
+    const u = (st.data.users || []).find(x => x.id === a.session.userId);
+    if (!u) return res.status(404).json({error:'NOT_FOUND'});
+    if (!verifyPassword(current, u.p)) return res.status(400).json({error:'BAD_CURRENT'});
+    u.p = hashPassword(next);
+    u.defaultPw = false;
+    u.pwChangedAt = Date.now();
+    const ver = await setState(st.data, st.ver);
+    if (ver == null) return res.status(409).json({error:'CONFLICT'});
+    res.json({ ok:true, ver });
+  } catch (e) { console.error('DB error on POST /api/password:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* ---- رفع وسائط (صور/توقيعات) وتخزينها في قاعدة البيانات ---- */
+app.post('/api/uploads', async (req,res)=>{
+  const a = auth(req,res); if(!a) return;
+  const ip = req.ip || req.socket.remoteAddress || 'x';
+  if (!boundedHit(pubHits, 'up:' + ip, 60 * 60 * 1000, 300)) return res.status(429).json({error:'TOO_MANY'});
+  try{
+    const b = req.body || {};
+    const m = /^data:([\w.+-]+\/[\w.+-]+);base64,(.+)$/i.exec(String(b.data || ''));
+    const mime = String(b.mime || (m ? m[1] : '')).toLowerCase();
+    const b64 = m ? m[2] : String(b.base64 || '');
+    if (!b64) return res.status(400).json({error:'NO_DATA'});
+    if (!/^image\//.test(mime) && mime !== 'application/pdf') return res.status(400).json({error:'BAD_TYPE'});
+    const buf = Buffer.from(b64, 'base64');
+    if (!buf.length) return res.status(400).json({error:'NO_DATA'});
+    if (buf.length > MAX_UPLOAD) return res.status(413).json({error:'TOO_LARGE', max:MAX_UPLOAD});
+    const id = 'F' + crypto.randomBytes(9).toString('hex');
+    await putFile({ id, compound_id: String(b.compoundId || '').slice(0,60), name: String(b.name || '').slice(0,120), mime, size: buf.length, data: buf, created: Date.now() });
+    res.json({ ok:true, id, url:'/api/files/' + id, size:buf.length, mime });
+  }catch(e){ console.error('DB error on POST /api/uploads:', e.message); return res.status(500).json({error:'DB'}); }
+});
+app.get('/api/files/:id', async (req,res)=>{
+  const a = auth(req,res,{silent:true}); if(!a) return res.status(401).end();
+  try{
+    const f = await getFileById(String(req.params.id || ''));
+    if (!f) return res.status(404).end();
+    res.set('Content-Type', f.mime || 'application/octet-stream');
+    res.set('Cache-Control', 'private, max-age=31536000, immutable');
+    res.send(Buffer.isBuffer(f.data) ? f.data : Buffer.from(f.data));
+  }catch(e){ console.error('DB error on GET /api/files:', e.message); res.status(500).end(); }
 });
 
 app.post('/api/logout',(req,res)=>{
@@ -532,9 +681,14 @@ app.post('/api/state', async (req,res)=>{
   if(!data) return res.status(400).json({error:'NO_DATA'});
   if(cur.data && Number(baseVer) !== cur.ver)
     return res.status(409).json({error:'CONFLICT', ver:cur.ver});
-  /* إدارة المستخدمين للمدير فقط — تُقارن بالمحتوى (تغيير لغتي/مجمعي مسموح للجميع) */
-  if (cur.data && canonUsers(data.users) !== canonUsers(cur.data.users) && actor.session.role !== 'admin')
-    return res.status(403).json({error:'USERS_FORBIDDEN'});
+  /* إدارة المستخدمين للمدير فقط — تُقارن بعد تطبيع الحقول حتى لا يُرفض الحفظ بسبب فروق تنسيقية */
+  if (cur.data && actor.session.role !== 'admin') {
+    const nextU = canonUsers(normalizeUserList(JSON.parse(JSON.stringify(data.users || [])), data.compounds || []));
+    const curU = canonUsers(normalizeUserList(JSON.parse(JSON.stringify(cur.data.users || [])), cur.data.compounds || []));
+    if (nextU !== curU) return res.status(403).json({ error: 'USERS_FORBIDDEN' });
+  }
+  /* نطبّع نسخة التخزين أيضاً حتى تتفق نسخة العميل مع المخزّنة */
+  normalizeUserList(data.users, data.compounds);
   try {
     /* compare-and-swap: only writes if the version is still cur.ver, closing the
        read→write race that two simultaneous editors could otherwise slip through */
@@ -1043,8 +1197,23 @@ async function aiFetch(c, payload) {
 function isoDay(d){const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
 function addDaysISO(iso,n){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return isoDay(d);}
 function daysBetweenISO(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);}
+/* حساب الفترات: الأشهر تقويمية (12 شهراً = سنة) — مطابق لحساب الواجهة */
+function addMonthsISO(iso,n){
+  const d=new Date(iso+'T12:00:00');
+  const day=d.getDate();
+  d.setDate(1);d.setMonth(d.getMonth()+n);
+  const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  d.setDate(Math.min(day,last));
+  return isoDay(d);
+}
+function pmAddIntervalISO(iso,p){
+  const n=Math.max(1,Number(p.freqVal)||1);
+  if(p.freqUnit==='days')return addDaysISO(iso,n);
+  if(p.freqUnit==='weeks')return addDaysISO(iso,n*7);
+  return addMonthsISO(iso,n);
+}
 function pmIntervalDays(p){const n=Math.max(1,Number(p.freqVal)||1);return p.freqUnit==='days'?n:p.freqUnit==='weeks'?n*7:n*30;}
-function pmNextDue(p,today){if(p.nextDue)return p.nextDue;if(p.lastDone)return addDaysISO(p.lastDone,pmIntervalDays(p));return today;}
+function pmNextDue(p,today){if(p.nextDue)return p.nextDue;if(p.lastDone)return pmAddIntervalISO(p.lastDone,p);return today;}
 function pmReqPartsMissing(d,p){
   const out=[];
   (p.parts||[]).forEach(rp=>{
