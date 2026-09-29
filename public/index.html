@@ -1315,23 +1315,116 @@ function initLangMaps(){
   SHIFTK={am:lb('صباحية||Morning'),pm:lb('مسائية||Evening'),ng:lb('ليلية||Night'),oc:lb('استعداد||On-Call')};
 }
 
-/* ===== PERSIST (HYBRID: LOCAL + SERVER) ===== */
+/* ===== PERSIST (HYBRID: LOCAL + SERVER) =====
+   حفظ مُسلسَل: طلب POST واحد فقط في أي لحظة، وإرسال أخير واحد عند وصول تعديلات أثناء الحفظ.
+   حالات صريحة: 200 · 401 (انتهت الجلسة) · 409 (تعارض) · 413 (حجم كبير) · 5xx/شبكة (إعادة محاولة متدرجة) */
+const SAVE={state:'saved',dirt:false,inflight:null,retry:0,timer:0};
+const SAVE_RETRY_MS=[1000,3000,10000];
+const LS_MAX_CHARS=2*1024*1024;   /* حد نسخة المتصفح — الصور والتوقيعات لا تُنسخ محلياً */
+/* TODO(server): الصور والتوقيعات ما زالت تُرسَل داخل /state مع كل حفظ، وهذا سبب 413 المحتمل.
+   الحل الجذري: نقطة رفع منفصلة (POST /api/uploads) تُرجع روابط، ثم يُخزَّن الرابط فقط.
+   لم يُبنَ بعد — يحتاج موافقة وعملاً على الخادم.
+   TODO(server): photos/signatures still ride inside /state on every save (likely 413 cause).
+   Real fix: a separate upload endpoint (POST /api/uploads) returning URLs; not built yet. */
+function stripHeavyForLocal(d){
+  const c=Object.assign({},d);
+  c.wos=(d.wos||[]).map(w=>{const x=Object.assign({},w);x.photos=[];x.sig='';return x;});
+  c.assets=(d.assets||[]).map(a=>{const x=Object.assign({},a);x.photos=[];return x;});
+  return c;
+}
+function saveLocalCopy(){
+  try{
+    if(!db)return;
+    const json=JSON.stringify(stripHeavyForLocal(db));
+    if(json.length<=LS_MAX_CHARS)localStorage.setItem('cmms_data',json);
+  }catch(e){}
+}
+function saveStateLabel(s){
+  return s==='saving'?lb('جارٍ الحفظ…||Saving…')
+    :s==='offline'?lb('غير متصل — سيُعاد المحاولة||Offline — will retry')
+    :s==='error'?lb('خطأ في الحفظ||Save error')
+    :lb('محفوظ||Saved');
+}
+function renderSaveState(){
+  const el=document.getElementById('saveStat');
+  if(!el)return;
+  const s=SAVE.state;
+  const cls=s==='saved'?'b-ok':s==='saving'?'b-prog':s==='offline'?'b-wait':'b-urgent';
+  el.innerHTML=`<span class="badge ${cls}" title="${lb('حالة الحفظ||Save status')}">${saveStateLabel(s)}</span>`;
+}
+function setSaveState(s){SAVE.state=s;renderSaveState();}
 function persist(){
-  try{if(db)localStorage.setItem('cmms_data',JSON.stringify(db));}catch(e){}
-  clearTimeout(persist._t);persist._t=setTimeout(async()=>{
+  saveLocalCopy();
+  SAVE.dirt=true;
+  SAVE.retry=0;                          /* تغيير جديد من المستخدم = فرصة إعادة كاملة */
+  clearTimeout(persist._t);
+  persist._t=setTimeout(queueSave,400);
+}
+async function queueSave(){
+  if(SAVE.inflight){SAVE.dirt=true;return;}   /* يوجد حفظ جارٍ — سيُعاد الإرسال بعده */
+  if(!SAVE.dirt)return;
+  SAVE.dirt=false;
+  SAVE.inflight=(async()=>{
+    setSaveState('saving');
     try{
       const r=await api('/state',{method:'POST',body:JSON.stringify({baseVer:AUTH.ver,data:db})});
-      if(r.status===409){
-        const s=await(await api('/state')).json();
-        AUTH.ver=s.ver;db=s.data;
-        try{localStorage.setItem('cmms_data',JSON.stringify(db));}catch(e){}
-        toast(lb(' حدّث مستخدم آخر البيانات — حُمّلت النسخة الأحدث|| Data updated by another user — latest loaded'),'err');
-        render();return;
+      if(r.status===200){
+        let j=null;try{j=await r.json();}catch(e){}
+        if(j&&typeof j.ver==='number')AUTH.ver=j.ver;   /* لا نثق بـ ver غير رقمي */
+        SAVE.retry=0;setSaveState('saved');
+      }else if(r.status===401){
+        setSaveState('error');sessionExpired();
+      }else if(r.status===409){
+        await resolveConflict();
+      }else if(r.status===413){
+        setSaveState('error');
+        toast(lb(' حجم البيانات كبير (صور) — لم يُحفظ. احذف بعض الصور ثم أعد المحاولة|| Payload too large (photos) — not saved. Remove some photos and retry'),'err');
+      }else{
+        scheduleSaveRetry(r.status);
       }
-      const j=await r.json();AUTH.ver=j.ver;
-    }catch(e){}
-  },400);
+    }catch(e){
+      scheduleSaveRetry(0);
+    }finally{
+      SAVE.inflight=null;
+      if(SAVE.dirt)queueSave();            /* تعديلات وصلت أثناء الحفظ → إرسال أخير واحد */
+    }
+  })();
+  return SAVE.inflight;
 }
+function scheduleSaveRetry(status){
+  SAVE.retry++;
+  if(SAVE.retry<=SAVE_RETRY_MS.length){
+    const wait=SAVE_RETRY_MS[SAVE.retry-1];
+    setSaveState('saving');
+    clearTimeout(SAVE.timer);
+    SAVE.timer=setTimeout(()=>{SAVE.dirt=true;queueSave();},wait);
+  }else{
+    setSaveState('offline');
+    toast(lb(' تعذّر الوصول للخادم — سيُعاد المحاولة عند أول تغيير|| Server unreachable — will retry on your next change'),'err');
+  }
+}
+async function resolveConflict(){
+  try{
+    const r=await api('/state');
+    if(!r.ok){setSaveState('error');toast(lb(' تعارض في الحفظ وتعذّر تحميل النسخة الأحدث|| Save conflict and the latest copy could not be loaded'),'err');return;}
+    const s=await r.json();
+    if(!s||!s.data||typeof s.ver!=='number'){setSaveState('error');toast(lb(' تعارض في الحفظ — نسخة الخادم غير صالحة|| Save conflict — server copy invalid'),'err');return;}
+    AUTH.ver=s.ver;db=migrate(s.data);
+    saveLocalCopy();setSaveState('saved');
+    toast(lb(' حدّث مستخدم آخر البيانات — حُمّلت النسخة الأحدث|| Data updated by another user — latest loaded'),'err');
+    render();
+  }catch(e){setSaveState('error');}
+}
+function sessionExpired(){
+  SAVE.dirt=false;
+  me=null;AUTH.csrf='';AUTH.ver=0;
+  toast(lb(' انتهت الجلسة — سجّل الدخول من جديد|| Session expired — please sign in again'),'err');
+  render();
+}
+/* تحذير قبل مغادرة الصفحة وفيه تغييرات لم تُحفظ */
+window.addEventListener('beforeunload',e=>{
+  if(SAVE.dirt||SAVE.inflight){e.preventDefault();e.returnValue='';return '';}
+});
 function backupOnLaunch(){}
 /* نسخ رابط بوابة المستأجرين (مع مجمع محدد مسبقاً إن أمكن) */
 function copyPortal(){
@@ -2123,6 +2216,7 @@ function render(){
   if(me&&!tabAllowed(TAB))TAB='dash';
   $('app').innerHTML = me ? (PICK?pickerHtml():shell()) : loginHtml();
   if(me&&!PICK)paintTab();
+  renderSaveState();
   document.querySelectorAll('#app button[title]').forEach(b=>{if(!b.getAttribute('aria-label'))b.setAttribute('aria-label',b.title);});
 }
 /* بطاقات اختيار نوع الأصل — تُستخدم في شاشة البداية وفي نافذة "أصل جديد" */
@@ -2221,7 +2315,9 @@ function cmpIsEmpty(id){
 }
   async function logout(){
   try{await api('/logout',{method:'POST'});}catch(e){}
-  AUTH.csrf='';AUTH.mustChange=false;me=null;PICK=false;render();}
+  try{localStorage.removeItem('cmms_data');}catch(e){}
+  SAVE.dirt=false;SAVE.retry=0;clearTimeout(SAVE.timer);setSaveState('saved');
+  AUTH.csrf='';AUTH.mustChange=false;AUTH.ver=0;me=null;PICK=false;render();}
 function toggleLang(){db.lang=db.lang==='ar'?'en':'ar';initLangMaps();persist();render();}
 function toggleTheme(){const d=document.documentElement.classList.toggle('dark');try{localStorage.setItem('amlaki_theme',d?'dark':'light');}catch(e){}render();}
 
@@ -2266,6 +2362,7 @@ function shell(){
         <span class="ttl"><span class="pname">${lb('أملاكي||Amlaki')}</span>${(()=>{const c=nav.find(n=>n[0]===TAB);return c?c[2]:lb('الرئيسية||Dashboard')})()}</span>
         <span class="meta">
           ${asw}
+          <span id="saveStat" style="display:inline-flex;align-items:center;max-width:230px"></span>
           <span> ${fmtD(todayISO())}</span>
           <button class="bell" title="${lb('الإشعارات||Notifications')}" onclick="notifModal()">${ic('bell',16)}${uc?`<span class="bellb">${uc}</span>`:''}</button>
         </span>
