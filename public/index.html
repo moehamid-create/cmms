@@ -1083,7 +1083,7 @@ label{font-size:11.5px;font-weight:700;color:var(--muted);margin:10px 0 5px}
 /* ===== SERVER API (WEB EDITION) ===== */
 /* Production: same-origin /api on any hosted domain. Local file:// falls back to localhost. */
 const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:3000/api' : '/api';
-let AUTH={csrf:'',ver:0,mustChange:false};
+let AUTH={csrf:'',ver:0,mustChange:false,usersRaw:null};
 /* ===== وضع التشغيل: نسخة file:// (عرض فقط) مقابل نسخة مستضافة =====
    الدخول المحلي مسموح فقط في file:// أو عند تفعيل علم عدم الاتصال الصريح
    (localStorage 'amlaki_offline' = '1' أو window.AMLaki_OFFLINE = true). */
@@ -1348,7 +1348,7 @@ function initLangMaps(){
 /* ===== PERSIST (HYBRID: LOCAL + SERVER) =====
    حفظ مُسلسَل: طلب POST واحد فقط في أي لحظة، وإرسال أخير واحد عند وصول تعديلات أثناء الحفظ.
    حالات صريحة: 200 · 401 (انتهت الجلسة) · 409 (تعارض) · 413 (حجم كبير) · 5xx/شبكة (إعادة محاولة متدرجة) */
-const SAVE={state:'saved',dirt:false,inflight:null,retry:0,timer:0};
+const SAVE={state:'saved',dirt:false,inflight:null,retry:0,timer:0,usersIntent:false};
 const SAVE_RETRY_MS=[1000,3000,10000];
 const LS_MAX_CHARS=2*1024*1024;   /* حد نسخة المتصفح — الصور والتوقيعات لا تُنسخ محلياً */
 /* TODO(server): الصور والتوقيعات ما زالت تُرسَل داخل /state مع كل حفظ، وهذا سبب 413 المحتمل.
@@ -1397,10 +1397,20 @@ async function queueSave(){
   SAVE.inflight=(async()=>{
     setSaveState('saving');
     try{
-      const r=await api('/state',{method:'POST',body:JSON.stringify({baseVer:AUTH.ver,data:db})});
+      /* للأدوار غير المدير: نُرسل نسخة الخادم من «users» كما هي — أي فرق يُرفض بـ USERS_FORBIDDEN (تعديل المستخدمين للمدير فقط).
+         لا تُرسل تعديلات المستخدمين إلا إذا كانت مقصودة من الواجهة (SAVE.usersIntent). */
+      const payload=Object.assign({},db);
+      if(!isAdmin()&&!SAVE.usersIntent&&AUTH.usersRaw)payload.users=AUTH.usersRaw;
+      /* لا نُرسل كلمات مرور بنص واضح أبداً: نشفّرها محلياً بنفس صيغة الخادم حتى تطابق النسخة المخزّنة */
+      for(const u of (payload.users||[])){
+        if(u&&typeof u.p==='string'&&u.p&&u.p.indexOf('pbkdf2$')!==0)u.p=await hashLocalPw(u.p);
+      }
+      const r=await api('/state',{method:'POST',body:JSON.stringify({baseVer:AUTH.ver,data:payload})});
       if(r.status===200){
         let j=null;try{j=await r.json();}catch(e){}
         if(j&&typeof j.ver==='number')AUTH.ver=j.ver;   /* لا نثق بـ ver غير رقمي */
+        AUTH.usersRaw=JSON.parse(JSON.stringify(payload.users||[]));
+        SAVE.usersIntent=false;
         SAVE.retry=0;setSaveState('saved');
       }else if(r.status===401){
         setSaveState('error');sessionExpired();
@@ -1443,6 +1453,7 @@ async function resolveConflict(){
     const s=await r.json();
     if(!s||!s.data||typeof s.ver!=='number'){setSaveState('error');toast(lb(' تعارض في الحفظ — نسخة الخادم غير صالحة|| Save conflict — server copy invalid'),'err');return;}
     AUTH.ver=s.ver;db=migrate(s.data);
+    AUTH.usersRaw=JSON.parse(JSON.stringify(s.data.users||[]));
     saveLocalCopy();setSaveState('saved');
     toast(lb(' حدّث مستخدم آخر البيانات — حُمّلت النسخة الأحدث|| Data updated by another user — latest loaded'),'err');
     render();
@@ -1737,6 +1748,7 @@ async function boot(){
     const j=await r.json();
     if(j.data){
       db=j.data;AUTH.ver=j.ver;
+      AUTH.usersRaw=JSON.parse(JSON.stringify(j.data.users||[]));
       if(j.marketplace){ me = { id:j.userId, role:j.role, name:(j.data.users[0]||{}).name||'' }; await marketBootstrap(); return; }
       db=migrate(db);
       me=db.users.find(x=>x.id===j.userId)||null;
@@ -2181,6 +2193,15 @@ async function verifyLocalPw(pw, stored){
     return got === parts[3];
   }catch(e){ return false; }
 }
+/* تشفير كلمة المرور محلياً بنفس صيغة الخادم (pbkdf2$iters$salt$hash) حتى تبقى نسخة العميل مطابقة لما يخزّنه الخادم */
+async function hashLocalPw(pw){
+  if(!window.crypto||!crypto.subtle)return String(pw);   /* بلا WebCrypto: الخادم سيشفّرها */
+  const saltBytes=crypto.getRandomValues(new Uint8Array(16));
+  const salt=btoa(String.fromCharCode.apply(null,saltBytes));
+  const mat=await crypto.subtle.importKey('raw',new TextEncoder().encode(String(pw)),'PBKDF2',false,['deriveBits']);
+  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:saltBytes,iterations:100000},mat,256);
+  return 'pbkdf2$100000$'+salt+'$'+btoa(String.fromCharCode.apply(null,new Uint8Array(bits)));
+}
 /* شاشة إلزامية لتغيير كلمة المرور الافتراضية — تمنع استخدام أي تبويب قبل التغيير */
 function forcePwHtml(){
   return `<div class="auth-wrapper">
@@ -2210,7 +2231,8 @@ async function forcePwSave(){
   const u=db.users.find(x=>x.id===(me&&me.id));
   if(!u)return toast(lb('تعذّر العثور على الحساب||Account not found'),'err');
   const oldP=u.p,oldDefault=!!u.defaultPw;
-  u.p=p1;u.defaultPw=false;AUTH.mustChange=false;
+  u.p=await hashLocalPw(p1);u.defaultPw=false;AUTH.mustChange=false;
+  SAVE.usersIntent=true;
   SAVE.dirt=true;
   await queueSave();
   if(SAVE.state!=='saved'){
@@ -2240,6 +2262,7 @@ async function doLogin(e){
       AUTH.csrf = j.csrf || ''; AUTH.ver = j.ver; AUTH.mustChange = !!j.mustChange;
       const s = await(await api('/state')).json();
       db = s.data; AUTH.ver = s.ver;
+      AUTH.usersRaw = JSON.parse(JSON.stringify((s.data&&s.data.users)||[]));
       if(s.marketplace){ me = { id:j.userId, role:j.role, name:(s.data.users[0]||{}).name||'' }; await marketBootstrap(); render(); return; }
       db = migrate(db);
       me = db.users.find(x => x.id === j.userId) || null;
@@ -2354,8 +2377,8 @@ function markAllRead(){notifsQ().forEach(n=>n.read=true);persist();closeModal();
 function render(){
   document.body.dir=db.lang==='ar'?'rtl':'ltr';
   document.body.lang=db.lang==='ar'?'ar':'en';
-  /* فرض تغيير كلمة المرور قبل أي استخدام للنظام */
-  if(me&&mustChangeNow()){ $('app').innerHTML=forcePwHtml(); renderSaveState(); return; }
+  /* فرض تغيير كلمة المرور قبل أي استخدام — للمدير فقط (تغيير مستخدم آخر يحتاج نقطة خادم مخصّصة) */
+  if(me&&isAdmin()&&mustChangeNow()){ $('app').innerHTML=forcePwHtml(); renderSaveState(); return; }
   /* بوابة السوق (مالك / مقاول / مورّد) — واجهة مستقلة ومعزولة */
   if(me&&isMarketRole()){
     $('app').innerHTML=marketShell();
@@ -4263,9 +4286,12 @@ function vDash(){
     ${kpi(ic('gear',19),down.length,lb('أصول متوقفة||Assets Down'),'assets',down.length>0)}
     ${kpi(ic('box',19),low.length,lb('أصناف تحت الحد||Low Stock'),'inv',low.length>0)}`;
 
+  /* تنبيه غير حاجب: غير المدير لا يستطيع تغيير كلمة مروره من الواجهة (يحتاج نقطة خادم مخصّصة) */
+  const pwBanner=(!isAdmin()&&((me&&me.defaultPw)||AUTH.mustChange))?`<div class="card" style="border:1.5px solid var(--red)"><b>${lb('حسابك يستخدم كلمة المرور الافتراضية — اطلب من مدير النظام تغييرها||Your account uses the default password — ask a system admin to change it')}</b></div>`:'';
+
   if(isTech()){
     return `<div class="stats">${stats}</div>
-    ${splitReportCard()}<div class="qa">${qa.join('')}</div>
+    ${pwBanner}${splitReportCard()}<div class="qa">${qa.join('')}</div>
     ${vHub()}
     <div class="dash-grid">
       <div class="card dg-6"><h2> ${lb('مهامي المفتوحة||My Open Tasks')}</h2>
@@ -4274,7 +4300,7 @@ function vDash(){
     </div>`;
   }
   return `<div class="stats">${stats}</div>
-  ${splitReportCard()}<div class="qa">${qa.join('')}</div>
+  ${pwBanner}${splitReportCard()}<div class="qa">${qa.join('')}</div>
   ${vHub()}
   <div class="dash-grid">
     ${alertsCard}
@@ -6500,22 +6526,27 @@ function saveUser(id){
   if(email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return toast(lb(' البريد الإلكتروني غير صحيح|| Invalid email'),'err');
   if(db.users.some(x=>x.u.toLowerCase()===un.toLowerCase()&&x.id!==id))return toast(lb(' اسم الدخول مستخدم|| Username taken'),'err');
   if(email&&db.users.some(x=>String(x.email||'').toLowerCase()===email&&x.id!==id))return toast(lb(' البريد مستخدم لحساب آخر|| Email already used'),'err');
+  void saveUserAsync(id,n,un,p,email);
+}
+async function saveUserAsync(id,n,un,p,email){
   const role=(id&&id===me.id)?'admin':$('fu_r').value; /* المدير يبقى مديراً — لا يستطيع سحب صلاحيته من نفسه */
   /* أصل واحد فقط لكل مستخدم (المدير يملك كل الأصول ويبدّل من الهيدر) */
   const oneCmp=$('fu_cmp')?$('fu_cmp').value:'';
   const cmpIds=role==='admin'?[]:(oneCmp?[oneCmp]:[]);
   if(role!=='admin'&&!cmpIds.length)return toast(lb(' اختر أصلاً لهذا المستخدم|| Pick an asset for this user'),'err');
   const phone=$('fu_ph').value.trim();
+  const pHash=p?await hashLocalPw(p):'';    /* نُخزّن نسخة مشفّرة مطابقة للخادم */
   if(id){const x=db.users.find(y=>y.id===id);
     const upd={name:n,u:un,email,role,phone,cmpIds,activeCmp:(x.activeCmp&&(cmpIds.includes(x.activeCmp)||role==='admin'))?x.activeCmp:''};
-    if(p){upd.p=p;upd.defaultPw=(p==='1234');} /* فارغة = إبقاء القديمة؛ الجديدة الافتراضية تُعلَّم للتغيير */
+    if(p){upd.p=pHash;upd.defaultPw=(p==='1234');} /* فارغة = إبقاء القديمة؛ الجديدة الافتراضية تُعلَّم للتغيير */
     Object.assign(x,upd);
     if(id===me.id)AUTH.mustChange=false;}
-  else db.users.push({id:uid('U'),name:n,u:un,p,email,role,phone,cmpIds,activeCmp:'',defaultPw:(p==='1234')});
+  else db.users.push({id:uid('U'),name:n,u:un,p:pHash,email,role,phone,cmpIds,activeCmp:'',defaultPw:(p==='1234')});
+  SAVE.usersIntent=true;
   persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
 function delUser(id){if(!confirm(lb('حذف المستخدم؟||Delete user?')))return;
-  db.users=db.users.filter(u=>u.id!==id);persist();paintTab();}
+  db.users=db.users.filter(u=>u.id!==id);SAVE.usersIntent=true;persist();paintTab();}
 
 /* ============================================================
    سوق أملاكي — منصة الملاك والمقدّمين (Owner / Contractor / Supplier)
