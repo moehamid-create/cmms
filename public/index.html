@@ -1196,7 +1196,7 @@ function woMsg(w){
    +(L?'الرقم: ':'No.: ')+w.no+'\n'
    +(L?'المجمع: ':'Compound: ')+(cmp.name||'—')+'\n'
    +(L?'الموقع: ':'Location: ')+(w.bname||'—')+'\n'
-   +(w.assetName?((L?'الأصل: ':'Asset: ')+w.assetName+'\n'):'')
+   +(w.assetName?((L?'الأصل: ':'Asset: ')+((w.assetLabel||w.assetName))+'\n'):'')
    +(L?'العطل: ':'Issue: ')+w.title+'\n'
    +(L?'الأولوية: ':'Priority: ')+(PRIO[w.priority]||w.priority)+'\n'
    +(L?'موعد الاستحقاق: ':'Due: ')+fmtD(w.dueDate)+'\n'
@@ -2815,7 +2815,7 @@ function pmGen(onlyId,force){
         if(g.meterDue&&ast&&ast.meter!=null&&ast.meter!=='')p.lastMeter=Number(ast.meter);
         db.wos.unshift({no:'WO-'+y+'-'+String(db.seq).padStart(4,'0'),type:'pm',pmId:p.id,compoundId:p.compoundId||activeCmp(),
           title:(db.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name+(g.timeDue&&daysUntil(nextDueOf(p))<0?(db.lang==='ar'?' (متأخرة)':' (late)'):''),
-          desc:p.tasks||'',assetId:p.assetId||'',assetName:ast?ast.name:'',
+          desc:p.tasks||'',assetId:p.assetId||'',assetName:ast?ast.name:'',assetLabel:ast&&ast.name?assetFullLabel(ast):'',
           bname:bld?bld.name:'',
           priority:p.priority||'normal',status:(db.pmApproval!==false)?'planned':'open',approval:(db.pmApproval!==false)?'pending':'approved',auto:true,createdAt:Date.now(),startedAt:null,closedAt:null,projectId:'',
           unitId:'',unitCode:'',tenantName:'',
@@ -4359,6 +4359,13 @@ function miniWoTable(list){
 /* ===== BUILDINGS ===== */
 function bById(id){return db.buildings.find(b=>b.id===id)||{};}
 function bName(id){const b=db.buildings.find(x=>x.id===id);return b?b.name:'—';}
+/* وصف مميّز للأصل: الاسم — المبنى · الدور (لفضّ الالتباس بين الأسماء المتشابهة) */
+function assetFullLabel(a){
+  if(!a)return '';
+  const b=a.building?(db.buildings.find(x=>x.id===a.building)||{}).name||'':'';
+  const fl=String(a.floor||'').trim();
+  return String(a.name||'')+(b?(' — '+b+(fl?' · '+fl:'')):(fl?(' — '+fl):''));
+}
 function floorsOf(id){const b=db.buildings.find(x=>x.id===id);return b?(b.floors||[]):[];}
 function bOpts(sel){return db.buildings.slice()
   .filter(b=>b.compoundId===activeCmp())
@@ -5146,7 +5153,7 @@ function vWOs(){
   const act=activeCmp();
   let list=(isTech()?db.wos.filter(w=>w.assigneeId===me.id):db.wos).filter(w=>w.compoundId===act);
   const q=FILT.wos.toLowerCase();
-  if(q)list=list.filter(w=>(w.no+' '+w.title+' '+(w.assetName||'')+' '+(w.unitCode||'')+' '+(w.tenantName||'')).toLowerCase().includes(q));
+  if(q)list=list.filter(w=>(w.no+' '+w.title+' '+(w.assetLabel||w.assetName||'')+' '+(w.unitCode||'')+' '+(w.tenantName||'')).toLowerCase().includes(q));
   if(FILT.woStatus!=='all')list=list.filter(w=>w.status===FILT.woStatus);
   list=list.slice().sort((a,b)=>(a.status==='closed')-(b.status==='closed'));
   const chip=k=>`<button class="chip ${FILT.woStatus===k?'on':''}" onclick="FILT.woStatus='${k}';paintTab()">${
@@ -5180,7 +5187,7 @@ function vWOs(){
     const wa=(w.status!=='closed')?`<button class="btn sm ghost" title="${lb('إرسال واتساب||Send WhatsApp')}" onclick="waBtn(${ix(w)})">${ic('chat',13)}</button>`:'';
     return `<tr class="${od?'overdue':''}"><td>${w.no}${w.type==='pm'?' <span class="badge b-maint">PM</span>':''}${w.status==='planned'?` <span class="badge b-open">${lb('مخطّط||Planned')}</span>`:''}${w.auto?` <span class="badge b-wait" title="${lb('أُنشئ تلقائياً||Auto-generated')}">${lb('تلقائي||Auto')}</span>`:''}${w.partsReady===false?` <span class="badge b-urgent" title="${lb('قطع غير متوفرة||Parts not ready')}">${lb('نقص قطع||Parts')}</span>`:''}${(w.status==='wait'&&w.deferReason)?` <span class="badge b-maint" title="${esc(w.deferReason)}">${lb('مؤجّل||Deferred')}</span>`:''}${(w.status==='closed'&&w.review==='pending')?` <span class="badge b-wait">${lb('بانتظار المراجعة||Review')}</span>`:''}${w.source==='portal'?portalBadge:''}${w.source==='corrective'?` <span class="badge b-down">${lb('تصحيحي||Corrective')}</span>`:''}${w.projectId?' <span class="badge b-open">مشروع</span>':''}${w.unitCode?' <span class="badge b-ok">وحدة</span>':''}</td>
     <td><b>${esc(w.title)}</b><br><span class="muted">${esc((w.desc||'').slice(0,55))}</span></td>
-    <td>${esc(w.assetName||'—')}<br><span class="muted">${esc([w.bname,w.unitCode,w.tenantName].filter(Boolean).join(' · ')||'')}</span></td>
+    <td>${esc(w.assetLabel||w.assetName||'—')}<br><span class="muted">${esc([(w.assetLabel?'':w.bname),w.unitCode,w.tenantName].filter(Boolean).join(' · ')||'')}</span></td>
     <td><span class="badge b-${w.priority}">${PRIO[w.priority]}</span></td>
     <td><span class="badge ${WSTAT[w.status][1]}">${WSTAT[w.status][0]}</span></td>
     <td>${esc(w.assigneeName||'—')}</td><td>${wa}</td><td>${fmtDT(w.createdAt)}</td>
@@ -5195,14 +5202,14 @@ function woForm(idx,presetAsset){
   const assets=db.assets.filter(a=>a.compoundId===act)
     .slice().sort((x,y)=>String(x.name||'').localeCompare(String(y.name||''),'ar'));
   const curAsset=(w.assetId||presetAsset)?assets.find(a=>a.id===(w.assetId||presetAsset))||null:null;
-  const adl=assets.map(a=>`<option value="${esc(a.name||'')}" data-id="${a.id}" label="${esc(bName(a.building))}${a.floor?' · '+esc(a.floor):''}"></option>`).join('');
+  const adl=assets.map(a=>`<option value="${esc(assetFullLabel(a))}" data-id="${a.id}" label="${esc(a.category||'')}"></option>`).join('');
   const prjOpts=db.projects.filter(p=>p.compoundId===act).map(p=>`<option value="${p.id}" ${w.projectId===p.id?'selected':''}>${esc(p.no)} — ${esc(p.name)}</option>`).join('');
   const uOpts=cmpUnits().slice().sort((a,b)=>String(a.code).localeCompare(String(b.code)))
     .map(u=>`<option value="${u.id}" ${w.unitId===u.id?'selected':''}>${esc(u.code)} — ${esc(bName(u.buildingId))}</option>`).join('');
   modal(`<h3>${(idx!=null&&idx!=='')?lb('تعديل بلاغ||Edit Report'):lb('بلاغ عطل جديد||New Fault Report')}</h3>
   <label>${lb('عنوان العطل *||Fault Title *')}</label><input id="fw_t" value="${esc(w.title||'')}">
   <div class="fg">
-    <div><label>${lb('الأصل المرتبط (اكتب للبحث)||Linked Asset (type to search)')}</label><input id="fw_a" list="fw_adl" autocomplete="off" value="${esc(curAsset?curAsset.name:'')}" placeholder="${lb('اكتب اسم الأصل…||Type an asset name…')}" oninput="syncLoc()" onchange="syncLoc()"><datalist id="fw_adl">${adl}</datalist></div>
+    <div><label>${lb('الأصل المرتبط (اكتب للبحث)||Linked Asset (type to search)')}</label><input id="fw_a" list="fw_adl" autocomplete="off" value="${esc(curAsset?assetFullLabel(curAsset):'')}" placeholder="${lb('اكتب اسم الأصل…||Type an asset name…')}" oninput="syncLoc()" onchange="syncLoc()"><datalist id="fw_adl">${adl}</datalist></div>
     <div><label>${lb('الوحدة (اختياري)||Unit (optional)')}</label><select id="fw_u"><option value="">—</option>${uOpts}</select></div>
     <div><label>${lb('الموقع (يدوي)||Location (manual)')}</label><input id="fw_l" value="${esc(w.bname||'')}"></div>
     <div><label>${lb('الأولوية (تحدد الاستحقاق)||Priority (sets due date)')}</label><select id="fw_p" onchange="slaDue()">${Object.keys(PRIO).map(k=>`<option value="${k}" ${(w.priority||'normal')===k?'selected':''}>${PRIO[k]}</option>`).join('')}</select></div>
@@ -5221,7 +5228,8 @@ function fwAsset(){
   const inp=$('fw_a');if(!inp)return null;
   const v=String(inp.value||'').trim();if(!v)return null;
   const act=activeCmp(),lv=v.toLowerCase();
-  let a=db.assets.find(x=>x.compoundId===act&&String(x.name||'').toLowerCase()===lv);
+  let a=db.assets.find(x=>x.compoundId===act&&assetFullLabel(x).toLowerCase()===lv);
+  if(!a)a=db.assets.find(x=>x.compoundId===act&&String(x.name||'').toLowerCase()===lv);
   if(!a){
     const dl=document.getElementById('fw_adl');
     if(dl&&dl.options){for(const o of dl.options){if(String(o.value).toLowerCase()===lv){a=db.assets.find(x=>x.id===o.getAttribute('data-id'));break;}}}
@@ -5241,7 +5249,7 @@ function saveWO(idxStr){
   const typed=String(($('fw_a')&&$('fw_a').value)||'').trim();
   const tech=db.users.find(u=>u.id===$('fw_as').value);
   const unSel=$('fw_u'),un=unSel?db.units.find(x=>x.id===unSel.value):null;
-  const o={title:t,desc:$('fw_de').value,assetId:aid,assetName:a?a.name:'',
+  const o={title:t,desc:$('fw_de').value,assetId:aid,assetName:a?a.name:'',assetLabel:a?assetFullLabel(a):'',
     bname:$('fw_l').value.trim()||(!a?typed:''),priority:$('fw_p').value,assigneeId:$('fw_as').value||'',
     assigneeName:tech?tech.name:'',dueDate:$('fw_d').value,projectId:$('fw_pr')?$('fw_pr').value:'',
     unitId:un?un.id:'',unitCode:un?un.code:'',
@@ -5422,7 +5430,7 @@ async function doCloseWO(i){
     db.seq++;const y=new Date().getFullYear();
     const nw={no:'WO-'+y+'-'+String(db.seq).padStart(4,'0'),type:'fault',compoundId:w.compoundId,
       title:lb('إجراء تصحيحي: ')+fud.slice(0,100),desc:lb('أمر تصحيحي ناتج عن ')+w.no+' — '+fud,
-      assetId:w.assetId||'',assetName:w.assetName||'',bname:w.bname||'',priority:'high',status:'open',
+      assetId:w.assetId||'',assetName:w.assetName||'',assetLabel:w.assetLabel||'',bname:w.bname||'',priority:'high',status:'open',
       assigneeId:w.assigneeId||'',assigneeName:w.assigneeName||'',dueDate:addDays(todayISO(),3),
       projectId:'',unitId:w.unitId||'',unitCode:w.unitCode||'',tenantName:w.tenantName||'',
       cost:0,closeNotes:'',parts:[],photos:[],sig:'',reportedBy:me?me.name:'',fromWo:w.no,source:'corrective',

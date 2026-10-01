@@ -1270,6 +1270,7 @@ async function runPmScheduler(reason){
         type:'pm',pmId:p.id,compoundId:p.compoundId||ast.compoundId||'',
         title:(d.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name,
         desc:tasksStr,assetId:p.assetId||'',assetName:ast.name||'',bname:bld?bld.name:'',
+        assetLabel:(ast&&ast.name)?(ast.name+(bld&&bld.name?(' — '+bld.name+(ast.floor?' · '+ast.floor:'')):(ast.floor?(' — '+ast.floor):''))):'',
         priority:p.priority||'normal',status:approval?'planned':'open',
         approval:approval?'pending':'approved',auto:true,scheduledBy:'server',scheduledAt:Date.now(),
         createdAt:Date.now(),startedAt:null,closedAt:null,projectId:'',unitId:'',unitCode:'',tenantName:'',
