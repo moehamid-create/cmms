@@ -1910,6 +1910,8 @@ const isViewer=()=>me&&me.role==='viewer';
 const canAppr=()=>me&&['admin','engineer','sitemgr','supervisor'].includes(me.role);
 const canInv=()=>me&&['admin','engineer','store'].includes(me.role);
 const canProc=()=>me&&['admin','engineer','proc'].includes(me.role);
+/* الإيصالات: متاحة لمن يصل لتبويب المشتريات (مدير/مهندس/مدير موقع/مشتريات) */
+const canRcpt=()=>me&&['admin','engineer','sitemgr','proc'].includes(me.role);
 const isTech=()=>me&&me.role==='tech';
 
 /* ===== أدوار السوق (مالك / مقاول / مورّد) ===== */
@@ -5547,7 +5549,7 @@ function vProc(){
   return `<div class="toolbar">
     ${canProc()&&tab==='pr'?`<button class="btn" onclick="prForm()">＋ ${lb('طلب شراء جديد||New Request')}</button>`:''}
     ${canProc()&&tab==='sup'?`<button class="btn" onclick="supForm()">＋ ${lb('مورد جديد||New Supplier')}</button>`:''}
-    ${canProc()&&tab==='rcpt'?`<button class="btn" style="background:linear-gradient(135deg,#7c3aed,#2563eb)" onclick="rcptUpload()">＋ ${lb('رفع إيصال (PDF)||Upload receipt (PDF)')}</button>
+    ${canRcpt()&&tab==='rcpt'?`<button class="btn" style="background:linear-gradient(135deg,#7c3aed,#2563eb)" onclick="rcptUpload()">＋ ${lb('رفع إيصال (PDF)||Upload receipt (PDF)')}</button>
     <button class="btn ghost" onclick="rcptCsv()"> ${lb('Excel||Excel')}</button>`:''}
   </div>
   <div class="chips">${chip('pr')}${chip('po')}${chip('sup')}${chip('rcpt')}</div><div id="procbody"></div>`;
@@ -5564,23 +5566,44 @@ function paintProc(){
 function rcptQ(){return (db.receipts||[]).filter(r=>r.compoundId===activeCmp());}
 function rcptMoney(r){const c=r.currency||'SAR';return (Number(r.amount)||0).toLocaleString(undefined,{maximumFractionDigits:2})+' '+c;}
 function readFileDataUrl(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result||''));r.onerror=()=>rej(new Error('read'));r.readAsDataURL(f);});}
+const MAX_UPLOAD_MB=25;
+/* رفع الملف كما هو (بدون base64) — يتجنّب التضخيم ويسمح بملفات أكبر */
+async function rawUpload(path,file,q){
+  const params=Object.assign({},q||{});
+  const qs=Object.keys(params).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(params[k])).join('&');
+  const headers={'Content-Type':file.type||'application/octet-stream','X-File-Name':encodeURIComponent(file.name||'')};
+  if(AUTH.csrf)headers['X-CSRF-Token']=AUTH.csrf;
+  return fetch(API_BASE+path+(qs?'?'+qs:''),{method:'POST',credentials:'same-origin',headers,body:file});
+}
 function rcptUpload(){
-  if(!canProc())return;
-  const inp=document.createElement('input');inp.type='file';inp.accept='application/pdf,image/*';
+  if(!canRcpt())return;
+  const inp=document.createElement('input');inp.type='file';inp.accept='application/pdf,image/*';inp.multiple=true;
   inp.onchange=async()=>{
-    const f=inp.files&&inp.files[0];if(!f)return;
-    if(f.size>8*1024*1024)return toast(lb('الحد الأقصى 8 ميجابايت||Maximum size is 8 MB'),'err');
-    toast(lb('جارٍ رفع الإيصال وتحليله…||Uploading and reading the receipt…'));
-    let data;try{data=await readFileDataUrl(f);}catch(e){return toast(lb('تعذّر قراءة الملف||Could not read the file'),'err');}
-    let j=null,status=0;
-    try{const r=await api('/receipts',{method:'POST',body:JSON.stringify({data,name:f.name,compoundId:activeCmp()||''})});status=r.status;j=await r.json().catch(()=>null);}
-    catch(e){return toast(lb('تعذّر الاتصال بالخادم||Could not reach the server'),'err');}
-    if(status===413||(j&&j.error==='TOO_LARGE'))return toast(lb('الملف أكبر من الحد المسموح (8 ميجابايت)||The file exceeds the limit (8 MB)'),'err');
-    if(status!==200||!j||!j.ok)return toast(lb('تعذّر تحليل الإيصال||Could not read the receipt'),'err');
-    rcptReview({fileId:j.fileId,url:j.url,name:f.name,mime:j.mime,size:j.size,scanned:j.scanned,text:j.text,fields:j.fields||{}});
+    const files=[...(inp.files||[])];if(!files.length)return;
+    const results=[];
+    for(const f of files){
+      if(f.size>MAX_UPLOAD_MB*1024*1024){toast(lb('تجاوز الحد ('+MAX_UPLOAD_MB+' م.ب): '||'Exceeds the limit ('+MAX_UPLOAD_MB+' MB): ')+f.name,'err');continue;}
+      toast(lb('جارٍ رفع وتحليل: ||Uploading and reading: ')+f.name);
+      let r=null;
+      try{ r=await rawUpload('/receipts',f,{compoundId:activeCmp()||''}); }
+      catch(e){ toast(lb('تعذّر الاتصال بالخادم: ||Could not reach the server: ')+f.name,'err'); continue; }
+      const j=await r.json().catch(()=>null);
+      if(r.status===413||(j&&j.error==='TOO_LARGE')){toast(lb('الملف أكبر من الحد: ||File exceeds the limit: ')+f.name,'err');continue;}
+      if(r.status!==200||!j||!j.ok){toast(lb('تعذّر تحليل الملف: ||Could not read the file: ')+f.name,'err');continue;}
+      results.push({fileId:j.fileId,url:j.url,name:f.name,mime:j.mime,size:j.size,scanned:j.scanned,text:j.text,fields:j.fields||{}});
+    }
+    if(!results.length)return toast(lb('لم يُرفع أي ملف||No file was uploaded'),'err');
+    window._rcptQueue=results.slice(1);   /* الملفات المتبقية تُراجع بالتتابع */
+    rcptReview(results[0]);
   };
   inp.click();
 }
+function rcptNextInQueue(){
+  const q=window._rcptQueue||[];
+  if(!q.length){window._rcptQueue=null;return;}
+  rcptReview(q.shift());
+}
+function rcptCancel(){window._rcptQueue=null;closeModal();}
 function rcptReview(rec,idx){
   const ex=(idx!=null&&idx!=='')?rcptQ()[idx]:null;
   const base=rec?Object.assign({},rec.fields||{},rec):{};   /* يقبل الحقول مسطّحة أو تحت fields */
@@ -5601,7 +5624,7 @@ function rcptReview(rec,idx){
   </div>
   <label>${lb('ملاحظات||Notes')}</label><textarea id="fr_no" rows="2">${esc(r.notes||'')}</textarea>
   ${(r.text&&String(r.text).trim())?`<details><summary class="muted">${lb('النص المستخرج||Extracted text')}</summary><pre style="white-space:pre-wrap;max-height:22vh;overflow:auto;font-size:11px">${esc(String(r.text).slice(0,3000))}</pre></details>`:''}
-  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+  <div class="ma"><button class="btn ghost" onclick="rcptCancel()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="rcptSave(${idx!=null&&idx!==''?idx:'null'})">${lb('حفظ||Save')}</button></div>`);
 }
 function rcptSave(idx){
@@ -5617,6 +5640,7 @@ function rcptSave(idx){
   if(idx!=null&&idx!==''){const ex=rcptQ()[idx];if(!ex)return toast(lb('الإيصال غير موجود||Receipt not found'),'err');Object.assign(ex,o);auditLog('update','receipt',o.receiptNo||vendor);}
   else{db.receipts.unshift(Object.assign({id:uid('R'),compoundId:activeCmp(),by:me?me.name:'',createdAt:Date.now()},o));auditLog('create','receipt',o.receiptNo||vendor);}
   persist();closeModal();paintTab();toast(lb('حُفظ الإيصال||Receipt saved'),'ok');
+  if(window._rcptQueue&&window._rcptQueue.length)rcptNextInQueue();   /* متابعة مراجعة بقية الملفات */
 }
 function rcptView(idx){
   const r=rcptQ()[idx];if(!r)return;
@@ -5631,11 +5655,11 @@ function rcptView(idx){
   <div style="margin-top:8px">${prev}</div>
   <div class="ma">
     ${r.url?`<a class="btn ghost" href="${esc(r.url)}" target="_blank" rel="noopener">${lb('فتح الملف||Open file')}</a>`:''}
-    ${canProc()?`<button class="btn ghost" onclick="closeModal();rcptReview(null,${idx})">${lb('تعديل||Edit')}</button>`:''}
+    ${canRcpt()?`<button class="btn ghost" onclick="closeModal();rcptReview(null,${idx})">${lb('تعديل||Edit')}</button>`:''}
     <button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button></div>`);
 }
 function rcptDel(idx){
-  if(!canProc())return;
+  if(!canRcpt())return;
   const r=rcptQ()[idx];if(!r)return;
   if(!confirm(lb('حذف الإيصال؟||Delete this receipt?')))return;
   db.receipts=db.receipts.filter(x=>x!==r);auditLog('delete','receipt',r.receiptNo||r.vendor||'');persist();paintTab();toast(lb('حُذف||Deleted'),'ok');
@@ -5655,7 +5679,7 @@ function vRcpt(){
     <td>${r.vat!=null?esc(String(r.vat)):'—'}</td>
     <td>${esc((db.projects.find(p=>p.id===r.projectId)||{}).name||'—')}</td>
     <td nowrap><button class="btn sm ghost" onclick="rcptView(${i})">${ic('view',13)}</button>
-    ${canProc()?`<button class="btn sm ghost" onclick="rcptReview(null,${i})">${ic('edit',13)}</button>
+    ${canRcpt()?`<button class="btn sm ghost" onclick="rcptReview(null,${i})">${ic('edit',13)}</button>
     <button class="btn sm danger" onclick="rcptDel(${i})">${ic('del',13)}</button>`:''}</td></tr>`;
   }).join('');
   return `<div class="stats">

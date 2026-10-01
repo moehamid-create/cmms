@@ -35,6 +35,8 @@ const HOST = process.env.HOST || '0.0.0.0';
 const APP_VERSION = '1.1.0';
 const STARTED_AT = Date.now();
 let apiRequests = 0;
+/* حد رفع الملفات (وسائط/إيصالات) — قابل للضبط عبر MAX_UPLOAD_BYTES */
+const MAX_UPLOAD = Number(process.env.MAX_UPLOAD_BYTES || 25 * 1024 * 1024);   /* 25MB افتراضياً */
 
 const USE_PG = !!process.env.DATABASE_URL;
 let sqlite = null, pgPool = null, DB_LABEL = '';
@@ -139,6 +141,8 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(origin && !allowedOrigins.has(origin) && origin !== `${req.protocol}://${req.get('host')}` ? 403 : 204);
   next();
 });
+/* رفع الملفات الخام (PDF/صور) قبل محلّل JSON — يتجنّب تضخيم base64 ويمنع حدّه */
+app.use(['/api/receipts','/api/uploads'], express.raw({ type: ['application/pdf','image/*','application/octet-stream'], limit: MAX_UPLOAD }));
 app.use(express.json({ limit: '40mb', strict: true }));   /* الصور تُحفظ داخل البيانات — حد كبير لصور قبل/بعد */
 app.use(compression({ threshold: 1024 }));   /* Gzip للنصوص فوق 1KB */
 /* سجل طلبات API (للمراقبة) + عدّاد — بدون تسجيل الأجساد أو الكوكيز */
@@ -362,7 +366,6 @@ async function setConfig(key, val){
   }catch(e){ console.error('config write failed:', e.message); return false; }
 }
 /* ---- ملفات الوسائط (صور وتوقيعات) مخزّنة في قاعدة البيانات ---- */
-const MAX_UPLOAD = Number(process.env.MAX_UPLOAD_BYTES || 8 * 1024 * 1024);   /* 8MB للملف */
 async function putFile(row){
   if (USE_PG) {
     await pgPool.query('INSERT INTO files(id,compound_id,name,mime,size,data,created) VALUES($1,$2,$3,$4,$5,$6,$7)',
@@ -609,24 +612,34 @@ app.post('/api/password', async (req,res)=>{
   } catch (e) { console.error('DB error on POST /api/password:', e.message); return res.status(500).json({error:'DB'}); }
 });
 
+/* ---- مدخل موحّد للملفات: يدعم رفعاً خاماً (binary) أو JSON بترميز base64 ---- */
+function incomingFile(req){
+  if (Buffer.isBuffer(req.body)) {
+    const ct = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+    let nm = String(req.headers['x-file-name'] || '');
+    try { nm = decodeURIComponent(nm); } catch (e) {}
+    return { buf: req.body, mime: ct || 'application/octet-stream', name: nm,
+      compoundId: String(req.query.compoundId || req.headers['x-compound-id'] || ''), raw:true };
+  }
+  const b = req.body || {};
+  const m = /^data:([\w.+-]+\/[\w.+-]+);base64,(.+)$/i.exec(String(b.data || ''));
+  const mime = String(b.mime || (m ? m[1] : '')).toLowerCase();
+  const b64 = m ? m[2] : String(b.base64 || '');
+  return { buf: b64 ? Buffer.from(b64, 'base64') : null, mime, name: String(b.name || ''), compoundId: String(b.compoundId || ''), raw:false };
+}
 /* ---- رفع وسائط (صور/توقيعات) وتخزينها في قاعدة البيانات ---- */
 app.post('/api/uploads', async (req,res)=>{
   const a = auth(req,res); if(!a) return;
   const ip = req.ip || req.socket.remoteAddress || 'x';
   if (!boundedHit(pubHits, 'up:' + ip, 60 * 60 * 1000, 300)) return res.status(429).json({error:'TOO_MANY'});
   try{
-    const b = req.body || {};
-    const m = /^data:([\w.+-]+\/[\w.+-]+);base64,(.+)$/i.exec(String(b.data || ''));
-    const mime = String(b.mime || (m ? m[1] : '')).toLowerCase();
-    const b64 = m ? m[2] : String(b.base64 || '');
-    if (!b64) return res.status(400).json({error:'NO_DATA'});
-    if (!/^image\//.test(mime) && mime !== 'application/pdf') return res.status(400).json({error:'BAD_TYPE'});
-    const buf = Buffer.from(b64, 'base64');
-    if (!buf.length) return res.status(400).json({error:'NO_DATA'});
-    if (buf.length > MAX_UPLOAD) return res.status(413).json({error:'TOO_LARGE', max:MAX_UPLOAD});
+    const f = incomingFile(req);
+    if (!f.buf || !f.buf.length) return res.status(400).json({error:'NO_DATA'});
+    if (!/^image\//.test(f.mime) && f.mime !== 'application/pdf') return res.status(400).json({error:'BAD_TYPE'});
+    if (f.buf.length > MAX_UPLOAD) return res.status(413).json({error:'TOO_LARGE', max:MAX_UPLOAD});
     const id = 'F' + crypto.randomBytes(9).toString('hex');
-    await putFile({ id, compound_id: String(b.compoundId || '').slice(0,60), name: String(b.name || '').slice(0,120), mime, size: buf.length, data: buf, created: Date.now() });
-    res.json({ ok:true, id, url:'/api/files/' + id, size:buf.length, mime });
+    await putFile({ id, compound_id: String(f.compoundId || '').slice(0,60), name: String(f.name || '').slice(0,120), mime: f.mime, size: f.buf.length, data: f.buf, created: Date.now() });
+    res.json({ ok:true, id, url:'/api/files/' + id, size:f.buf.length, mime:f.mime });
   }catch(e){ console.error('DB error on POST /api/uploads:', e.message); return res.status(500).json({error:'DB'}); }
 });
 app.get('/api/files/:id', async (req,res)=>{
@@ -666,15 +679,24 @@ function normDateStr(s){
   return y+'-'+m+'-'+d;
 }
 function extractReceiptFields(text){
-  const t=String(text||'').replace(/\r/g,'\n');
+  const arD='٠١٢٣٤٥٦٧٨٩', faD='۰۱۲۳۴۵۶۷۸۹';
+  const t=String(text||'').replace(/\r/g,'\n')
+    .replace(/[٠-٩]/g, c => String(arD.indexOf(c)))
+    .replace(/[۰-۹]/g, c => String(faD.indexOf(c)));
   const flat=t.replace(/[ \t]+/g,' ');
-  const num=s=>{const n=parseFloat(String(s).replace(/[^\d.]/g,''));return isFinite(n)?n:null;};
+  const num=s=>{
+    let x=String(s==null?'':s).replace(/[^\d.,-]/g,'');
+    if(!x)return null;
+    if(x.indexOf('.')>=0&&x.indexOf(',')>=0){ x = x.lastIndexOf('.')>x.lastIndexOf(',') ? x.replace(/,/g,'') : x.replace(/\./g,'').replace(/,/g,'.'); }
+    else if(x.indexOf(',')>=0){ const p=x.split(','); x = (p.length===2&&p[1].length<=2) ? p[0]+'.'+p[1] : x.replace(/,/g,''); }
+    const n=parseFloat(x); return isFinite(n)?n:null;
+  };
   const f={};
   const dm=flat.match(/\b(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})\b/)||flat.match(/\b(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\b/);
   if(dm){f.dateRaw=dm[1];f.date=normDateStr(dm[1]);}
-  const nm=flat.match(/(?:invoice|receipt|inv|bill|فاتورة|إيصال|ايصال|رقم)[^\n:#]*[:#]?\s*([A-Za-z0-9\-\/]{3,})/i);
+  const nm=flat.match(/(?:invoice|receipt|inv|bill|فاتورة|إيصال|ايصال|سند)[^\n:#]*[:#]?\s*([A-Za-z0-9\-\/]{3,})/i);
   if(nm)f.no=String(nm[1]).slice(0,40);
-  const vm=flat.match(/(?:vat|tax|ضريبة|الضريبة)[^\n:]*[:#]?\s*([\d.,]+)/i)||flat.match(/([\d.,]+)\s*%?\s*(?:vat|ضريبة)/i);
+  const vm=flat.match(/(?:vat|tax|ضريبة|الضريبة|ضريبه)[^\n:]*[:#]?\s*([\d.,]+)/i)||flat.match(/([\d.,]+)\s*%?\s*(?:vat|ضريبة)/i);
   if(vm)f.vat=num(vm[1]);
   const lastMatch=(src)=>{ const re=new RegExp(src,'gi'); let m,last=null; while((m=re.exec(flat))) last=m; return last; };
   const am=lastMatch('(?:grand\\s+total|الإجمالي|الاجمالي|المجموع)[^\\n:#]*[:#]?\\s*([\\d.,]+)')
@@ -685,9 +707,16 @@ function extractReceiptFields(text){
     const all=[...flat.matchAll(/\b\d{1,3}(?:[,\s]\d{3})*(?:[.,]\d{2})\b/g)].map(x=>num(x[0])).filter(x=>x!=null);
     if(all.length)f.amount=Math.max.apply(null,all);
   }
+  /* الرقم الضريبي للمورّد (15 رقماً شائع في السعودية) */
+  const vn=flat.match(/(?:vat\s*(?:no|number|reg)|الرقم الضريبي|الرقم الضريبى)[^\n:]*[:#]?\s*(\d{10,20})/i);
+  if(vn)f.supplierNo=vn[1];
+  const ph=flat.match(/(?:tel|phone|هاتف|جوال)[^\n:]*[:#]?\s*([+\d][\d\s\-()]{6,})/i);
+  if(ph)f.phone=String(ph[1]).trim().slice(0,25);
   if(/ر\.?\s?س|ريال|SAR/i.test(flat))f.currency='SAR';
   else if(/\$|USD|دولار/i.test(flat))f.currency='USD';
   else if(/€|EUR|يورو/i.test(flat))f.currency='EUR';
+  else if(/AED|درهم/i.test(flat))f.currency='AED';
+  else if(/EGP|جنيه/i.test(flat))f.currency='EGP';
   const lines=t.split('\n').map(s=>s.trim()).filter(s=>s.length>2&&/[A-Za-z\u0600-\u06FF]/.test(s)&&!/^(tax|vat|total|date|invoice|receipt)$/i.test(s));
   if(lines.length)f.vendor=lines[0].slice(0,120);
   return f;
@@ -697,25 +726,20 @@ app.post('/api/receipts', async (req,res)=>{
   const ip = req.ip || req.socket.remoteAddress || 'x';
   if (!boundedHit(pubHits, 'rcpt:' + ip, 60 * 60 * 1000, 200)) return res.status(429).json({error:'TOO_MANY'});
   try{
-    const b = req.body || {};
-    const m = /^data:([\w.+-]+\/[\w.+-]+);base64,(.+)$/i.exec(String(b.data || ''));
-    const mime = String(b.mime || (m ? m[1] : '')).toLowerCase();
-    const b64 = m ? m[2] : String(b.base64 || '');
-    if (!b64) return res.status(400).json({error:'NO_DATA'});
-    const buf = Buffer.from(b64, 'base64');
-    if (!buf.length) return res.status(400).json({error:'NO_DATA'});
-    if (buf.length > MAX_UPLOAD) return res.status(413).json({error:'TOO_LARGE', max:MAX_UPLOAD});
-    const isPdf = mime === 'application/pdf' || buf.slice(0,4).toString('latin1') === '%PDF';
-    if (!isPdf && !/^image\//.test(mime)) return res.status(400).json({error:'BAD_TYPE'});
+    const f = incomingFile(req);
+    const isPdf = f.mime === 'application/pdf' || (f.buf && f.buf.slice(0,4).toString('latin1') === '%PDF');
+    if (!f.buf || !f.buf.length) return res.status(400).json({error:'NO_DATA'});
+    if (!isPdf && !/^image\//.test(f.mime)) return res.status(400).json({error:'BAD_TYPE'});
+    if (f.buf.length > MAX_UPLOAD) return res.status(413).json({error:'TOO_LARGE', max:MAX_UPLOAD});
     const id = 'F' + crypto.randomBytes(9).toString('hex');
-    await putFile({ id, compound_id: String(b.compoundId || '').slice(0,60), name: String(b.name || '').slice(0,120), mime: isPdf ? 'application/pdf' : mime, size: buf.length, data: buf, created: Date.now() });
+    await putFile({ id, compound_id: String(f.compoundId || '').slice(0,60), name: String(f.name || '').slice(0,120), mime: isPdf ? 'application/pdf' : f.mime, size: f.buf.length, data: f.buf, created: Date.now() });
     let text = '', scanned = false;
     if (isPdf) {
-      try { text = await pdfText(buf, 6); }
-      catch (e) { console.error('[receipts] pdf parse failed:', e.message, 'len=' + buf.length, 'head=' + buf.slice(0,5).toString('latin1')); text = ''; }
+      try { text = await pdfText(f.buf, 6); }
+      catch (e) { console.error('[receipts] pdf parse failed:', e.message, 'len=' + f.buf.length, 'head=' + f.buf.slice(0,5).toString('latin1')); text = ''; }
       if (!text.trim()) scanned = true;   /* ملف صورة/ممسوح: لا نص قابل للاستخراج */
     } else { scanned = true; }
-    res.json({ ok:true, fileId:id, url:'/api/files/'+id, mime:isPdf?'application/pdf':mime, size:buf.length,
+    res.json({ ok:true, fileId:id, url:'/api/files/'+id, mime:isPdf?'application/pdf':f.mime, size:f.buf.length,
       scanned, text:text.slice(0,6000), fields:extractReceiptFields(text) });
   }catch(e){ console.error('DB error on POST /api/receipts:', e.message); return res.status(500).json({error:'DB'}); }
 });
@@ -1387,6 +1411,15 @@ app.post('/api/pm/run', async (req,res)=>{
 
 /* ---- 404 لأي مسار API غير معروف (JSON) ---- */
 app.use('/api', (req, res) => res.status(404).json({ error: 'NOT_FOUND' }));
+
+/* ---- معالج أخطاء الأجساد: 413 واضح عند تجاوز الحد + JSON تالف ---- */
+app.use((err, req, res, next) => {
+  if (err && (err.type === 'entity.too.large' || err.status === 413))
+    return res.status(413).json({ error: 'TOO_LARGE', max: MAX_UPLOAD });
+  if (err && err.type === 'entity.parse.failed')
+    return res.status(400).json({ error: 'BAD_BODY' });
+  next(err);
+});
 
 /* ---- SPA fallback: أي مسار غير /api يرجع الواجهة ---- */
 app.get('*', (req, res, next) => {
