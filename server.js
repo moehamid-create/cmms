@@ -251,7 +251,7 @@ function seedState(){
     compounds:[{id:C,name:'مجمع الخير السكني - حي الروضة',loc:'',notes:'',createdAt:Date.now()}],
     buildings:[],units:[],tenants:[],contracts:[],assets:[],wos:[],inv:[],moves:[],
     pms:[],suppliers:[],prs:[],pos:[],projects:[],employees:[],shifts:[],notifs:[],
-    providers:[],rfqs:[],pmTemplates:[],audit:[],orgs:[],woPhotoReq:false
+    providers:[],rfqs:[],pmTemplates:[],audit:[],orgs:[],woPhotoReq:false,receipts:[]
   };
   const addB=(name,type,floors)=>d.buildings.push({id:rid('B'),name,type,floors:floors.slice(),compoundId:C});
   for(let i=1;i<=34;i++)addB('فيلا '+i,'villa',['الدور الأرضي','الدور الأول','الملحق']);
@@ -288,6 +288,7 @@ function normalizeState(d){
   if(!Array.isArray(d.pmTemplates))d.pmTemplates=[];
   if(!Array.isArray(d.audit))d.audit=[];
   if(!Array.isArray(d.orgs))d.orgs=[];
+  if(!Array.isArray(d.receipts))d.receipts=[];
   if(d.rfqSeq==null) d.rfqSeq=0;
   ['seq','prSeq','poSeq','rnSeq','prjSeq','ctSeq'].forEach(k=>{ if(d[k]==null) d[k]=0; });
   if(!Array.isArray(d.users)) d.users=[];
@@ -637,6 +638,86 @@ app.get('/api/files/:id', async (req,res)=>{
     res.set('Cache-Control', 'private, max-age=31536000, immutable');
     res.send(Buffer.isBuffer(f.data) ? f.data : Buffer.from(f.data));
   }catch(e){ console.error('DB error on GET /api/files:', e.message); res.status(500).end(); }
+});
+
+/* ---- استخراج بيانات الإيصالات من ملفات PDF (مكتبة pdfjs-dist على الخادم) ----
+   ملاحظة: يعمل مع ملفات PDF النصية. الملفات الممسوحة ضوئياً (صور) تحتاج OCR — غير مُدمج حالياً،
+   ويُرجع الخادم scanned=true ليُكمل المستخدم الحقول يدوياً. */
+async function pdfText(buf, maxPages){
+  const pdfjs = require('pdfjs-dist/legacy/build/pdf.js');
+  const data = new Uint8Array(buf.length); data.set(buf);   /* نسخة دقيقة الحجم */
+  const doc = await pdfjs.getDocument({ data, useWorkerFetch:false, isEvalSupported:false, useSystemFonts:true, disableFontFace:true, verbosity:0 }).promise;
+  const n = Math.min(doc.numPages || 1, maxPages || 6);
+  let out = '';
+  for (let i = 1; i <= n; i++) {
+    const page = await doc.getPage(i);
+    const c = await page.getTextContent();
+    out += (c.items || []).map(x => x.str || '').join('\n') + '\n';
+  }
+  return out.trim();
+}
+function normDateStr(s){
+  const a=String(s||'').split(/[-/.]/).map(x=>x.trim());
+  if(a.length!==3)return '';
+  let y,m,d;
+  if(a[0].length===4){y=a[0];m=a[1];d=a[2];} else { d=a[0];m=a[1];y=a[2]; if(y.length===2)y='20'+y; }
+  m=String(+m).padStart(2,'0');d=String(+d).padStart(2,'0');
+  if(+m<1||+m>12||+d<1||+d>31)return '';
+  return y+'-'+m+'-'+d;
+}
+function extractReceiptFields(text){
+  const t=String(text||'').replace(/\r/g,'\n');
+  const flat=t.replace(/[ \t]+/g,' ');
+  const num=s=>{const n=parseFloat(String(s).replace(/[^\d.]/g,''));return isFinite(n)?n:null;};
+  const f={};
+  const dm=flat.match(/\b(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})\b/)||flat.match(/\b(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\b/);
+  if(dm){f.dateRaw=dm[1];f.date=normDateStr(dm[1]);}
+  const nm=flat.match(/(?:invoice|receipt|inv|bill|فاتورة|إيصال|ايصال|رقم)[^\n:#]*[:#]?\s*([A-Za-z0-9\-\/]{3,})/i);
+  if(nm)f.no=String(nm[1]).slice(0,40);
+  const vm=flat.match(/(?:vat|tax|ضريبة|الضريبة)[^\n:]*[:#]?\s*([\d.,]+)/i)||flat.match(/([\d.,]+)\s*%?\s*(?:vat|ضريبة)/i);
+  if(vm)f.vat=num(vm[1]);
+  const lastMatch=(src)=>{ const re=new RegExp(src,'gi'); let m,last=null; while((m=re.exec(flat))) last=m; return last; };
+  const am=lastMatch('(?:grand\\s+total|الإجمالي|الاجمالي|المجموع)[^\\n:#]*[:#]?\\s*([\\d.,]+)')
+        || lastMatch('(?:^|[^A-Za-z])total[^\\n:#]*[:#]?\\s*([\\d.,]+)')
+        || lastMatch('(?:^|[^A-Za-z])(?:amount|net)[^\\n:#]*[:#]?\\s*([\\d.,]+)');
+  if(am)f.amount=num(am[1]);
+  if(f.amount==null){
+    const all=[...flat.matchAll(/\b\d{1,3}(?:[,\s]\d{3})*(?:[.,]\d{2})\b/g)].map(x=>num(x[0])).filter(x=>x!=null);
+    if(all.length)f.amount=Math.max.apply(null,all);
+  }
+  if(/ر\.?\s?س|ريال|SAR/i.test(flat))f.currency='SAR';
+  else if(/\$|USD|دولار/i.test(flat))f.currency='USD';
+  else if(/€|EUR|يورو/i.test(flat))f.currency='EUR';
+  const lines=t.split('\n').map(s=>s.trim()).filter(s=>s.length>2&&/[A-Za-z\u0600-\u06FF]/.test(s)&&!/^(tax|vat|total|date|invoice|receipt)$/i.test(s));
+  if(lines.length)f.vendor=lines[0].slice(0,120);
+  return f;
+}
+app.post('/api/receipts', async (req,res)=>{
+  const a = auth(req,res); if(!a) return;
+  const ip = req.ip || req.socket.remoteAddress || 'x';
+  if (!boundedHit(pubHits, 'rcpt:' + ip, 60 * 60 * 1000, 200)) return res.status(429).json({error:'TOO_MANY'});
+  try{
+    const b = req.body || {};
+    const m = /^data:([\w.+-]+\/[\w.+-]+);base64,(.+)$/i.exec(String(b.data || ''));
+    const mime = String(b.mime || (m ? m[1] : '')).toLowerCase();
+    const b64 = m ? m[2] : String(b.base64 || '');
+    if (!b64) return res.status(400).json({error:'NO_DATA'});
+    const buf = Buffer.from(b64, 'base64');
+    if (!buf.length) return res.status(400).json({error:'NO_DATA'});
+    if (buf.length > MAX_UPLOAD) return res.status(413).json({error:'TOO_LARGE', max:MAX_UPLOAD});
+    const isPdf = mime === 'application/pdf' || buf.slice(0,4).toString('latin1') === '%PDF';
+    if (!isPdf && !/^image\//.test(mime)) return res.status(400).json({error:'BAD_TYPE'});
+    const id = 'F' + crypto.randomBytes(9).toString('hex');
+    await putFile({ id, compound_id: String(b.compoundId || '').slice(0,60), name: String(b.name || '').slice(0,120), mime: isPdf ? 'application/pdf' : mime, size: buf.length, data: buf, created: Date.now() });
+    let text = '', scanned = false;
+    if (isPdf) {
+      try { text = await pdfText(buf, 6); }
+      catch (e) { console.error('[receipts] pdf parse failed:', e.message, 'len=' + buf.length, 'head=' + buf.slice(0,5).toString('latin1')); text = ''; }
+      if (!text.trim()) scanned = true;   /* ملف صورة/ممسوح: لا نص قابل للاستخراج */
+    } else { scanned = true; }
+    res.json({ ok:true, fileId:id, url:'/api/files/'+id, mime:isPdf?'application/pdf':mime, size:buf.length,
+      scanned, text:text.slice(0,6000), fields:extractReceiptFields(text) });
+  }catch(e){ console.error('DB error on POST /api/receipts:', e.message); return res.status(500).json({error:'DB'}); }
 });
 
 app.post('/api/logout',(req,res)=>{
