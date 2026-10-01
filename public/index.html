@@ -5192,19 +5192,17 @@ function woForm(idx,presetAsset){
   const w=(idx!=null&&idx!=='')?db.wos[idx]:{};
   const act=activeCmp();
   const techs=db.users.filter(u=>u.role==='tech'&&(u.cmpIds||[]).includes(act));
-  const groups={};
-  db.buildings.filter(b=>b.compoundId===act).forEach(b=>{(groups[b.name]=groups[b.name]||[]).push(b);});
-  const opts=Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ar')).map(g=>{
-    const inner=groups[g].flatMap(b=>db.assets.filter(a=>a.building===b.id))
-      .map(a=>`<option value="${a.id}" ${(w.assetId||presetAsset)===a.id?'selected':''}>${esc(a.name)}</option>`).join('');
-    return inner?`<optgroup label="${esc(g)}">${inner}</optgroup>`:'';}).join('');
+  const assets=db.assets.filter(a=>a.compoundId===act)
+    .slice().sort((x,y)=>String(x.name||'').localeCompare(String(y.name||''),'ar'));
+  const curAsset=(w.assetId||presetAsset)?assets.find(a=>a.id===(w.assetId||presetAsset))||null:null;
+  const adl=assets.map(a=>`<option value="${esc(a.name||'')}" data-id="${a.id}" label="${esc(bName(a.building))}${a.floor?' · '+esc(a.floor):''}"></option>`).join('');
   const prjOpts=db.projects.filter(p=>p.compoundId===act).map(p=>`<option value="${p.id}" ${w.projectId===p.id?'selected':''}>${esc(p.no)} — ${esc(p.name)}</option>`).join('');
   const uOpts=cmpUnits().slice().sort((a,b)=>String(a.code).localeCompare(String(b.code)))
     .map(u=>`<option value="${u.id}" ${w.unitId===u.id?'selected':''}>${esc(u.code)} — ${esc(bName(u.buildingId))}</option>`).join('');
   modal(`<h3>${(idx!=null&&idx!=='')?lb('تعديل بلاغ||Edit Report'):lb('بلاغ عطل جديد||New Fault Report')}</h3>
   <label>${lb('عنوان العطل *||Fault Title *')}</label><input id="fw_t" value="${esc(w.title||'')}">
   <div class="fg">
-    <div><label>${lb('الأصل المرتبط||Linked Asset')}</label><select id="fw_a" onchange="syncLoc()"><option value="">—</option>${opts}</select></div>
+    <div><label>${lb('الأصل المرتبط (اكتب للبحث)||Linked Asset (type to search)')}</label><input id="fw_a" list="fw_adl" autocomplete="off" value="${esc(curAsset?curAsset.name:'')}" placeholder="${lb('اكتب اسم الأصل…||Type an asset name…')}" oninput="syncLoc()" onchange="syncLoc()"><datalist id="fw_adl">${adl}</datalist></div>
     <div><label>${lb('الوحدة (اختياري)||Unit (optional)')}</label><select id="fw_u"><option value="">—</option>${uOpts}</select></div>
     <div><label>${lb('الموقع (يدوي)||Location (manual)')}</label><input id="fw_l" value="${esc(w.bname||'')}"></div>
     <div><label>${lb('الأولوية (تحدد الاستحقاق)||Priority (sets due date)')}</label><select id="fw_p" onchange="slaDue()">${Object.keys(PRIO).map(k=>`<option value="${k}" ${(w.priority||'normal')===k?'selected':''}>${PRIO[k]}</option>`).join('')}</select></div>
@@ -5218,19 +5216,33 @@ function woForm(idx,presetAsset){
   syncLoc(true);
   if(idx==null||idx==='')slaDue();
 }
+/* حلّ الأصل المكتوب في حقل البحث إلى سجل أصل حقيقي (بالاسم أو عبر قائمة datalist) */
+function fwAsset(){
+  const inp=$('fw_a');if(!inp)return null;
+  const v=String(inp.value||'').trim();if(!v)return null;
+  const act=activeCmp(),lv=v.toLowerCase();
+  let a=db.assets.find(x=>x.compoundId===act&&String(x.name||'').toLowerCase()===lv);
+  if(!a){
+    const dl=document.getElementById('fw_adl');
+    if(dl&&dl.options){for(const o of dl.options){if(String(o.value).toLowerCase()===lv){a=db.assets.find(x=>x.id===o.getAttribute('data-id'));break;}}}
+  }
+  return a||null;
+}
 function syncLoc(keep){
-  const a=db.assets.find(x=>x.id===$('fw_a').value);
+  const a=fwAsset();
   if(a&&(!keep||!$('fw_l').value))$('fw_l').value=bName(a.building);
 }
 function saveWO(idxStr){
   const isNew=(idxStr===''||idxStr==null);
   const prevAssignee=isNew?'':(db.wos[idxStr]||{}).assigneeId||'';
   const t=$('fw_t').value.trim();if(!t)return toast(lb(' العنوان مطلوب|| Title required'),'err');
-  const aid=$('fw_a').value,a=db.assets.find(x=>x.id===aid);
+  const a=fwAsset();
+  const aid=a?a.id:'';
+  const typed=String(($('fw_a')&&$('fw_a').value)||'').trim();
   const tech=db.users.find(u=>u.id===$('fw_as').value);
   const unSel=$('fw_u'),un=unSel?db.units.find(x=>x.id===unSel.value):null;
   const o={title:t,desc:$('fw_de').value,assetId:aid,assetName:a?a.name:'',
-    bname:$('fw_l').value.trim(),priority:$('fw_p').value,assigneeId:$('fw_as').value||'',
+    bname:$('fw_l').value.trim()||(!a?typed:''),priority:$('fw_p').value,assigneeId:$('fw_as').value||'',
     assigneeName:tech?tech.name:'',dueDate:$('fw_d').value,projectId:$('fw_pr')?$('fw_pr').value:'',
     unitId:un?un.id:'',unitCode:un?un.code:'',
     tenantName:(un&&un.tenantId)?((db.tenants.find(x=>x.id===un.tenantId)||{}).name||''):''};
