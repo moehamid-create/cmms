@@ -803,6 +803,219 @@ app.post('/api/state', async (req,res)=>{
   } catch (e) { console.error('DB error on save:', e.message); return res.status(500).json({error:'DB'}); }
 });
 
+/* ---- محرك البحث الموحّد (UpKeep-style Unified Multi-Entity Search API) ---- */
+app.get('/api/search', async (req, res) => {
+  let cur;
+  try { cur = await getState(); }
+  catch (e) { return res.status(500).json({ error: 'DB' }); }
+  const actor = cur.data ? auth(req, res) : null;
+  if (cur.data && !actor) return;
+
+  const d = cur.data || {};
+  const q = String(req.query.q || '').trim();
+  const types = String(req.query.types || 'all').toLowerCase().split(',').map(s => s.trim());
+  const compoundId = req.query.compoundId ? String(req.query.compoundId) : null;
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+
+  if (!q) {
+    return res.json({ query: '', total: 0, results: {} });
+  }
+
+  const normStr = s => String(s || '').toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/[أإآء]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/[ىي]/g, 'ي')
+    .replace(/[\s\-_/\\,.]+/g, ' ')
+    .trim();
+
+  const tokens = normStr(q).split(' ').filter(Boolean);
+  const matchTokens = text => tokens.every(tok => normStr(text).includes(tok));
+
+  const results = {};
+  let total = 0;
+
+  // 1. أوامر الشغل (Work Orders)
+  if (types.includes('all') || types.includes('wos')) {
+    let list = d.wos || [];
+    if (compoundId) list = list.filter(w => w.compoundId === compoundId);
+    if (actor && actor.session.role === 'tech') list = list.filter(w => w.assigneeId === actor.session.userId);
+    const hits = list.filter(w => matchTokens([
+      w.no, w.title, w.desc, w.assetName, w.assetLabel, w.bname, w.unitCode,
+      w.tenantName, w.assigneeName, w.priority, w.status, w.deferReason
+    ].filter(Boolean).join(' ')))
+    .slice(0, limit)
+    .map(w => ({
+      type: 'wo',
+      id: w.id,
+      no: w.no,
+      title: w.title,
+      desc: (w.desc || '').slice(0, 100),
+      assetName: w.assetLabel || w.assetName || '',
+      location: w.bname || '',
+      unitCode: w.unitCode || '',
+      priority: w.priority || 'normal',
+      status: w.status || 'open',
+      assigneeName: w.assigneeName || '',
+      dueDate: w.dueDate || null,
+      compoundId: w.compoundId
+    }));
+    results.wos = hits;
+    total += hits.length;
+  }
+
+  // 2. سجل الأصول والمعدات (Assets & Equipment)
+  if (types.includes('all') || types.includes('assets')) {
+    let list = d.assets || [];
+    if (compoundId) list = list.filter(a => a.compoundId === compoundId);
+    const bldMap = new Map((d.buildings || []).map(b => [b.id, b.name]));
+    const hits = list.filter(a => matchTokens([
+      a.name, a.category, bldMap.get(a.building) || '', a.floor, a.barcode,
+      a.serial, a.model, a.manufacturer, a.zone, a.room, a.notes
+    ].filter(Boolean).join(' ')))
+    .slice(0, limit)
+    .map(a => ({
+      type: 'asset',
+      id: a.id,
+      name: a.name,
+      category: a.category || '',
+      building: bldMap.get(a.building) || '',
+      floor: a.floor || '',
+      status: a.status || 'ok',
+      critical: a.critical || 'normal',
+      barcode: a.barcode || '',
+      serial: a.serial || '',
+      model: a.model || '',
+      compoundId: a.compoundId
+    }));
+    results.assets = hits;
+    total += hits.length;
+  }
+
+  // 3. قطع الغيار والمخزون (Inventory & Parts)
+  if (types.includes('all') || types.includes('inv')) {
+    let list = d.inv || [];
+    const hits = list.filter(it => matchTokens([
+      it.name, it.code, it.barcode, it.cat, it.loc
+    ].filter(Boolean).join(' ')))
+    .slice(0, limit)
+    .map(it => ({
+      type: 'inv',
+      id: it.id,
+      name: it.name,
+      code: it.code || '',
+      barcode: it.barcode || '',
+      cat: it.cat || '',
+      qty: it.qty || 0,
+      minQty: it.minQty || 0,
+      unit: it.unit || '',
+      unitCost: it.unitCost || 0,
+      loc: it.loc || ''
+    }));
+    results.inv = hits;
+    total += hits.length;
+  }
+
+  // 4. خطط الصيانة الوقائية (Preventive Maintenance)
+  if (types.includes('all') || types.includes('pm')) {
+    let list = d.pms || [];
+    if (compoundId) list = list.filter(p => !p.compoundId || p.compoundId === compoundId);
+    const hits = list.filter(p => matchTokens([
+      p.title, p.disc, p.crit, p.freq
+    ].filter(Boolean).join(' ')))
+    .slice(0, limit)
+    .map(p => ({
+      type: 'pm',
+      id: p.id,
+      title: p.title,
+      disc: p.disc || '',
+      crit: p.crit || '',
+      freq: p.freq || '',
+      nextDue: p.nextDue || null
+    }));
+    results.pm = hits;
+    total += hits.length;
+  }
+
+  // 5. الوحدات والمستأجرين (Units & Tenants)
+  if (types.includes('all') || types.includes('units')) {
+    let units = d.units || [];
+    const bldMap = new Map((d.buildings || []).map(b => [b.id, b.name]));
+    const tntMap = new Map((d.tenants || []).map(t => [t.unitId || t.id, t]));
+    if (compoundId) {
+      const bSet = new Set((d.buildings || []).filter(b => b.compoundId === compoundId).map(b => b.id));
+      units = units.filter(u => bSet.has(u.buildingId));
+    }
+    const hits = units.filter(u => {
+      const bName = bldMap.get(u.buildingId) || '';
+      const t = tntMap.get(u.id) || (u.tenantId ? tntMap.get(u.tenantId) : null);
+      return matchTokens([
+        u.code, bName, u.floor, u.kind, u.st,
+        t ? t.name : '', t ? t.phone : ''
+      ].filter(Boolean).join(' '));
+    })
+    .slice(0, limit)
+    .map(u => {
+      const t = tntMap.get(u.id) || (u.tenantId ? tntMap.get(u.tenantId) : null);
+      return {
+        type: 'unit',
+        id: u.id,
+        code: u.code,
+        building: bldMap.get(u.buildingId) || '',
+        floor: u.floor || '',
+        status: u.st || 'vacant',
+        tenantName: t ? t.name : '',
+        tenantPhone: t ? t.phone : ''
+      };
+    });
+    results.units = hits;
+    total += hits.length;
+  }
+
+  // 6. الفواتير والإيصالات (Receipts & Invoices)
+  if (types.includes('all') || types.includes('receipts')) {
+    let list = d.receipts || [];
+    const hits = list.filter(r => matchTokens([
+      r.receiptNo, r.vendor, r.notes, r.total, r.amount
+    ].filter(Boolean).join(' ')))
+    .slice(0, limit)
+    .map(r => ({
+      type: 'receipt',
+      id: r.id,
+      receiptNo: r.receiptNo || '',
+      vendor: r.vendor || '',
+      amount: r.total || r.amount || 0,
+      currency: r.currency || 'SAR',
+      date: r.date || '',
+      notes: (r.notes || '').slice(0, 100)
+    }));
+    results.receipts = hits;
+    total += hits.length;
+  }
+
+  // 7. المستخدمين وفرق الصيانة (Users & Techs)
+  if (types.includes('all') || types.includes('users')) {
+    let list = d.users || [];
+    const hits = list.filter(u => matchTokens([
+      u.name, u.u, u.role, u.phone, u.email
+    ].filter(Boolean).join(' ')))
+    .slice(0, limit)
+    .map(u => ({
+      type: 'user',
+      id: u.id,
+      name: u.name,
+      username: u.u,
+      role: u.role,
+      phone: u.phone || '',
+      email: u.email || ''
+    }));
+    results.users = hits;
+    total += hits.length;
+  }
+
+  res.json({ query: q, total, results });
+});
+
 /* ---- بوابة المستأجرين العامة (بدون دخول): قائمة المجمعات ---- */
 app.get('/api/public/compounds', async (req, res) => {
   let st;

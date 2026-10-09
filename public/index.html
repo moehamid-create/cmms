@@ -969,6 +969,141 @@ input[type=checkbox]{transform:scale(1.1)}
 label{font-size:11.5px;font-weight:700;color:var(--muted);margin:10px 0 5px}
 .searchbar{max-width:340px}
 
+/* ── UpKeep-Style Global Search & Faceted Filtering ──────────────── */
+.topbar-search{
+  display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:10px;
+  background:var(--s2);border:1px solid var(--line);color:var(--muted);
+  font-size:12.5px;font-weight:600;cursor:pointer;transition:.18s;flex:1 1 240px;max-width:340px;
+}
+.topbar-search:hover{background:var(--s3);border-color:rgba(13,110,128,.35);color:var(--ink)}
+.topbar-search svg{color:var(--brand);flex-shrink:0}
+.tbs-text{flex:1;text-align:start;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbs-kbd{
+  font-size:10px;font-family:inherit;font-weight:700;padding:1px 5px;border-radius:5px;
+  background:rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.08);color:var(--muted);
+}
+.dark .tbs-kbd{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12);color:#9db4c2}
+.dark .topbar-search{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);color:#a7c0cb}
+.dark .topbar-search:hover{background:rgba(255,255,255,.12);color:#e9f1f6}
+
+/* Global Search Modal (Command Palette) */
+.gs-overlay{
+  position:fixed;inset:0;z-index:9999;background:rgba(8,26,35,.6);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  display:flex;align-items:flex-start;justify-content:center;padding:50px 16px 20px;
+  animation:fade .15s ease forwards;
+}
+.gs-modal{
+  width:100%;max-width:700px;background:var(--bg,#fff);border-radius:18px;
+  border:1px solid var(--line);box-shadow:0 24px 60px -15px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.1);
+  display:flex;flex-direction:column;max-height:85vh;overflow:hidden;
+  animation:pop .15s cubic-bezier(.16,1,.3,1) forwards;
+}
+.dark .gs-modal{background:#11222d;border-color:rgba(255,255,255,.12);box-shadow:0 28px 70px -15px rgba(0,0,0,.7)}
+.gs-head{
+  display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line-soft);
+  position:relative;background:var(--glass-hi);
+}
+.gs-head svg{color:var(--brand);flex-shrink:0}
+.gs-input{
+  flex:1;border:none!important;outline:none!important;background:transparent!important;
+  font-size:15.5px;font-weight:700;color:var(--ink);padding:0;box-shadow:none!important;
+}
+.dark .gs-input{color:#f1f5f9}
+.gs-clear-btn{
+  background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:4px 6px;border-radius:6px;
+}
+.gs-clear-btn:hover{color:var(--ink);background:var(--s2)}
+.gs-esc-kbd{
+  font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px;cursor:pointer;
+  background:var(--s2);border:1px solid var(--line);color:var(--muted);
+}
+.gs-filters{
+  display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid var(--line-soft);
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;background:var(--s2);
+}
+.gs-filters::-webkit-scrollbar{display:none}
+.gs-chip{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;
+  background:var(--bg,#fff);border:1px solid var(--line);font-size:11.5px;font-weight:700;
+  color:var(--muted);cursor:pointer;white-space:nowrap;transition:.15s;
+}
+.dark .gs-chip{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.08);color:#93a7b3}
+.gs-chip:hover{border-color:var(--brand);color:var(--ink)}
+.gs-chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.gs-chip .gs-cbadge{
+  font-size:9.5px;padding:1px 5px;border-radius:99px;background:rgba(0,0,0,.08);color:inherit;font-weight:800;
+}
+.gs-chip.on .gs-cbadge{background:rgba(255,255,255,.25)}
+.gs-body{flex:1;overflow-y:auto;padding:10px;max-height:55vh}
+.gs-sec-title{
+  font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;
+  color:var(--muted);padding:8px 10px 4px;display:flex;justify-content:space-between;align-items:center;
+}
+.gs-item{
+  display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:10px;
+  cursor:pointer;transition:.12s;border:1px solid transparent;margin-bottom:3px;text-align:start;
+}
+.gs-item:hover,.gs-item.active{background:var(--s2);border-color:rgba(13,110,128,.25)}
+.dark .gs-item:hover,.dark .gs-item.active{background:rgba(255,255,255,.07);border-color:rgba(51,191,212,.3)}
+.gs-item-ic{
+  width:32px;height:32px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;
+  color:#fff;font-weight:800;font-size:13px;
+}
+.gs-item-text{flex:1;min-width:0}
+.gs-item-title{font-size:13.5px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dark .gs-item-title{color:#f1f5f9}
+.gs-item-sub{font-size:11.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gs-item-meta{display:flex;gap:5px;align-items:center;flex-shrink:0}
+mark.gs-hl{background:#fef08a;color:#713f12;font-weight:800;padding:0 2px;border-radius:3px}
+.dark mark.gs-hl{background:#854d0e;color:#fef9c3}
+.gs-footer{
+  display:flex;justify-content:space-between;align-items:center;padding:10px 16px;
+  border-top:1px solid var(--line-soft);background:var(--s2);font-size:11.5px;color:var(--muted);
+}
+.gs-hints{display:flex;gap:12px;align-items:center}
+.gs-hints kbd{
+  font-size:9.5px;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.06);
+  border:1px solid var(--line);font-weight:700;
+}
+.dark .gs-hints kbd{background:rgba(255,255,255,.08)}
+.gs-quick-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;padding:6px 0}
+.gs-quick-card{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+  background:var(--s2);border:1px solid var(--line);cursor:pointer;transition:.15s;text-align:start;
+}
+.gs-quick-card:hover{background:var(--s3);border-color:rgba(13,110,128,.35);transform:translateY(-1px)}
+.gs-quick-ic{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand)}
+.gs-quick-tx b{display:block;font-size:12.5px;line-height:1.2}
+.gs-quick-tx small{color:var(--muted);font-size:10.5px}
+
+/* Work Orders Faceted Filter Toolbar */
+.wo-filter-container{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.wo-presets-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.wo-presets-bar::-webkit-scrollbar{display:none}
+.wo-preset-chip{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:8px;
+  background:var(--s2);border:1px solid var(--line);font-size:12px;font-weight:700;
+  color:var(--muted);cursor:pointer;transition:.15s;white-space:nowrap;
+}
+.wo-preset-chip:hover{background:var(--s3);color:var(--ink);border-color:rgba(13,110,128,.3)}
+.wo-preset-chip.on{background:linear-gradient(135deg,#0e7490,#0891b2);color:#fff;border-color:transparent;box-shadow:0 4px 12px -3px rgba(14,116,144,.45)}
+.wo-preset-chip .pbadge{font-size:10px;padding:1px 5px;border-radius:99px;background:rgba(0,0,0,.08);color:inherit}
+.wo-preset-chip.on .pbadge{background:rgba(255,255,255,.25)}
+.wo-facets-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.wo-facets-row .searchbar{margin-bottom:0;flex:1 1 200px;max-width:none}
+.wo-facet-select{
+  padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg,#fff);
+  font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;min-height:36px;
+}
+.dark .wo-facet-select{background:#162733;border-color:rgba(255,255,255,.12);color:#e2ecf0}
+.wo-reset-btn{
+  display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red);
+  font-size:11.5px;font-weight:700;cursor:pointer;transition:.15s;height:36px;
+}
+.wo-reset-btn:hover{background:rgba(239,68,68,.2)}
+
 /* ── 8. النوافذ والتنبيهات ─────────────────────────────────────── */
 .modal-bg{background:rgba(8,26,35,.55);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
 .modal{
@@ -1127,7 +1262,7 @@ window.addEventListener('unhandledrejection',e=>{
   const r=e&&e.reason;
   reportClientError((r&&(r.message||r))||'unhandledrejection','promise');
 });
-let FILT={assets:'',wos:'',inv:'',woStatus:'all',procTab:'pr',units:'',pmView:'plans',pmFcDays:30,pmGroup:'time',pmDisc:'all',pmCritF:'all',pmBld:'all',rcpt:''};
+let FILT={assets:'',assetCat:'all',assetStatus:'all',wos:'',woStatus:'all',woPrio:'all',woTech:'all',woBld:'all',woPreset:'all',inv:'',invCat:'all',invLowOnly:false,procTab:'pr',units:'',pmView:'plans',pmFcDays:30,pmGroup:'time',pmDisc:'all',pmCritF:'all',pmBld:'all',rcpt:''};
 let PRIO,WSTAT,ASTAT,ROLES,VILLA_FLOORS,PRSTAT,POSTAT,FREQUNIT,PRJSTAT,SHIFTK,BTYPES,UNITKIND,CTRSC,CYCLEK;
 const UNITKIND_NEW=['apt','villa','subunit','office','shop','annex','land'];
 const SUB_SUFFIX=['G','F1','F2','ANX','R'];
@@ -1183,7 +1318,11 @@ sun:'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42
  fuel:'<path d="M3 22h12V4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/><path d="M14 10h2a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9l-3-3"/><path d="M6 8h6"/>',
  gauge:'<path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
- zap:'<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>'
+ zap:'<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>',
+ search:'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+ filter:'<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
+ qr:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M7 17h.01M17 17h.01M7 7h.01M17 7h.01"/>',
+ sparkles:'<path d="M12 3v3m0 12v3M3 12h3m12 0h3m-3.5-6.5l-2 2m-7 7l-2 2m11 0l-2-2m-7-7l-2-2"/>'
 };
 function ic(n,s){s=s||18;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]||''}</svg>`;}
 
@@ -1987,7 +2126,8 @@ function navItems(){
 }
 function tabAllowed(t){return HIDDEN_TABS.includes(t)||navItems().some(n=>n[0]===t);}
 function goTab(t){TAB=tabAllowed(t)?t:'dash';render();}
-function dashStatus(st){FILT.woStatus=st;FILT.wos='';goTab('wos');}
+function resetWOFilters(){FILT.wos='';FILT.woStatus='all';FILT.woPrio='all';FILT.woTech='all';FILT.woBld='all';FILT.woPreset='all';}
+function dashStatus(st){resetWOFilters();FILT.woStatus=st;goTab('wos');}
 function sbFocus(){const sb=document.querySelector('#view .searchbar');if(sb){sb.focus();try{sb.setSelectionRange(sb.value.length,sb.value.length)}catch(e){}}}
 function togglePwVisibility(){
   const inp=$('lp'), btn=$('btnPwToggle');
@@ -2582,6 +2722,11 @@ function shell(){
     <div class="content">
       <div class="topbar">
         <span class="ttl"><span class="pname">${lb('أملاكي||Amlaki')}</span>${(()=>{const c=nav.find(n=>n[0]===TAB);return c?c[2]:lb('الرئيسية||Dashboard')})()}</span>
+        <button class="topbar-search" onclick="openGlobalSearch()" title="${lb('بحث شامل (Ctrl + K)||Global Search (Ctrl + K)')}">
+          ${ic('search',15)}
+          <span class="tbs-text">${lb('بحث في كل النظام...||Search all system...')}</span>
+          <kbd class="tbs-kbd">Ctrl K</kbd>
+        </button>
         <span class="meta">
           ${asw}
           <span id="saveStat" style="display:inline-flex;align-items:center;max-width:230px"></span>
@@ -4382,6 +4527,9 @@ function bOpts(sel){return db.buildings.slice()
 /* ===== ASSETS ===== */
 function vAssets(){
   const act=activeCmp();
+  const allCats = Array.from(new Set(db.assets.filter(a=>a.compoundId===act).map(a=>a.category).filter(Boolean))).sort();
+  const hasActive = !!(FILT.assets || (FILT.assetCat && FILT.assetCat !== 'all') || (FILT.assetStatus && FILT.assetStatus !== 'all'));
+
   return `<div class="toolbar">
     ${isEng()?`<button class="btn" onclick="assetForm()">＋ ${lb('إضافة أصل||Add Asset')}</button>
     <button class="btn ghost" onclick="buildingForm()">＋ ${lb('مبنى/منطقة||Building/Area')}</button>
@@ -4390,17 +4538,53 @@ function vAssets(){
     <button class="btn ghost" onclick="assetImportModal()"> ${lb('استيراد CSV||Import CSV')}</button>
     <button class="btn ghost" onclick="dataQualityModal()"> ${lb('جودة البيانات||Data quality')}</button>`:''}
     <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
-  <input class="searchbar" placeholder=" ${lb('بحث…||Search…')}" value="${esc(FILT.assets)}" oninput="FILT.assets=this.value;drawAssetsTable()">
-  <div class="card"><h2>${lb('سجل الأصول||Asset Registry')} (${db.assets.filter(a=>a.compoundId===act).length})</h2>
+
+  <div class="wo-facets-row" style="margin-bottom:12px">
+    <input class="searchbar" placeholder="${lb('🔍 ابحث باسم الأصل، التصنيف، المبنى، الموديل، السيريال، أو الباركود...||Search asset, category, building, model, serial, barcode...')}" value="${esc(FILT.assets)}" oninput="FILT.assets=this.value;drawAssetsTable()">
+
+    <select class="wo-facet-select" onchange="FILT.assetCat=this.value;drawAssetsTable()" title="${lb('تصفية حسب التصنيف||Filter by category')}">
+      <option value="all">${lb('كل التصنيفات||All Categories')}</option>
+      ${allCats.map(c=>`<option value="${esc(c)}" ${(FILT.assetCat||'all')===c?'selected':''}>${esc(c)}</option>`).join('')}
+    </select>
+
+    <select class="wo-facet-select" onchange="FILT.assetStatus=this.value;drawAssetsTable()" title="${lb('تصفية حسب الحالة||Filter by status')}">
+      <option value="all">${lb('كل الحالات||All Statuses')}</option>
+      ${Object.keys(ASTAT).map(k=>`<option value="${k}" ${(FILT.assetStatus||'all')===k?'selected':''}>${ASTAT[k][0]}</option>`).join('')}
+    </select>
+
+    ${hasActive?`<button class="wo-reset-btn" onclick="FILT.assets='';FILT.assetCat='all';FILT.assetStatus='all';paintTab();drawAssetsTable()">
+      ✕ ${lb('إعادة ضبط||Reset')}
+    </button>`:''}
+  </div>
+
+  <div class="card"><h2>${lb('سجل الأصول||Asset Registry')} (<span id="asset_count">${db.assets.filter(a=>a.compoundId===act).length}</span>)</h2>
   <div class="tbl-wrap"><table><thead id="atbl_head"></thead><tbody id="atbl"></tbody></table></div></div>`;
 }
+
 function drawAssetsTable(){
   try{
     const act=activeCmp();
-    const q=(FILT.assets||'').toLowerCase();
-    const list=db.assets.filter(a=>a.compoundId===act)
-     .filter(a=>!q||((a.name||'')+' '+(a.category||'')+' '+bName(a.building)).toLowerCase().includes(q))
-     .slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+    const tokens = tokenizeSearch(FILT.assets);
+    let list = db.assets.filter(a=>a.compoundId===act);
+
+    if(FILT.assetCat && FILT.assetCat !== 'all'){
+      list = list.filter(a => a.category === FILT.assetCat);
+    }
+    if(FILT.assetStatus && FILT.assetStatus !== 'all'){
+      list = list.filter(a => a.status === FILT.assetStatus);
+    }
+    if(tokens.length){
+      list = list.filter(a => matchSearchTokens([
+        a.name, a.category, bName(a.building), a.floor, a.barcode,
+        a.serial, a.model, a.manufacturer, a.zone, a.room, a.notes
+      ].filter(Boolean).join(' '), tokens));
+    }
+
+    list = list.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+
+    const cntEl = $('asset_count');
+    if(cntEl) cntEl.textContent = list.length;
+
     const head=`<tr><th>${lb('الأصل||Asset')}</th><th>${lb('التصنيف||Category')}</th><th>${lb('المبنى/المنطقة||Building')}</th><th>${lb('الطابق/الجزء||Floor')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الضمان||Warranty')}</th>${isEng()?`<th></th>`:''}</tr>`;
     let rows='';
     if(!list.length)rows=`<tr><td colspan="7"><div class="empty">${db.assets.filter(a=>a.compoundId===act).length?lb('لا نتائج مطابقة للبحث||No search matches'):lb('لا أصول بعد — اضغط «إضافة أصل»||No assets yet — click Add Asset')}</div></td></tr>`;
@@ -4409,8 +4593,8 @@ function drawAssetsTable(){
       const wr=a.warrantyend&&daysUntil(a.warrantyend)>=0&&daysUntil(a.warrantyend)<90;
       const par=a.parentId?(db.assets.find(x=>x.id===a.parentId)||null):null;
       const kids=db.assets.filter(x=>x.parentId===a.id).length;
-      rows+=`<tr><td><b>${esc(a.name)}</b>${a.critical==='critical'?` <span class="badge b-down">${lb('حرج||Critical')}</span>`:a.critical==='high'?` <span class="badge b-maint">${lb('عالية||High')}</span>`:''}${(a.photos&&a.photos.length)?' ':''}${a.meter!=null&&a.meter!==''?`<br><span class="muted"> ${a.meter} ${esc(a.meterUnit||'')}</span>`:''}${(a.manufacturer||a.model)?`<br><span class="muted">${esc([a.manufacturer,a.model].filter(Boolean).join(' / '))}</span>`:''}${par?`<br><span class="muted">↳ ${esc(par.name)}</span>`:''}${kids?` <span class="badge b-open" title="${lb('مكوّنات تابعة||Components')}">${kids}</span>`:''}</td><td>${esc(a.category||'—')}</td>
-      <td>${esc(bName(a.building))}${a.zone?`<br><span class="muted">${esc(a.zone)}${a.room?' / '+esc(a.room):''}</span>`:''}</td><td>${esc(a.floor||'—')}</td>
+      rows+=`<tr><td><b>${highlightSearchText(a.name, FILT.assets)}</b>${a.critical==='critical'?' <span class="badge b-down">'+lb('حرج||Critical')+'</span>':a.critical==='high'?' <span class="badge b-maint">'+lb('عالية||High')+'</span>':''}${(a.photos&&a.photos.length)?' 📷':''}${a.meter!=null&&a.meter!==''?'<br><span class="muted">⏱ '+a.meter+' '+esc(a.meterUnit||'')+'</span>':''}${(a.manufacturer||a.model)?`<br><span class="muted">${esc([a.manufacturer,a.model].filter(Boolean).join(' / '))}</span>`:''}${par?`<br><span class="muted">↳ ${esc(par.name)}</span>`:''}${kids?` <span class="badge b-open" title="${lb('مكوّنات تابعة||Components')}">${kids}</span>`:''}${a.barcode?`<br><span class="muted" style="font-family:monospace;font-size:10.5px">🏷 ${esc(a.barcode)}</span>`:''}</td><td>${highlightSearchText(a.category||'—', FILT.assets)}</td>
+      <td>${highlightSearchText(bName(a.building), FILT.assets)}${a.zone?`<br><span class="muted">${esc(a.zone)}${a.room?' / '+esc(a.room):''}</span>`:''}</td><td>${esc(a.floor||'—')}</td>
       <td><span class="badge ${st[1]}">${st[0]}</span></td>
       <td>${wr?`<span class="badge b-prog">${fmtD(a.warrantyend)}</span>`:fmtD(a.warrantyend)}</td>
       ${isEng()?`<td nowrap><button class="btn sm ghost" title="${lb('صور ومستندات||Photos')}" onclick="assetPhotos('${a.id}')">${ic('cam',13)}</button>
@@ -4427,6 +4611,494 @@ function drawAssetsTable(){
     if(b)b.innerHTML=`<tr><td colspan="7"><div class="empty"> ${lb('خطأ في عرض الجدول: ||Table error: ')}${esc(e.message)}</div></td></tr>`;
   }
 }
+/* ===== UPKEEP-INSPIRED SEARCH ENGINE (محرك البحث الشامل والمتقدم) ===== */
+function normSearchStr(s){
+  return String(s||'')
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/[أإآء]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/[ىي]/g, 'ي')
+    .replace(/[\s\-_/\\,.]+/g, ' ')
+    .trim();
+}
+
+function tokenizeSearch(q){
+  const n = normSearchStr(q);
+  return n ? n.split(' ').filter(Boolean) : [];
+}
+
+function matchSearchTokens(text, tokens){
+  if(!tokens || !tokens.length) return true;
+  const n = normSearchStr(text);
+  return tokens.every(tok => n.includes(tok));
+}
+
+function highlightSearchText(text, query){
+  if(!text) return '';
+  const str = String(text);
+  const tokens = tokenizeSearch(query);
+  if(!tokens.length) return esc(str);
+  let safe = esc(str);
+  tokens.forEach(tok => {
+    if(tok.length < 1) return;
+    try {
+      const reg = new RegExp('('+tok.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')+')', 'gi');
+      safe = safe.replace(reg, '<mark class="gs-hl">$1</mark>');
+    } catch(e){}
+  });
+  return safe;
+}
+
+let GS_STATE = {
+  type: 'all',
+  query: '',
+  selIdx: 0,
+  items: []
+};
+
+function openGlobalSearch(initialQuery){
+  let el = $('gsOverlay');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'gsOverlay';
+    el.className = 'gs-overlay';
+    el.innerHTML = `
+      <div class="gs-modal" role="dialog" aria-modal="true">
+        <div class="gs-head">
+          ${ic('search',18)}
+          <input id="gsInput" class="gs-input" autofocus autocomplete="off" spellcheck="false"
+            placeholder="${lb('ابحث في أوامر الشغل، الأصول، القطع، الوقائية، المستأجرين... (أو امسح باركود)||Search work orders, assets, parts, PM, tenants... (or scan barcode)')}"
+            oninput="onGlobalSearchInput(this.value)"
+            onkeydown="handleGlobalSearchKey(event)">
+          <button class="gs-clear-btn" id="gsClearBtn" onclick="clearGlobalSearch()" style="display:none" title="${lb('مسح||Clear')}">✕</button>
+          <kbd class="gs-esc-kbd" onclick="closeGlobalSearch()">ESC</kbd>
+        </div>
+        <div class="gs-filters">
+          <button class="gs-chip on" data-type="all" onclick="setGlobalSearchType('all')">${lb('الكل||All')} <span class="gs-cbadge" id="gsc-all"></span></button>
+          <button class="gs-chip" data-type="wos" onclick="setGlobalSearchType('wos')">${ic('tool',13)} ${lb('أوامر الشغل||Work Orders')} <span class="gs-cbadge" id="gsc-wos"></span></button>
+          <button class="gs-chip" data-type="assets" onclick="setGlobalSearchType('assets')">${ic('gear',13)} ${lb('الأصول||Assets')} <span class="gs-cbadge" id="gsc-assets"></span></button>
+          <button class="gs-chip" data-type="inv" onclick="setGlobalSearchType('inv')">${ic('box',13)} ${lb('المخزون||Inventory')} <span class="gs-cbadge" id="gsc-inv"></span></button>
+          <button class="gs-chip" data-type="pm" onclick="setGlobalSearchType('pm')">${ic('cal',13)} ${lb('الوقائية||PM')} <span class="gs-cbadge" id="gsc-pm"></span></button>
+          <button class="gs-chip" data-type="units" onclick="setGlobalSearchType('units')">${ic('homes',13)} ${lb('الوحدات||Units')} <span class="gs-cbadge" id="gsc-units"></span></button>
+          <button class="gs-chip" data-type="proc" onclick="setGlobalSearchType('proc')">${ic('cart',13)} ${lb('المشتريات||Procurement')} <span class="gs-cbadge" id="gsc-proc"></span></button>
+          <button class="gs-chip" data-type="users" onclick="setGlobalSearchType('users')">${ic('users',13)} ${lb('المستخدمين||Users')} <span class="gs-cbadge" id="gsc-users"></span></button>
+        </div>
+        <div class="gs-body" id="gsBody"></div>
+        <div class="gs-footer">
+          <div class="gs-hints">
+            <span><kbd>↑</kbd><kbd>↓</kbd> ${lb('للتنقل||navigate')}</span>
+            <span><kbd>↵</kbd> ${lb('للاختيار||select')}</span>
+            <span><kbd>ESC</kbd> ${lb('للإغلاق||close')}</span>
+          </div>
+          <div class="gs-engine-info" style="display:flex;align-items:center;gap:6px">
+            <span style="width:7px;height:7px;border-radius:99px;background:#22c55e;display:inline-block"></span>
+            <span>UpKeep Fast-Search Indexer</span>
+          </div>
+        </div>
+      </div>
+    `;
+    el.addEventListener('click', ev => { if(ev.target === el) closeGlobalSearch(); });
+    document.body.appendChild(el);
+  }
+  GS_STATE.query = initialQuery || '';
+  GS_STATE.selIdx = 0;
+  const inp = $('gsInput');
+  if(inp){
+    inp.value = GS_STATE.query;
+    setTimeout(() => { inp.focus(); inp.select(); }, 20);
+  }
+  renderGlobalSearchResults();
+}
+
+function closeGlobalSearch(){
+  const el = $('gsOverlay');
+  if(!el) return;
+  el.style.animation = 'fade .15s ease reverse forwards';
+  const modal = el.querySelector('.gs-modal');
+  if(modal) modal.style.animation = 'pop .15s ease reverse forwards';
+  setTimeout(() => el.remove(), 150);
+}
+
+function clearGlobalSearch(){
+  const inp = $('gsInput');
+  if(inp){ inp.value = ''; inp.focus(); }
+  onGlobalSearchInput('');
+}
+
+function onGlobalSearchInput(val){
+  GS_STATE.query = val || '';
+  GS_STATE.selIdx = 0;
+  const clr = $('gsClearBtn');
+  if(clr) clr.style.display = GS_STATE.query ? 'block' : 'none';
+  renderGlobalSearchResults();
+}
+
+function setGlobalSearchType(t){
+  GS_STATE.type = t;
+  GS_STATE.selIdx = 0;
+  document.querySelectorAll('.gs-chip').forEach(btn => {
+    btn.classList.toggle('on', btn.getAttribute('data-type') === t);
+  });
+  renderGlobalSearchResults();
+}
+
+function handleGlobalSearchKey(e){
+  if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    if(GS_STATE.items.length){
+      GS_STATE.selIdx = (GS_STATE.selIdx + 1) % GS_STATE.items.length;
+      updateGlobalSearchActiveItem();
+    }
+  } else if(e.key === 'ArrowUp'){
+    e.preventDefault();
+    if(GS_STATE.items.length){
+      GS_STATE.selIdx = (GS_STATE.selIdx - 1 + GS_STATE.items.length) % GS_STATE.items.length;
+      updateGlobalSearchActiveItem();
+    }
+  } else if(e.key === 'Enter'){
+    e.preventDefault();
+    if(GS_STATE.items[GS_STATE.selIdx]){
+      executeGlobalSearchResult(GS_STATE.items[GS_STATE.selIdx]);
+    }
+  } else if(e.key === 'Escape'){
+    e.preventDefault();
+    closeGlobalSearch();
+  }
+}
+
+function updateGlobalSearchActiveItem(){
+  const items = document.querySelectorAll('.gs-item');
+  items.forEach((it, idx) => {
+    it.classList.toggle('active', idx === GS_STATE.selIdx);
+    if(idx === GS_STATE.selIdx){
+      it.scrollIntoView({ block: 'nearest' });
+    }
+  });
+}
+
+function renderGlobalSearchResults(){
+  const body = $('gsBody');
+  if(!body || !db) return;
+  const q = GS_STATE.query.trim();
+  const filterType = GS_STATE.type;
+  const tokens = tokenizeSearch(q);
+  const act = activeCmp();
+
+  if(!tokens.length){
+    const openWos = db.wos.filter(w=>w.compoundId===act && w.status!=='closed').length;
+    const urgentWos = db.wos.filter(w=>w.compoundId===act && w.status!=='closed' && (w.priority==='urgent'||w.priority==='high')).length;
+    const overdueWos = db.wos.filter(w=>w.compoundId===act && w.status!=='closed' && w.dueDate && daysUntil(w.dueDate)<0).length;
+    const lowStock = (db.inv||[]).filter(it=>it.qty<=it.minQty).length;
+
+    $('gsc-all').textContent = '';
+    ['wos','assets','inv','pm','units','proc','users'].forEach(k => {
+      const el = $('gsc-'+k); if(el) el.textContent = '';
+    });
+
+    GS_STATE.items = [];
+    body.innerHTML = `
+      <div class="gs-sec-title">${lb('إجراءات سريعة واقتراحات||Quick Access & Shortcuts')}</div>
+      <div class="gs-quick-list">
+        <div class="gs-quick-card" onclick="closeGlobalSearch();woForm()">
+          <span class="gs-quick-ic">${ic('tool',16)}</span>
+          <div class="gs-quick-tx"><b>+ ${lb('بلاغ عطل جديد||New Fault Report')}</b><small>${lb('فتح أمر شغل فوري||Create instant work order')}</small></div>
+        </div>
+        ${isEng()?`<div class="gs-quick-card" onclick="closeGlobalSearch();assetForm()">
+          <span class="gs-quick-ic">${ic('gear',16)}</span>
+          <div class="gs-quick-tx"><b>+ ${lb('إضافة أصل جديد||Add New Asset')}</b><small>${lb('تسجيل معدة في السجل||Register machinery/equipment')}</small></div>
+        </div>`:''}
+        ${urgentWos?`<div class="gs-quick-card" onclick="closeGlobalSearch();FILT.woPreset='urgent';goTab('wos')">
+          <span class="gs-quick-ic" style="color:var(--red);background:rgba(239,68,68,.1)">${ic('alert',16)}</span>
+          <div class="gs-quick-tx"><b style="color:var(--red)">${urgentWos} ${lb('بلاغات عاجلة مفتوحة||Urgent open WOs')}</b><small>${lb('تتطلب استجابة سريعة||Requires quick response')}</small></div>
+        </div>`:''}
+        ${overdueWos?`<div class="gs-quick-card" onclick="closeGlobalSearch();FILT.woPreset='overdue';goTab('wos')">
+          <span class="gs-quick-ic" style="color:#d97706;background:rgba(217,119,6,.1)">${ic('clock',16)}</span>
+          <div class="gs-quick-tx"><b style="color:#d97706">${overdueWos} ${lb('بلاغات متأخرة||Overdue Work Orders')}</b><small>${lb('تجاوزت موعد الاستحقاق||Past due date')}</small></div>
+        </div>`:''}
+        ${lowStock?`<div class="gs-quick-card" onclick="closeGlobalSearch();FILT.invLowOnly=true;goTab('inv')">
+          <span class="gs-quick-ic" style="color:#ea580c;background:rgba(234,88,12,.1)">${ic('box',16)}</span>
+          <div class="gs-quick-tx"><b>${lowStock} ${lb('قطع أوشكت على النفاد||Low Stock Items')}</b><small>${lb('تحت الحد الأدنى||Below minimum quantity')}</small></div>
+        </div>`:''}
+        <div class="gs-quick-card" onclick="closeGlobalSearch();FILT.woPreset='mine';goTab('wos')">
+          <span class="gs-quick-ic">${ic('users',16)}</span>
+          <div class="gs-quick-tx"><b>${lb('أوامر الشغل المسندة لي||My Assigned Tasks')}</b><small>${lb('مهام فريق العمل||Assigned to my account')}</small></div>
+        </div>
+      </div>
+      <div class="gs-sec-title" style="margin-top:12px">${lb('نصيحة بحث UpKeep||UpKeep Search Tip')}</div>
+      <p style="font-size:12px;color:var(--muted);padding:4px 10px;line-height:1.6">
+        ${lb('يمكنك كتابة اسم الأصل ورقم الغرفة معاً (مثال: «مكيف 101»)، أو رقم البلاغ، أو مسح باركود أي قطعة أو أصل مباشرة.||Type any combination like "chiller 101", work order number, asset name, or scan a barcode tag.')}
+      </p>
+    `;
+    return;
+  }
+
+  let barcodeMatch = null;
+  const rawQ = q.toUpperCase().replace(/\s+/g,'');
+  const matchedAssetBarcode = db.assets.find(a => (a.barcode && a.barcode.toUpperCase() === rawQ) || (a.id && a.id.toUpperCase() === rawQ) || (a.serial && a.serial.toUpperCase() === rawQ));
+  const matchedInvBarcode = (db.inv||[]).find(it => (it.barcode && it.barcode.toUpperCase() === rawQ) || (it.code && it.code.toUpperCase() === rawQ));
+  if(matchedAssetBarcode){
+    barcodeMatch = { type: 'asset', raw: matchedAssetBarcode, title: matchedAssetBarcode.name, sub: lb('مطابقة باركود أصل||Asset Barcode Match') + ' · ' + (matchedAssetBarcode.barcode||matchedAssetBarcode.id), badge: 'BARCODE' };
+  } else if(matchedInvBarcode){
+    barcodeMatch = { type: 'inv', raw: matchedInvBarcode, title: matchedInvBarcode.name, sub: lb('مطابقة باركود صنف||Item Barcode Match') + ' · ' + (matchedInvBarcode.barcode||matchedInvBarcode.code), badge: 'BARCODE' };
+  }
+
+  const catMatches = { wos: [], assets: [], inv: [], pm: [], units: [], proc: [], users: [] };
+
+  (db.wos||[]).forEach(w => {
+    const hay = [
+      w.no, w.title, w.desc, w.assetLabel, w.assetName, w.bname, w.unitCode,
+      w.tenantName, w.assigneeName, w.deferReason, PRIO[w.priority], (WSTAT[w.status]||[])[0]
+    ].filter(Boolean).join(' ');
+    if(matchSearchTokens(hay, tokens)){
+      catMatches.wos.push({
+        type: 'wo',
+        raw: w,
+        title: `${w.no} · ${w.title}`,
+        sub: [(w.assetLabel||w.assetName||w.bname), w.unitCode, w.assigneeName, fmtD(w.createdAt)].filter(Boolean).join(' · '),
+        priority: w.priority,
+        status: w.status,
+        scope: w.compoundId === act ? '' : (cmpName(w.compoundId)||'')
+      });
+    }
+  });
+
+  (db.assets||[]).forEach(a => {
+    const hay = [
+      a.name, a.category, bName(a.building), a.floor, a.barcode,
+      a.serial, a.model, a.manufacturer, a.zone, a.room, a.notes
+    ].filter(Boolean).join(' ');
+    if(matchSearchTokens(hay, tokens)){
+      catMatches.assets.push({
+        type: 'asset',
+        raw: a,
+        title: a.name,
+        sub: [a.category, bName(a.building), a.floor, a.model].filter(Boolean).join(' · '),
+        status: a.status,
+        critical: a.critical,
+        scope: a.compoundId === act ? '' : (cmpName(a.compoundId)||'')
+      });
+    }
+  });
+
+  (db.inv||[]).forEach(it => {
+    const hay = [it.name, it.code, it.barcode, it.cat, it.loc].filter(Boolean).join(' ');
+    if(matchSearchTokens(hay, tokens)){
+      catMatches.inv.push({
+        type: 'inv',
+        raw: it,
+        title: it.name,
+        sub: [it.code, it.cat, it.loc, money(it.unitCost)].filter(Boolean).join(' · '),
+        qty: it.qty,
+        minQty: it.minQty,
+        unit: it.unit
+      });
+    }
+  });
+
+  (db.pms||[]).forEach(p => {
+    const a = p.assetId ? db.assets.find(x => x.id === p.assetId) : null;
+    const hay = [p.title, p.disc, p.crit, p.freq, a ? a.name : ''].filter(Boolean).join(' ');
+    if(matchSearchTokens(hay, tokens)){
+      catMatches.pm.push({
+        type: 'pm',
+        raw: p,
+        title: p.title,
+        sub: [(a?a.name:''), lb(PM_DISC[p.disc]||p.disc||''), p.freq, fmtD(p.nextDue)].filter(Boolean).join(' · '),
+        crit: p.crit
+      });
+    }
+  });
+
+  (db.units||[]).forEach(u => {
+    const t = db.tenants.find(x => x.unitId === u.id || x.id === u.tenantId);
+    const b = db.buildings.find(x => x.id === u.buildingId);
+    const hay = [u.code, b?b.name:'', u.floor, u.kind, u.st, t?t.name:'', t?t.phone:''].filter(Boolean).join(' ');
+    if(matchSearchTokens(hay, tokens)){
+      catMatches.units.push({
+        type: 'unit',
+        raw: u,
+        title: `${lb('وحدة||Unit')} ${u.code}${b?' · '+b.name:''}`,
+        sub: [t?t.name:'', t?t.phone:'', u.floor, u.st==='rented'?lb('مؤجرة||Rented'):lb('شاغرة||Vacant')].filter(Boolean).join(' · '),
+        status: u.st
+      });
+    }
+  });
+
+  (db.receipts||[]).forEach(r => {
+    const hay = [r.receiptNo, r.vendor, r.notes, r.total, r.amount].filter(Boolean).join(' ');
+    if(matchSearchTokens(hay, tokens)){
+      catMatches.proc.push({
+        type: 'receipt',
+        raw: r,
+        title: `${lb('إيصال||Receipt')} ${r.receiptNo||'—'} · ${r.vendor||'—'}`,
+        sub: [fmtD(r.date), money(r.total||r.amount), r.notes].filter(Boolean).join(' · ')
+      });
+    }
+  });
+
+  (db.users||[]).forEach(u => {
+    const hay = [u.name, u.u, u.role, u.phone, u.email].filter(Boolean).join(' ');
+    if(matchSearchTokens(hay, tokens)){
+      catMatches.users.push({
+        type: 'user',
+        raw: u,
+        title: u.name,
+        sub: [u.u ? '@'+u.u : '', ROLES[u.role]||u.role, u.phone, u.email].filter(Boolean).join(' · '),
+        role: u.role
+      });
+    }
+  });
+
+  const totalCount = Object.values(catMatches).reduce((s, arr) => s + arr.length, 0);
+  $('gsc-all').textContent = totalCount || '';
+  $('gsc-wos').textContent = catMatches.wos.length || '';
+  $('gsc-assets').textContent = catMatches.assets.length || '';
+  $('gsc-inv').textContent = catMatches.inv.length || '';
+  $('gsc-pm').textContent = catMatches.pm.length || '';
+  $('gsc-units').textContent = catMatches.units.length || '';
+  $('gsc-proc').textContent = catMatches.proc.length || '';
+  $('gsc-users').textContent = catMatches.users.length || '';
+
+  let itemsToRender = [];
+  if(filterType === 'all'){
+    if(barcodeMatch) itemsToRender.push(barcodeMatch);
+    itemsToRender = itemsToRender.concat(
+      catMatches.wos.slice(0, 10),
+      catMatches.assets.slice(0, 10),
+      catMatches.inv.slice(0, 8),
+      catMatches.pm.slice(0, 6),
+      catMatches.units.slice(0, 6),
+      catMatches.proc.slice(0, 5),
+      catMatches.users.slice(0, 5)
+    );
+  } else {
+    itemsToRender = catMatches[filterType] || [];
+  }
+
+  GS_STATE.items = itemsToRender;
+
+  if(!itemsToRender.length){
+    body.innerHTML = `
+      <div style="text-align:center;padding:40px 16px;color:var(--muted)">
+        <div style="font-size:32px;margin-bottom:8px">🔍</div>
+        <b style="font-size:15px;color:var(--ink);display:block;margin-bottom:4px">${lb('لا توجد نتائج مطابقة||No matching results')}</b>
+        <p style="font-size:12.5px">${lb('جرّب البحث بكلمات أخرى أو تحقق من كتابة الكلمة||Try different keywords or check spelling')}</p>
+      </div>
+    `;
+    return;
+  }
+
+  let out = '';
+  if(barcodeMatch && filterType === 'all'){
+    out += `
+      <div style="background:linear-gradient(135deg,rgba(14,116,144,.15),rgba(34,197,94,.15));border:1px solid rgba(14,116,144,.3);border-radius:10px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+        ${ic('qr',16)}
+        <span style="font-size:12px;font-weight:700">${lb('تم العثور على مطابقة فورية للباركود:||Direct Barcode Match Found:')} <b>${esc(barcodeMatch.title)}</b></span>
+      </div>
+    `;
+  }
+
+  itemsToRender.forEach((item, idx) => {
+    const isAct = idx === GS_STATE.selIdx;
+    let iconName = 'tool', iconBg = '#0891b2', typeLbl = lb('أمر شغل||Work Order');
+    let extraMeta = '';
+
+    if(item.type === 'wo'){
+      iconName = 'tool'; iconBg = '#0891b2'; typeLbl = lb('أمر شغل||Work Order');
+      if(item.priority) extraMeta += `<span class="badge b-${item.priority}">${PRIO[item.priority]||item.priority}</span>`;
+      if(item.status && WSTAT[item.status]) extraMeta += `<span class="badge ${WSTAT[item.status][1]}">${WSTAT[item.status][0]}</span>`;
+    } else if(item.type === 'asset'){
+      iconName = 'gear'; iconBg = '#0284c7'; typeLbl = lb('أصل||Asset');
+      if(item.critical === 'critical') extraMeta += `<span class="badge b-down">${lb('حرج||Critical')}</span>`;
+      if(item.status && ASTAT[item.status]) extraMeta += `<span class="badge ${ASTAT[item.status][1]}">${ASTAT[item.status][0]}</span>`;
+    } else if(item.type === 'inv'){
+      iconName = 'box'; iconBg = '#16a34a'; typeLbl = lb('مخزون||Part');
+      const isLow = item.qty <= item.minQty;
+      extraMeta += `<span class="badge ${isLow?'b-urgent':'b-ok'}">${item.qty} ${esc(item.unit||'')}</span>`;
+    } else if(item.type === 'pm'){
+      iconName = 'cal'; iconBg = '#7c3aed'; typeLbl = lb('وقائية||PM');
+    } else if(item.type === 'unit'){
+      iconName = 'homes'; iconBg = '#0d9488'; typeLbl = lb('وحدة||Unit');
+    } else if(item.type === 'receipt'){
+      iconName = 'cart'; iconBg = '#ea580c'; typeLbl = lb('فاتورة||Receipt');
+    } else if(item.type === 'user'){
+      iconName = 'users'; iconBg = '#475569'; typeLbl = lb('مستخدم||User');
+    }
+
+    if(item.scope){
+      extraMeta += `<span class="badge b-wait" title="${esc(item.scope)}">${esc(item.scope)}</span>`;
+    }
+
+    out += `
+      <div class="gs-item ${isAct?'active':''}" onclick="executeGlobalSearchResult(GS_STATE.items[${idx}])" onmouseenter="GS_STATE.selIdx=${idx};updateGlobalSearchActiveItem()">
+        <span class="gs-item-ic" style="background:${iconBg}">${ic(iconName, 16)}</span>
+        <div class="gs-item-text">
+          <div class="gs-item-title">${highlightSearchText(item.title, q)}</div>
+          <div class="gs-item-sub"><small style="font-weight:700;color:var(--brand);margin-inline-end:6px">[${typeLbl}]</small>${highlightSearchText(item.sub, q)}</div>
+        </div>
+        <div class="gs-item-meta">${extraMeta}</div>
+      </div>
+    `;
+  });
+
+  body.innerHTML = out;
+}
+
+function executeGlobalSearchResult(item){
+  closeGlobalSearch();
+  if(!item) return;
+  if(item.type === 'wo'){
+    const ix = db.wos.indexOf(item.raw);
+    if(ix >= 0) {
+      if(item.raw.compoundId && item.raw.compoundId !== activeCmp()){
+        setCmp(item.raw.compoundId);
+      }
+      TAB = 'wos';
+      render();
+      woView(ix);
+    }
+  } else if(item.type === 'asset'){
+    if(item.raw.compoundId && item.raw.compoundId !== activeCmp()){
+      setCmp(item.raw.compoundId);
+    }
+    TAB = 'assets';
+    FILT.assets = item.raw.name;
+    render();
+    drawAssetsTable();
+  } else if(item.type === 'inv'){
+    TAB = 'inv';
+    FILT.inv = item.raw.name;
+    render();
+  } else if(item.type === 'pm'){
+    if(item.raw.compoundId && item.raw.compoundId !== activeCmp()){
+      setCmp(item.raw.compoundId);
+    }
+    TAB = 'pm';
+    FILT.pmView = 'plans';
+    render();
+  } else if(item.type === 'unit'){
+    TAB = 'units';
+    FILT.units = item.raw.code;
+    render();
+  } else if(item.type === 'receipt'){
+    TAB = 'proc';
+    FILT.procTab = 'rcpt';
+    FILT.rcpt = item.raw.receiptNo || item.raw.vendor || '';
+    render();
+    paintProc();
+  } else if(item.type === 'user'){
+    if(isAdmin()){
+      TAB = 'users';
+      render();
+    } else {
+      toast(`${item.raw.name} (${ROLES[item.raw.role]||item.raw.role}) - ${item.raw.phone||item.raw.email||''}`, 'ok');
+    }
+  } else if(item.type === 'action'){
+    if(typeof item.fn === 'function') item.fn();
+  }
+}
+
 function modal(html){
   const old=$('mbg');if(old)old.remove();
   const d=document.createElement('div');d.className='modal-bg';d.id='mbg';
@@ -4440,7 +5112,21 @@ function closeModal(){const m=$('mbg');if(!m)return;
   if(bx)bx.style.animation='pop .15s ease reverse forwards';
   setTimeout(()=>m.remove(),150);}
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeModal();return;}
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){
+    e.preventDefault();
+    openGlobalSearch();
+    return;
+  }
+  if(e.key==='Escape'){
+    if($('gsOverlay')){ closeGlobalSearch(); return; }
+    closeModal();
+    return;
+  }
+  if(e.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(((document.activeElement||{}).tagName||'')) && !$('gsOverlay')){
+    e.preventDefault();
+    openGlobalSearch();
+    return;
+  }
   /* التنقل بين عناصر القائمة بأسهم الكيبورد (يعمل عندما يكون التركيز على أحد الأزرار فقط — لا يسرق الأسهم من الحقول) */
   if(e.key!=='ArrowDown'&&e.key!=='ArrowUp'&&e.key!=='Home'&&e.key!=='End')return;
   const btns=[...document.querySelectorAll('.side .nbtn')];
@@ -5158,21 +5844,117 @@ function slaDue(){
 }
 function vWOs(){
   const act=activeCmp();
-  let list=(isTech()?db.wos.filter(w=>w.assigneeId===me.id):db.wos).filter(w=>w.compoundId===act);
-  const q=FILT.wos.toLowerCase();
-  if(q)list=list.filter(w=>(w.no+' '+w.title+' '+(w.assetLabel||w.assetName||'')+' '+(w.unitCode||'')+' '+(w.tenantName||'')).toLowerCase().includes(q));
-  if(FILT.woStatus!=='all')list=list.filter(w=>w.status===FILT.woStatus);
-  list=list.slice().sort((a,b)=>(a.status==='closed')-(b.status==='closed'));
-  const chip=k=>`<button class="chip ${FILT.woStatus===k?'on':''}" onclick="FILT.woStatus='${k}';paintTab()">${
-    {all:lb('الكل||All'),planned:WSTAT.planned[0],open:WSTAT.open[0],inprog:WSTAT.inprog[0],wait:WSTAT.wait[0],closed:WSTAT.closed[0]}[k]}</button>`;
+  const rawList=(isTech()?db.wos.filter(w=>w.assigneeId===me.id):db.wos).filter(w=>w.compoundId===act);
+  let list = rawList;
+
+  // 1. Presets (Saved Views inspired by UpKeep)
+  const preset = FILT.woPreset || 'all';
+  if(preset === 'mine') list = list.filter(w => w.assigneeId === me.id && w.status !== 'closed');
+  else if(preset === 'urgent') list = list.filter(w => w.status !== 'closed' && (w.priority === 'urgent' || w.priority === 'high'));
+  else if(preset === 'overdue') list = list.filter(w => w.status !== 'closed' && w.dueDate && daysUntil(w.dueDate) < 0);
+  else if(preset === 'parts') list = list.filter(w => w.status !== 'closed' && w.partsReady === false);
+  else if(preset === 'deferred') list = list.filter(w => w.status === 'wait' && !!w.deferReason);
+  else if(preset === 'review') list = list.filter(w => w.status === 'closed' && w.review === 'pending');
+
+  // 2. Status Filter
+  if(FILT.woStatus && FILT.woStatus !== 'all') list = list.filter(w => w.status === FILT.woStatus);
+
+  // 3. Priority Filter
+  if(FILT.woPrio && FILT.woPrio !== 'all') list = list.filter(w => w.priority === FILT.woPrio);
+
+  // 4. Assignee / Tech Filter
+  if(FILT.woTech && FILT.woTech !== 'all') list = list.filter(w => w.assigneeId === FILT.woTech);
+
+  // 5. Building / Location Filter
+  if(FILT.woBld && FILT.woBld !== 'all') {
+    list = list.filter(w => {
+      if(w.buildingId === FILT.woBld) return true;
+      if(w.bname && bName(FILT.woBld) && w.bname.includes(bName(FILT.woBld))) return true;
+      const a = w.assetId ? db.assets.find(x => x.id === w.assetId) : null;
+      if(a && a.building === FILT.woBld) return true;
+      return false;
+    });
+  }
+
+  // 6. Tokenized Search with Arabic normalization (UpKeep Engine)
+  const tokens = tokenizeSearch(FILT.wos);
+  if(tokens.length) {
+    list = list.filter(w => matchSearchTokens([
+      w.no, w.title, w.desc, w.assetLabel, w.assetName, w.bname, w.unitCode,
+      w.tenantName, w.assigneeName, w.deferReason, PRIO[w.priority], (WSTAT[w.status]||[])[0]
+    ].filter(Boolean).join(' '), tokens));
+  }
+
+  list = list.slice().sort((a,b)=>(a.status==='closed')-(b.status==='closed'));
+
   const ix=w=>db.wos.indexOf(w);
   const portalBadge=` <span class="badge b-open" title="${lb('من بوابة المستأجرين||From tenant portal')}">بوابة</span>`;
+
+  // Preset Counts for UpKeep Saved Views
+  const cMine = rawList.filter(w => w.assigneeId === me.id && w.status !== 'closed').length;
+  const cUrgent = rawList.filter(w => w.status !== 'closed' && (w.priority === 'urgent' || w.priority === 'high')).length;
+  const cOverdue = rawList.filter(w => w.status !== 'closed' && w.dueDate && daysUntil(w.dueDate) < 0).length;
+  const cParts = rawList.filter(w => w.status !== 'closed' && w.partsReady === false).length;
+  const cDeferred = rawList.filter(w => w.status === 'wait' && !!w.deferReason).length;
+  const cReview = rawList.filter(w => w.status === 'closed' && w.review === 'pending').length;
+
+  const pChip = (k, lbl, count) => `<button class="wo-preset-chip ${preset===k?'on':''}" onclick="FILT.woPreset='${k}';paintTab()">${lbl}${count != null ? ` <span class="pbadge">${count}</span>`:''}</button>`;
+
+  const statusChip = k => `<button class="chip ${(FILT.woStatus||'all')===k?'on':''}" onclick="FILT.woStatus='${k}';paintTab()">${
+    {all:lb('الكل||All'),planned:WSTAT.planned[0],open:WSTAT.open[0],inprog:WSTAT.inprog[0],wait:WSTAT.wait[0],closed:WSTAT.closed[0]}[k]}</button>`;
+
+  const techs = db.users.filter(u => u.role === 'tech' && (u.cmpIds||[]).includes(act));
+  const blds = db.buildings.filter(b => b.compoundId === act);
+
+  const hasActiveFilters = !!(FILT.wos || (FILT.woStatus && FILT.woStatus !== 'all') || (FILT.woPrio && FILT.woPrio !== 'all') || (FILT.woTech && FILT.woTech !== 'all') || (FILT.woBld && FILT.woBld !== 'all') || (FILT.woPreset && FILT.woPreset !== 'all'));
+
   return `<div class="toolbar">${isViewer()?'':`<button class="btn" onclick="woForm()">＋ ${lb('بلاغ عطل جديد||New Fault Report')}</button>`}
     ${isAdmin()?`<button class="btn ghost" onclick="settingsModal()">⚙ ${db.woPhotoReq?lb('صور الإغلاق: مطلوبة||Close photos: required'):lb('صور الإغلاق: اختيارية||Close photos: optional')}</button>`:''}
     <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
-  <div class="chips">${chip('all')}${chip('planned')}${chip('open')}${chip('inprog')}${chip('wait')}${chip('closed')}</div>
-  <input class="searchbar" placeholder=" ${lb('بحث…||Search…')}" value="${esc(FILT.wos)}" oninput="FILT.wos=this.value;paintTab();sbFocus()">
-  <div class="card"><h2>${lb('أوامر الشغل||Work Orders')} — ${list.length} ${lb('نتيجة||results')}</h2><div class="tbl-wrap"><table>
+
+  <div class="wo-filter-container">
+    <!-- UpKeep-Style Saved Views / Presets Bar -->
+    <div class="wo-presets-bar">
+      ${pChip('all', lb('📋 الكل||All'), rawList.length)}
+      ${pChip('mine', lb('👤 مهامي||My Tasks'), cMine)}
+      ${pChip('urgent', lb('🚨 عاجل/مرتفع||Urgent/High'), cUrgent)}
+      ${pChip('overdue', lb('⏰ متأخرة||Overdue'), cOverdue)}
+      ${cParts ? pChip('parts', lb('📦 نقص قطع||Parts Shortage'), cParts) : ''}
+      ${cDeferred ? pChip('deferred', lb('⏸️ مؤجلة||Deferred'), cDeferred) : ''}
+      ${cReview ? pChip('review', lb('📝 بانتظار المراجعة||Review'), cReview) : ''}
+    </div>
+
+    <!-- Status Chips Row -->
+    <div class="chips" style="margin-bottom:0">
+      ${statusChip('all')}${statusChip('planned')}${statusChip('open')}${statusChip('inprog')}${statusChip('wait')}${statusChip('closed')}
+    </div>
+
+    <!-- Facets & Search Bar Row -->
+    <div class="wo-facets-row">
+      <input class="searchbar" placeholder="${lb('🔍 ابحث بالرقم أو البلاغ أو الأصل أو الموقع أو الفني...||Search by no, report, asset, location, tech...')}" value="${esc(FILT.wos)}" oninput="FILT.wos=this.value;paintTab();sbFocus()">
+
+      <select class="wo-facet-select" onchange="FILT.woPrio=this.value;paintTab()" title="${lb('تصفية حسب الأولوية||Filter by priority')}">
+        <option value="all">${lb('كل الأولويات||All Priorities')}</option>
+        ${Object.keys(PRIO).map(k=>`<option value="${k}" ${(FILT.woPrio||'all')===k?'selected':''}>${PRIO[k]}</option>`).join('')}
+      </select>
+
+      ${techs.length?`<select class="wo-facet-select" onchange="FILT.woTech=this.value;paintTab()" title="${lb('تصفية حسب الفني||Filter by technician')}">
+        <option value="all">${lb('كل الفنيين||All Technicians')}</option>
+        ${techs.map(t=>`<option value="${t.id}" ${(FILT.woTech||'all')===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}
+      </select>`:''}
+
+      ${blds.length?`<select class="wo-facet-select" onchange="FILT.woBld=this.value;paintTab()" title="${lb('تصفية حسب المبنى/المنطقة||Filter by building/area')}">
+        <option value="all">${lb('كل المباني||All Buildings')}</option>
+        ${blds.map(b=>`<option value="${b.id}" ${(FILT.woBld||'all')===b.id?'selected':''}>${esc(b.name)}</option>`).join('')}
+      </select>`:''}
+
+      ${hasActiveFilters?`<button class="wo-reset-btn" onclick="resetWOFilters();paintTab()" title="${lb('إعادة ضبط كافة الفلاتر||Reset all filters')}">
+        ✕ ${lb('إعادة ضبط||Reset Filters')}
+      </button>`:''}
+    </div>
+  </div>
+
+  <div class="card"><h2>${lb('أوامر الشغل||Work Orders')} — ${list.length} ${lb('نتيجة||results')} ${hasActiveFilters?`<small style="font-size:12px;font-weight:600;color:var(--muted)">(${lb('مصفاة من أصل||filtered from')} ${rawList.length})</small>`:''}</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('الرقم||No.')}</th><th>${lb('البلاغ||Report')}</th><th>${lb('الأصل/الموقع||Asset/Loc')}</th><th>${lb('الأولوية||Priority')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الفني||Tech')}</th><th>${lb('واتساب||WhatsApp')}</th><th>${lb('فُتح||Opened')}</th><th>${lb('أُغلق||Closed')}</th><th></th></tr>
   ${list.length?list.map(w=>{
     const od=w.status!=='closed'&&w.dueDate&&daysUntil(w.dueDate)<0;
@@ -5192,14 +5974,14 @@ function vWOs(){
     if(isEng()){acts+=`<button class="btn sm ghost" onclick="woForm('${ix(w)}')">${ic('edit',13)}</button>
       <button class="btn sm danger" onclick="woDel(${ix(w)})">${ic('del',13)}</button>`;}
     const wa=(w.status!=='closed')?`<button class="btn sm ghost" title="${lb('إرسال واتساب||Send WhatsApp')}" onclick="waBtn(${ix(w)})">${ic('chat',13)}</button>`:'';
-    return `<tr class="${od?'overdue':''}"><td>${w.no}${w.type==='pm'?' <span class="badge b-maint">PM</span>':''}${w.status==='planned'?` <span class="badge b-open">${lb('مخطّط||Planned')}</span>`:''}${w.auto?` <span class="badge b-wait" title="${lb('أُنشئ تلقائياً||Auto-generated')}">${lb('تلقائي||Auto')}</span>`:''}${w.partsReady===false?` <span class="badge b-urgent" title="${lb('قطع غير متوفرة||Parts not ready')}">${lb('نقص قطع||Parts')}</span>`:''}${(w.status==='wait'&&w.deferReason)?` <span class="badge b-maint" title="${esc(w.deferReason)}">${lb('مؤجّل||Deferred')}</span>`:''}${(w.status==='closed'&&w.review==='pending')?` <span class="badge b-wait">${lb('بانتظار المراجعة||Review')}</span>`:''}${w.source==='portal'?portalBadge:''}${w.source==='corrective'?` <span class="badge b-down">${lb('تصحيحي||Corrective')}</span>`:''}${w.projectId?' <span class="badge b-open">مشروع</span>':''}${w.unitCode?' <span class="badge b-ok">وحدة</span>':''}</td>
-    <td><b>${esc(w.title)}</b><br><span class="muted">${esc((w.desc||'').slice(0,55))}</span></td>
-    <td>${esc(w.assetLabel||w.assetName||'—')}<br><span class="muted">${esc([(w.assetLabel?'':w.bname),w.unitCode,w.tenantName].filter(Boolean).join(' · ')||'')}</span></td>
+    return `<tr class="${od?'overdue':''}"><td>${highlightSearchText(w.no, FILT.wos)}${w.type==='pm'?' <span class="badge b-maint">PM</span>':''}${w.status==='planned'?` <span class="badge b-open">${lb('مخطّط||Planned')}</span>`:''}${w.auto?` <span class="badge b-wait" title="${lb('أُنشئ تلقائياً||Auto-generated')}">${lb('تلقائي||Auto')}</span>`:''}${w.partsReady===false?` <span class="badge b-urgent" title="${lb('قطع غير متوفرة||Parts not ready')}">${lb('نقص قطع||Parts')}</span>`:''}${(w.status==='wait'&&w.deferReason)?` <span class="badge b-maint" title="${esc(w.deferReason)}">${lb('مؤجّل||Deferred')}</span>`:''}${(w.status==='closed'&&w.review==='pending')?` <span class="badge b-wait">${lb('بانتظار المراجعة||Review')}</span>`:''}${w.source==='portal'?portalBadge:''}${w.source==='corrective'?` <span class="badge b-down">${lb('تصحيحي||Corrective')}</span>`:''}${w.projectId?' <span class="badge b-open">مشروع</span>':''}${w.unitCode?' <span class="badge b-ok">وحدة</span>':''}</td>
+    <td><b>${highlightSearchText(w.title, FILT.wos)}</b><br><span class="muted">${highlightSearchText((w.desc||'').slice(0,55), FILT.wos)}</span></td>
+    <td>${highlightSearchText(w.assetLabel||w.assetName||'—', FILT.wos)}<br><span class="muted">${esc([(w.assetLabel?'':w.bname),w.unitCode,w.tenantName].filter(Boolean).join(' · ')||'')}</span></td>
     <td><span class="badge b-${w.priority}">${PRIO[w.priority]}</span></td>
     <td><span class="badge ${WSTAT[w.status][1]}">${WSTAT[w.status][0]}</span></td>
-    <td>${esc(w.assigneeName||'—')}</td><td>${wa}</td><td>${fmtDT(w.createdAt)}</td>
+    <td>${highlightSearchText(w.assigneeName||'—', FILT.wos)}</td><td>${wa}</td><td>${fmtDT(w.createdAt)}</td>
     <td>${w.closedAt?`${fmtDT(w.closedAt)}<br><span class="muted">${durTxt(w.closedAt,w.startedAt||w.createdAt)}</span>`:'—'}</td>
-    <td nowrap>${acts}</td></tr>`}).join(''):`<tr><td colspan="10"><div class="empty">${lb('لا بلاغات||Nothing here')}</div></td></tr>`}
+    <td nowrap>${acts}</td></tr>`}).join(''):`<tr><td colspan="10"><div class="empty">${hasActiveFilters?lb('لا نتائج تطابق الفلاتر المحددة — اضغط «إعادة ضبط»||No results match active filters — click Reset'):lb('لا بلاغات||Nothing here')}</div></td></tr>`}
   </table></div></div>`;
 }
 function woForm(idx,presetAsset){
@@ -5463,31 +6245,65 @@ function prsQ(){return db.prs.filter(p=>p.compoundId===activeCmp());}
 function posQ(){return db.pos.filter(p=>p.compoundId===activeCmp());}
 function notifsQ(){return db.notifs.filter(n=>n.compoundId===activeCmp());}
 function vInv(){
-  const q=FILT.inv.toLowerCase();
-  const mine=invQ(),mv=movesQ();
-  const list=mine.filter(it=>!q||(it.name+' '+(it.loc||'')).toLowerCase().includes(q)).slice().sort((a,b)=>a.name.localeCompare(b.name,'ar'));
-  const val=mine.reduce((s,it)=>s+it.qty*it.unitCost,0),low=mine.filter(it=>it.qty<=it.minQty).length;
+  const tokens = tokenizeSearch(FILT.inv);
+  const mine = invQ(), mv = movesQ();
+  let list = mine;
+
+  if(FILT.invLowOnly) {
+    list = list.filter(it => it.qty <= it.minQty);
+  }
+  if(FILT.invCat && FILT.invCat !== 'all') {
+    list = list.filter(it => it.cat === FILT.invCat);
+  }
+  if(tokens.length) {
+    list = list.filter(it => matchSearchTokens([
+      it.name, it.code, it.barcode, it.cat, it.loc
+    ].filter(Boolean).join(' '), tokens));
+  }
+  list = list.slice().sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+
+  const val = mine.reduce((s,it)=>s+it.qty*it.unitCost,0), low = mine.filter(it=>it.qty<=it.minQty).length;
+  const allCats = Array.from(new Set(mine.map(it=>it.cat).filter(Boolean))).sort();
+  const hasActive = !!(FILT.inv || FILT.invLowOnly || (FILT.invCat && FILT.invCat !== 'all'));
+
   return `${canInv()?`<div class="toolbar"><button class="btn" onclick="itemForm()">＋ ${lb('صنف جديد||New Item')}</button>
     <button class="btn ghost" onclick="moveForm('in')"> ${lb('وارد||Stock In')}</button>
     <button class="btn ghost" onclick="moveForm('out')"> ${lb('صرف يدوي||Manual Issue')}</button>
     <button class="btn ghost" onclick="prFromLow()"> ${lb('طلب تعويض النواقص||Restock Request')}</button></div>`:''}
-  <input class="searchbar" placeholder=" ${lb('بحث…||Search…')}" value="${esc(FILT.inv)}" oninput="FILT.inv=this.value;paintTab();sbFocus()">
+
+  <div class="wo-facets-row" style="margin-bottom:12px">
+    <input class="searchbar" placeholder="${lb('🔍 ابحث باسم الصنف، الكود، الباركود، التصنيف، أو موقع التخزين...||Search item, code, barcode, category, location...')}" value="${esc(FILT.inv)}" oninput="FILT.inv=this.value;paintTab();sbFocus()">
+
+    <button class="chip ${FILT.invLowOnly?'on':''}" onclick="FILT.invLowOnly=!FILT.invLowOnly;paintTab()">
+      ${lb('⚠️ تحت الحد الأدنى فقط||Below Min Only')} (${low})
+    </button>
+
+    ${allCats.length?`<select class="wo-facet-select" onchange="FILT.invCat=this.value;paintTab()" title="${lb('تصفية حسب التصنيف||Filter by category')}">
+      <option value="all">${lb('كل التصنيفات||All Categories')}</option>
+      ${allCats.map(c=>`<option value="${esc(c)}" ${(FILT.invCat||'all')===c?'selected':''}>${esc(c)}</option>`).join('')}
+    </select>`:''}
+
+    ${hasActive?`<button class="wo-reset-btn" onclick="FILT.inv='';FILT.invLowOnly=false;FILT.invCat='all';paintTab()">
+      ✕ ${lb('إعادة ضبط||Reset')}
+    </button>`:''}
+  </div>
+
   <div class="stats" style="margin-top:10px">
     <div class="stat"><div class="num">${mine.length}</div><div class="lbl">${lb('عدد الأصناف||Items')}</div></div>
     <div class="stat"><div class="num" style="font-size:19px">${money(val)}</div><div class="lbl">${lb('قيمة المخزون||Stock Value')}</div></div>
     <div class="stat ${low?'warn':''}"><div class="num">${low}</div><div class="lbl">${lb('تحت الحد الأدنى||Below Min')}</div></div>
   </div>
-  <div class="card"><h2>${lb('الأصناف||Items')}</h2><div class="tbl-wrap"><table>
-  <tr><th>${lb('الصنف||Item')}</th><th>${lb('الرصيد||Qty')}</th><th>${lb('الحد الأدنى||Min')}</th><th>${lb('سعر الوحدة||Unit Cost')}</th><th>${lb('موقع التخزين||Store Loc')}</th>${canInv()?`<th></th>`:''}</tr>
+  <div class="card"><h2>${lb('الأصناف||Items')} — ${list.length} ${lb('نتيجة||results')} ${hasActive?`<small style="font-size:12px;font-weight:600;color:var(--muted)">(${lb('مصفاة من أصل||filtered from')} ${mine.length})</small>`:''}</h2><div class="tbl-wrap"><table>
+  <tr><th>${lb('الصنف||Item')}</th><th>${lb('الرصيد||Qty')}</th><th>${lb('الحد الأدنى||Min')}</th><th>${lb('سعر الوحدة||Unit Cost')}</th><th>${lb('موقع التخزين||Store Loc')}</th>${canInv()?'<th></th>':''}</tr>
   ${list.length?list.map(it=>`<tr ${it.qty<=it.minQty?'style="background:rgba(254,226,226,.45)"':''}>
-    <td><b>${esc(it.name)}</b></td>
+    <td><b>${highlightSearchText(it.name, FILT.inv)}</b>${it.code?`<br><span class="muted" style="font-family:monospace;font-size:11px">#${highlightSearchText(it.code, FILT.inv)}</span>`:''}${it.barcode?`<span class="muted" style="font-family:monospace;font-size:10px;margin-inline-start:6px">🏷 ${highlightSearchText(it.barcode, FILT.inv)}</span>`:''}</td>
     <td><span class="badge ${it.qty<=it.minQty?'b-low':'b-ok'}">${it.qty} ${esc(it.unit)}</span></td>
-    <td>${it.minQty}</td><td>${money(it.unitCost)}</td><td>${esc(it.loc||'—')}</td>
+    <td>${it.minQty}</td><td>${money(it.unitCost)}</td><td>${highlightSearchText(it.loc||'—', FILT.inv)}</td>
     ${canInv()?`<td nowrap><button class="btn sm ghost" title="${lb('وارد||Stock in')}" onclick="moveForm('in','${it.id}')">↓</button>
     <button class="btn sm ghost" title="${lb('صرف||Issue')}" onclick="moveForm('out','${it.id}')">↑</button>
       <button class="btn sm ghost" onclick="itemForm('${it.id}')">${ic('edit',13)}</button>
       <button class="btn sm danger" onclick="delItem('${it.id}')">${ic('del',13)}</button></td>`:''}</tr>`).join('')
-    :`<tr><td colspan="6"><div class="empty">${lb('لا أصناف بعد||No items yet')}</div></td></tr>`}</table></div></div>
+    :`<tr><td colspan="6"><div class="empty">${hasActive?lb('لا أصناف تطابق الفلاتر المحددة||No items match active filters'):lb('لا أصناف بعد||No items yet')}</div></td></tr>`}</table></div></div>
   <div class="card"><h2>${lb('آخر الحركات||Recent Movements')}</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('التاريخ||Date')}</th><th>${lb('الصنف||Item')}</th><th>${lb('النوع||Type')}</th><th>${lb('الكمية||Qty')}</th><th>${lb('المرجع||Ref')}</th><th>${lb('بواسطة||By')}</th></tr>
   ${mv.slice(0,12).map(m=>`<tr><td>${fmtD(m.date)}</td><td>${esc(m.item)}</td>
