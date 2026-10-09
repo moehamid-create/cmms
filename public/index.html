@@ -1208,6 +1208,69 @@ mark.gs-hl{background:#fef08a;color:#713f12;font-weight:800;padding:0 2px;border
   .card,.stat{border:1px solid #d5dde1!important}
   th{background:#f2f5f6!important}
 }
+
+/* ===== UpKeep-Style Evidence & Proof of Work Platform ===== */
+.modal.modal-evidence{max-width:960px;width:95vw;padding:26px}
+.evidence-cert{display:flex;flex-direction:column;gap:18px}
+.evidence-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;
+  padding-bottom:16px;border-bottom:2px solid rgba(14,116,144,.25)}
+.evidence-seal-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:99px;
+  background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff;font-weight:800;font-size:12px;
+  box-shadow:0 8px 18px -4px rgba(14,116,144,.5)}
+.evidence-hash-box{font-family:monospace;font-size:11px;padding:8px 12px;border-radius:8px;
+  background:rgba(0,0,0,.04);border:1px dashed rgba(14,116,144,.3);color:var(--brand);word-break:break-all;line-height:1.4}
+.dark .evidence-hash-box{background:rgba(255,255,255,.05);border-color:rgba(34,184,207,.3);color:var(--brand)}
+.evidence-meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.evidence-meta-card{padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.55);border:1px solid var(--line)}
+.dark .evidence-meta-card{background:rgba(255,255,255,.05)}
+.evidence-meta-card small{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:3px}
+.evidence-meta-card span{font-size:14px;font-weight:800;color:var(--ink)}
+
+/* Before & After Photo Comparison */
+.evidence-photos-split{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:6px}
+.evidence-photo-box{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:rgba(255,255,255,.4);display:flex;flex-direction:column}
+.dark .evidence-photo-box{background:rgba(255,255,255,.04)}
+.evidence-photo-box-head{padding:10px 14px;font-weight:800;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+.evidence-photo-box-head.before{background:rgba(220,38,38,.12);color:var(--red)}
+.evidence-photo-box-head.after{background:rgba(21,153,87,.14);color:var(--green)}
+.evidence-photo-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:12px}
+.evidence-thumb-wrap{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:4/3;cursor:pointer;border:1px solid rgba(0,0,0,.08);box-shadow:0 4px 10px -2px rgba(0,0,0,.15);transition:.2s}
+.evidence-thumb-wrap:hover{transform:scale(1.03)}
+.evidence-thumb-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.evidence-thumb-tag{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.75);color:#fff;font-size:9.5px;padding:2px 6px;border-radius:4px;font-weight:700}
+
+/* AI UpKeep Nova Card */
+.evidence-ai-card{border-radius:16px;padding:18px;border:1.5px solid rgba(14,116,144,.35);
+  background:radial-gradient(120% 120% at 90% 10%, rgba(14,116,144,.12) 0%, rgba(124,58,237,.08) 50%, rgba(255,255,255,.5) 100%);
+  position:relative;overflow:hidden}
+.dark .evidence-ai-card{background:radial-gradient(120% 120% at 90% 10%, rgba(34,184,207,.15) 0%, rgba(124,58,237,.12) 50%, rgba(20,35,48,.7) 100%)}
+.evidence-ai-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.evidence-ai-badge{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:12px;color:var(--brand)}
+.evidence-ai-section{margin-top:10px;padding-top:8px;border-top:1px dashed rgba(14,116,144,.2)}
+.evidence-ai-title{font-size:12px;font-weight:800;color:var(--ink);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+
+/* Dual Signatures */
+.evidence-sigs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.evidence-sig-card{padding:14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.55);text-align:center}
+.dark .evidence-sig-card{background:rgba(255,255,255,.05)}
+.evidence-sig-img{max-height:90px;max-width:100%;object-fit:contain;margin:8px auto;display:block;filter:contrast(1.2)}
+
+/* Audit Chain Table */
+.evidence-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:12.5px}
+.evidence-table th{background:rgba(14,116,144,.08);padding:8px 10px;font-size:11px;font-weight:800;border:1px solid var(--line);text-align:start}
+.evidence-table td{padding:8px 10px;border:1px solid var(--line);vertical-align:middle}
+
+/* Print View for Evidence Certificate */
+@media print{
+  body.printing-evidence .side, body.printing-evidence .topbar, body.printing-evidence footer,
+  body.printing-evidence .btn:not(.print-keep), body.printing-evidence #app > *:not(#mbg){display:none!important}
+  body.printing-evidence #mbg{position:static!important;background:none!important;padding:0!important}
+  body.printing-evidence .modal{max-width:100%!important;box-shadow:none!important;border:none!important;padding:0!important;background:#fff!important}
+  body.printing-evidence .evidence-cert{color:#000!important}
+  body.printing-evidence .evidence-head{border-bottom:2px solid #000!important}
+  body.printing-evidence .evidence-photo-box{border:1px solid #ccc!important}
+  body.printing-evidence .no-print{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -1427,8 +1490,8 @@ function demoImg(txt,c1,c2){const cv=document.createElement('canvas');cv.width=6
   gr.addColorStop(0,c1);gr.addColorStop(1,c2);g.fillStyle=gr;g.fillRect(0,0,640,420);
   g.fillStyle='rgba(255,255,255,.93)';g.font='bold 32px Segoe UI';g.textAlign='center';
   g.fillText(txt,320,218);return cv.toDataURL('image/jpeg',.8);}
-function initSig(){
-  const cv=$('sigpad');if(!cv||cv._init||typeof cv.getContext!=='function')return;cv._init=true;
+function initSig(id='sigpad'){
+  const cv=$(id);if(!cv||cv._init||typeof cv.getContext!=='function')return;cv._init=true;
   const ctx=cv.getContext('2d');ctx.lineWidth=2.4;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#132430';
   let dr=false;
   const pos=e=>{const r=cv.getBoundingClientRect();
@@ -1438,8 +1501,8 @@ function initSig(){
     if(cv.setPointerCapture)try{cv.setPointerCapture(e.pointerId);}catch(x){}e.preventDefault();});
   cv.addEventListener('pointermove',e=>{if(!dr)return;const p=pos(e);ctx.lineTo(p[0],p[1]);ctx.stroke();});
   ['pointerup','pointercancel','pointerleave'].forEach(ev=>cv.addEventListener(ev,()=>{dr=false;}));}
-function sigClear(){const cv=$('sigpad');if(cv&&typeof cv.getContext==='function')cv.getContext('2d').clearRect(0,0,cv.width,cv.height);}
-function sigHasInk(){const cv=$('sigpad');if(!cv)return false;
+function sigClear(id='sigpad'){const cv=$(id);if(cv&&typeof cv.getContext==='function')cv.getContext('2d').clearRect(0,0,cv.width,cv.height);}
+function sigHasInk(id='sigpad'){const cv=$(id);if(!cv)return false;
   try{const d=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;
     for(let i=3;i<d.length;i+=4)if(d[i]>0)return true;}catch(e){}
   return false;}
@@ -5099,10 +5162,10 @@ function executeGlobalSearchResult(item){
   }
 }
 
-function modal(html){
+function modal(html, cls){
   const old=$('mbg');if(old)old.remove();
   const d=document.createElement('div');d.className='modal-bg';d.id='mbg';
-  d.innerHTML=`<div class="modal">${html}</div>`;
+  d.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;
   d.addEventListener('click',ev=>{if(ev.target===d)d.remove();});
   document.body.appendChild(d);d.style.display='block';
 }
@@ -5958,8 +6021,10 @@ function vWOs(){
   <tr><th>${lb('الرقم||No.')}</th><th>${lb('البلاغ||Report')}</th><th>${lb('الأصل/الموقع||Asset/Loc')}</th><th>${lb('الأولوية||Priority')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الفني||Tech')}</th><th>${lb('واتساب||WhatsApp')}</th><th>${lb('فُتح||Opened')}</th><th>${lb('أُغلق||Closed')}</th><th></th></tr>
   ${list.length?list.map(w=>{
     const od=w.status!=='closed'&&w.dueDate&&daysUntil(w.dueDate)<0;
-    const mine=w.assigneeId===me.id,open=w.status!=='closed';
-    let acts=`<button class="btn sm ghost" onclick="woView(${ix(w)})">${ic('view',13)}</button>`;
+    let acts=`<button class="btn sm ghost" title="${lb('عرض التفاصيل||View details')}" onclick="woView(${ix(w)})">${ic('view',13)}</button>`;
+    if(w.status==='closed'||(w.photos&&w.photos.length)||w.sig||(w.checklist&&w.checklist.length)){
+      acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff" title="${lb('شهادة إثبات العمل والامتثال (UpKeep Evidence)||Proof of Work Certificate')}" onclick="woEvidenceModal(${ix(w)})">🛡️ ${lb('إثبات||Evidence')}</button>`;
+    }
     if(w.status==='planned'&&canAppr()){
       acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="woApprove(${ix(w)})">${lb('اعتماد||Approve')}</button>`;
       acts+=`<button class="btn sm ghost" onclick="woDismiss(${ix(w)})">${lb('رفض||Dismiss')}</button>`;
@@ -6124,6 +6189,7 @@ function woView(i){
   <div class="ma">
   ${(w.status==='planned'&&canAppr())?`<button class="btn" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="closeModal();woApprove(${i})">${lb('اعتماد||Approve')}</button>
   <button class="btn ghost" onclick="closeModal();woDismiss(${i})">${lb('رفض||Dismiss')}</button>`:''}
+  <button class="btn" style="background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff" onclick="closeModal();woEvidenceModal(${i})">🛡️ ${lb('شهادة إثبات العمل والامتثال (UpKeep Evidence)||Evidence & Proof of Work')}</button>
   ${(w.status!=='closed')?`<button class="btn ghost" onclick="closeModal();waModal(${i})"> ${lb('واتساب||WhatsApp')}</button>`:''}
   <button class="btn ghost" onclick="closeModal()">${lb('إغلاق النافذة||Close Window')}</button></div>`);
 }
@@ -6131,9 +6197,16 @@ function woCloseForm(i){
   const w=db.wos[i];
   let ck='';
   if(w.checklist&&w.checklist.length){
-    ck=`<label>${lb('قائمة الفحص||Checklist')}</label>`+
-      w.checklist.map((c,j)=>`<div class="ckrow"><input type="checkbox" class="ck_c" id="ck_${j}" ${c.done?'checked':''}>
-      <span>${esc(c.t)}</span><input type="text" class="ck_v" id="ckv_${j}" placeholder="${lb('قياس/ملاحظة||Value/note')}" value="${esc(c.v||'')}"></div>`).join('');
+    ck=`<label>${lb('قائمة الفحص والتحقق (Checklist Evidence)||Inspection Checklist')}</label>`+
+      w.checklist.map((c,j)=>`<div class="ckrow" style="grid-template-columns:auto 1fr 105px 130px;gap:6px;align-items:center">
+      <input type="checkbox" class="ck_c" id="ck_${j}" ${c.done?'checked':''}>
+      <span>${esc(c.t)}</span>
+      <select id="ckst_${j}" style="padding:4px 6px;font-size:11.5px;font-weight:700">
+        <option value="pass" ${(c.status||'pass')==='pass'?'selected':''}>✅ ${lb('مطابق||Pass')}</option>
+        <option value="fail" ${c.status==='fail'?'selected':''}>❌ ${lb('عطل||Fail')}</option>
+        <option value="flagged" ${c.status==='flagged'?'selected':''}>⚠️ ${lb('ملاحظة||Flag')}</option>
+      </select>
+      <input type="text" class="ck_v" id="ckv_${j}" placeholder="${lb('قياس/ملاحظة||Value/note')}" value="${esc(c.v||'')}"></div>`).join('');
   }
   modal(`<h3> ${lb('إغلاق أمر الشغل||Close Work Order')} ${w.no}</h3>
   <p class="muted">${esc(w.title)}</p>
@@ -6192,8 +6265,10 @@ async function doCloseWO(i){
     }
   }
   if(w.checklist)w.checklist.forEach((c,j)=>{
-    const cb=$('ck_'+j),vv=$('ckv_'+j);
-    if(cb){c.done=cb.checked;c.v=vv?vv.value:'';}
+    const cb=$('ck_'+j),vv=$('ckv_'+j),st=$('ckst_'+j);
+    if(cb){c.done=cb.checked;}
+    if(st){c.status=st.value;}else if(!c.status){c.status=c.done?'pass':'fail';}
+    if(vv){c.v=vv.value;}
   });
   used.forEach(u=>{u.it.qty-=u.q;
     db.moves.unshift({date:todayISO(),item:u.it.name,invId:u.it.id,type:'out',qty:u.q,ref:w.no,by:me.name,compoundId:u.it.compoundId||w.compoundId});});
@@ -6230,10 +6305,397 @@ async function doCloseWO(i){
   /* المراجعة: يعتمد المشرف الإغلاق مباشرة، وإلا يبقى بانتظار المراجعة */
   w.review=canAppr()?'reviewed':'pending';
   if(w.review==='reviewed'){w.reviewedBy=me?me.name:'';w.reviewedAt=Date.now();}
+  w.integrityHash=await woComputeIntegrityHash(w);
   auditLog('close','wo',w.no,notes.slice(0,80));
   notifResolveWo(w);
   notify('',lb('اكتمل أمر: ||Work order completed: ')+w.no,'wos','done:'+(w.compoundId||activeCmp()||'')+':'+w.no);
   persist();closeModal();paintTab();toast(lb(' أُغلق الأمر|| Closed'),'ok');
+}
+
+/* ============================================================
+   UPKEEP EVIDENCE & PROOF OF WORK PLATFORM
+   - توليد الختم الرقمي لمكافحة التلاعب (SHA-256 Tamper Seal)
+   - ملف الإثبات الجنائي والامتثال المعتمد للتدقيق (Audit-Proof Dossier)
+   - مقارنة صور قبل/بعد الإصلاح (Before & After Visual Proof)
+   - قوائم فحص متعددة الحالات (Pass/Fail/Flagged Checklist)
+   - توقيع ثنائي (الفني المنفذ + اعتماد العميل/المشرف)
+   - ملخص الذكاء الاصطناعي للأدلة والسبب الجذري (UpKeep Nova)
+   ============================================================ */
+async function woComputeIntegrityHash(w){
+  try{
+    const raw = [
+      w.no||'',
+      w.closedAt||w.createdAt||'',
+      w.assigneeName||'',
+      w.cost||0,
+      (w.parts||[]).map(p=>(p.name||'')+'*'+(p.qty||1)).join(';'),
+      (w.checklist||[]).map(c=>(c.t||'')+'='+(c.status||(c.done?'pass':'fail'))).join(';'),
+      (w.photos||[]).length,
+      w.sig?w.sig.slice(0,60):'',
+      w.clientSig?w.clientSig.slice(0,60):''
+    ].join('|');
+    const enc=new TextEncoder().encode(raw);
+    const buf=await crypto.subtle.digest('SHA-256',enc);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(e){
+    let h=0;const str=String(w.no||'')+String(w.closedAt||Date.now());
+    for(let i=0;i<str.length;i++)h=((h<<5)-h)+str.charCodeAt(i)|0;
+    return 'sha256-sim-'+Math.abs(h).toString(16).padStart(16,'0');
+  }
+}
+
+function woEvidenceModal(i){
+  const w=db.wos[i];if(!w)return;
+  if(!w.integrityHash){
+    woComputeIntegrityHash(w).then(h=>{w.integrityHash=h;persist();const el=$('evi_hash');if(el)el.textContent=h;});
+  }
+  const isClosed=w.status==='closed';
+  const beforePhs=(w.photos||[]).filter(p=>p.tag==='before');
+  const afterPhs=(w.photos||[]).filter(p=>p.tag==='after');
+  const qrUrl=`https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=2&data=${encodeURIComponent('https://amlaki.cmms/verify/'+w.no+'?h='+(w.integrityHash||''))}`;
+  const certId=`CERT-${w.no}`;
+  const pj=w.projectId?db.projects.find(p=>p.id===w.projectId):null;
+  const ast=w.assetId?db.assets.find(a=>a.id===w.assetId):null;
+
+  /* تدقيق قائمة الفحص */
+  const ckRows=(w.checklist&&w.checklist.length)?w.checklist.map((c,idx)=>{
+    const st=c.status||(c.done?'pass':'fail');
+    const badge=st==='pass'?`<span class="badge b-done">✅ ${lb('مطابق / معتمد||PASS')}</span>`:
+      st==='fail'?`<span class="badge b-urgent">❌ ${lb('غير مطابق / عطل||FAIL')}</span>`:
+      `<span class="badge b-wait">⚠️ ${lb('ملاحظة حرجة||FLAGGED')}</span>`;
+    return `<tr>
+      <td style="font-weight:700">${idx+1}</td>
+      <td><b>${esc(c.t)}</b></td>
+      <td>${badge}</td>
+      <td>${esc(c.v||'—')}</td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="4" class="empty">${lb('لا توجد بنود فحص مسجلة||No checklist items recorded')}</td></tr>`;
+
+  /* قطع الغيار */
+  const partRows=(w.parts&&w.parts.length)?w.parts.map(p=>`<tr>
+    <td><b>${esc(p.name)}</b></td>
+    <td>${p.qty}</td>
+    <td><span class="badge b-ok">${lb('حسم مخزني موثّق||Stock Deducted')}</span></td>
+  </tr>`).join(''):`<tr><td colspan="3" class="empty">${lb('لم يتم استخدام قطع غيار مسجلة||No replacement parts used')}</td></tr>`;
+
+  /* سجل التدقيق */
+  const audits=(db.audit||[]).filter(a=>a.ref===w.no).slice(0,10);
+  const auditRows=audits.length?audits.map(a=>`<tr>
+    <td style="font-family:monospace;font-size:11px">${fmtDT(a.at)}</td>
+    <td><b>${esc(a.by||'—')}</b></td>
+    <td><span class="badge b-normal">${esc(a.act||'')}</span></td>
+    <td>${esc(a.det||'')}</td>
+  </tr>`).join(''):`<tr><td colspan="4" class="empty">${lb('لا توجد حركات تدقيق سابقة||No audit events')}</td></tr>`;
+
+  /* كرت الذكاء الاصطناعي */
+  let aiCardHtml='';
+  if(w.aiEvidence){
+    const ai=w.aiEvidence;
+    const rBadge=ai.riskScore==='low'?`<span class="badge b-done">🟢 ${lb('منخفضة||LOW')}</span>`:
+      ai.riskScore==='high'?`<span class="badge b-urgent">🔴 ${lb('مرتفعة||HIGH')}</span>`:
+      `<span class="badge b-wait">🟡 ${lb('متوسطة||MEDIUM')}</span>`;
+    aiCardHtml=`<div class="evidence-ai-card">
+      <div class="evidence-ai-head">
+        <span class="evidence-ai-badge">🤖 ${lb('تحليل الذكاء الاصطناعي للأدلة (UpKeep Intelligence — Nova)||AI Evidence & Root Cause Analysis')}</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:11px;font-weight:700">${lb('مستوى المخاطر: ||Risk Score: ')}${rBadge}</span>
+          <button class="btn sm ghost" onclick="generateAiEvidenceSummary(${i})">🔄 ${lb('تحديث التحليل||Refresh')}</button>
+        </div>
+      </div>
+      <div class="evidence-ai-section">
+        <div class="evidence-ai-title">🔍 ${lb('تشخيص السبب الجذري (Root Cause Diagnosis):||Root Cause Diagnosis:')}</div>
+        <p style="font-size:13px;line-height:1.6;margin-bottom:6px">${esc(ai.rootCause||'')}</p>
+      </div>
+      <div class="evidence-ai-section">
+        <div class="evidence-ai-title">🛠️ ${lb('ملخص العمل الميداني المتحقق منه (Verified Execution Summary):||Verified Execution Summary:')}</div>
+        <p style="font-size:13px;line-height:1.6;margin-bottom:6px">${esc(ai.summary||'')}</p>
+      </div>
+      <div class="evidence-ai-section">
+        <div class="evidence-ai-title">🔮 ${lb('توصيات الصيانة الاستباقية لمنع التكرار (Preventive Advice):||Preventive Recommendations:')}</div>
+        <ul style="padding-inline-start:20px;font-size:12.5px;line-height:1.6">
+          ${(ai.preventiveAdvice||[]).map(a=>`<li>${esc(a)}</li>`).join('')}
+        </ul>
+      </div>
+      ${ai.integrityNotes?`<div class="evidence-ai-section" style="font-size:11.5px;color:var(--muted)">
+        📜 ${esc(ai.integrityNotes)}
+      </div>`:''}
+    </div>`;
+  }else{
+    aiCardHtml=`<div class="evidence-ai-card" style="text-align:center;padding:16px">
+      <div style="font-size:24px;margin-bottom:6px">🤖</div>
+      <h4 style="margin-bottom:4px">${lb('تحليل الذكاء الاصطناعي للأدلة والسبب الجذري||AI Evidence & Root-Cause Assessment')}</h4>
+      <p class="muted" style="margin-bottom:12px">${lb('توليد تشخيص هندسي فوري للسبب الجذري وتوصيات الصيانة الاستباقية لمنع تكرار العطل استناداً لأدلة أمر الشغل.||Generate automated engineering root cause analysis, execution summary, and preventive actions from work order evidence.')}</p>
+      <button class="btn sm" style="background:linear-gradient(135deg,#0e7490,#7c3aed);color:#fff" onclick="generateAiEvidenceSummary(${i})">
+        ✨ ${lb('توليد تحليل الذكاء الاصطناعي الآن (UpKeep Nova)||Generate AI Evidence Summary Now')}
+      </button>
+    </div>`;
+  }
+
+  /* صور قبل/بعد */
+  const phBHtml=beforePhs.length?beforePhs.map(p=>`
+    <div class="evidence-thumb-wrap" onclick="lbShow('${phReg(p.d)}')">
+      <img src="${p.d}" loading="lazy">
+      <span class="evidence-thumb-tag">${lb('قبل||BEFORE')}</span>
+    </div>
+  `).join(''):`<div class="empty" style="grid-column:1/-1;padding:16px">${lb('لم تُرفق صور قبل البدء||No BEFORE photos attached')}</div>`;
+
+  const phAHtml=afterPhs.length?afterPhs.map(p=>`
+    <div class="evidence-thumb-wrap" onclick="lbShow('${phReg(p.d)}')">
+      <img src="${p.d}" loading="lazy">
+      <span class="evidence-thumb-tag">${lb('بعد||AFTER')}</span>
+    </div>
+  `).join(''):`<div class="empty" style="grid-column:1/-1;padding:16px">${lb('لم تُرفق صور بعد الإصلاح||No AFTER photos attached')}</div>`;
+
+  /* كرت التوقيع الثنائي */
+  const sigTechHtml=w.sig?`
+    <img src="${w.sig}" class="evidence-sig-img">
+    <div style="font-weight:800;font-size:13px">${esc(w.assigneeName||'—')}</div>
+    <div class="muted" style="font-size:11px">${lb('فني الصيانة المعتمد||Certified Technician')} · ${fmtDT(w.closedAt||w.createdAt)}</div>
+  `:`<div class="empty" style="padding:16px">${lb('لم يُسجل توقيع فني||No technician signature')}</div>`;
+
+  let sigClientHtml='';
+  if(w.clientSig){
+    sigClientHtml=`
+      <img src="${w.clientSig}" class="evidence-sig-img">
+      <div style="font-weight:800;font-size:13px">${esc(w.clientSigName||'—')}</div>
+      <div class="muted" style="font-size:11px">${esc(w.clientSigRole||lb('العميل المستلم||Client / Manager'))} · ${fmtDT(w.clientSigAt)}</div>
+      <div style="margin-top:6px"><span class="badge b-done">✅ ${lb('تم الاستلام والاعتماد الرسمي||Accepted & Certified')}</span></div>
+    `;
+  }else{
+    sigClientHtml=`
+      <p class="muted" style="margin-bottom:8px;font-size:12px">${lb('التوقيع بالماوس أو باللمس لاعتماد استلام الأعمال رسمياً:||Sign with touch or mouse to formally accept work:')}</p>
+      <canvas id="client_sigpad" class="sigbox" width="360" height="110" style="width:100%;max-width:360px;height:110px;background:#fff;border:1px solid #ccc;border-radius:10px"></canvas>
+      <div style="display:flex;gap:6px;justify-content:center;margin:6px 0">
+        <button class="btn ghost sm" onclick="sigClear('client_sigpad')">${lb('مسح||Clear')}</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0;text-align:start">
+        <div><label style="margin:0 0 2px;font-size:10.5px">${lb('اسم المستلم / المشرف||Signer Name')}</label>
+          <input id="csig_name" value="${esc(me?me.name:'')}" style="padding:5px 8px;font-size:12px"></div>
+        <div><label style="margin:0 0 2px;font-size:10.5px">${lb('الصفة||Role')}</label>
+          <select id="csig_role" style="padding:5px 8px;font-size:12px">
+            <option value="مدير الموقع">${lb('مدير الموقع||Site Manager')}</option>
+            <option value="المستأجر / العميل">${lb('المستأجر / العميل||Tenant / Client')}</option>
+            <option value="مهندس العمليات">${lb('مهندس العمليات||Operations Engineer')}</option>
+            <option value="مراقب الجودة والسلامة">${lb('مراقب الجودة والسلامة||QA / Safety Inspector')}</option>
+          </select></div>
+      </div>
+      <button class="btn sm" style="background:linear-gradient(135deg,#0e7490,#0284c7);width:100%;margin-top:4px" onclick="saveClientSignOff(${i})">
+        ✍️ ${lb('اعتماد وتوقيع الاستلام الآن||Sign & Accept Now')}
+      </button>
+    `;
+  }
+
+  const modalHtml=`
+  <div class="evidence-cert">
+    <!-- Header -->
+    <div class="evidence-head">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#0e7490,#0891b2);display:grid;place-items:center;font-size:26px;color:#fff;box-shadow:0 8px 18px -4px rgba(14,116,144,.5)">
+          🛡️
+        </div>
+        <div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span class="evidence-seal-badge">🛡️ ${lb('شهادة إثبات العمل والامتثال (UpKeep Evidence)||UpKeep Proof of Work & Audit Certificate')}</span>
+            ${isClosed?`<span class="badge b-done" style="font-size:11px;padding:3px 9px">✅ ${lb('خاضع للامتثال ومعتمد||Audit-Proof & Verified')}</span>`:
+              `<span class="badge b-prog" style="font-size:11px;padding:3px 9px">⏳ ${lb('قيد المعاينة الميدانية||In Progress')}</span>`}
+          </div>
+          <h2 style="margin:4px 0 2px;font-size:17px;font-weight:800">${esc(w.no)} — ${esc(w.title)}</h2>
+          <div class="muted" style="font-size:12px">${lb('المرجع الرسمي: ||Official Ref: ')}<b>${certId}</b> · ${cmpName(w.compoundId||activeCmp())}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <img src="${qrUrl}" width="78" height="78" style="border-radius:8px;border:1px solid var(--line);background:#fff;padding:2px" title="${lb('رمز التحقق الرقمي||Digital Verification QR')}">
+      </div>
+    </div>
+
+    <!-- Tamper Seal Hash -->
+    <div class="evidence-hash-box">
+      <b>🔒 ${lb('الختم الرقمي لمكافحة التلاعب (SHA-256 Tamper Seal):||Tamper-Proof Integrity Hash (SHA-256):')}</b><br>
+      <span id="evi_hash">${w.integrityHash||lb('جاري التوليد...||Generating...')}</span>
+    </div>
+
+    <!-- Overview Stats -->
+    <div class="evidence-meta-grid">
+      <div class="evidence-meta-card">
+        <small>${lb('الأصل والموقع||Asset & Location')}</small>
+        <span>${esc(w.assetLabel||w.assetName||w.bname||'—')}</span>
+        ${w.unitCode?`<div class="muted" style="font-size:11px">${lb('الوحدة: ||Unit: ')}${esc(w.unitCode)}</div>`:''}
+      </div>
+      <div class="evidence-meta-card">
+        <small>${lb('زمن الاستجابة والتنفيذ||Response & Repair Time')}</small>
+        <span>${w.closedAt?durTxt(w.closedAt,w.startedAt||w.createdAt):'—'}</span>
+        <div class="muted" style="font-size:11px">${lb('فُتح: ||Opened: ')}${fmtDT(w.createdAt)}</div>
+      </div>
+      <div class="evidence-meta-card">
+        <small>${lb('الفني المسؤول||Responsible Technician')}</small>
+        <span>${esc(w.assigneeName||'—')}</span>
+        <div class="muted" style="font-size:11px">${lb('الأولوية: ||Priority: ')}${PRIO[w.priority]||w.priority}</div>
+      </div>
+      <div class="evidence-meta-card">
+        <small>${lb('التكلفة الإجمالية والقطع||Cost & Spare Parts')}</small>
+        <span>${money(w.cost)}</span>
+        <div class="muted" style="font-size:11px">${(w.parts||[]).length} ${lb('قطع مستخدمة||parts replaced')}</div>
+      </div>
+    </div>
+
+    <!-- Before & After Photo Proof -->
+    <div>
+      <h3 style="font-size:14px;margin-bottom:6px">📸 ${lb('الإثبات المرئي (صور قبل وبعد الإصلاح)||Visual Evidence (Before & After Photo Proof)')}</h3>
+      <div class="evidence-photos-split">
+        <div class="evidence-photo-box">
+          <div class="evidence-photo-box-head before">
+            <span>🛑 ${lb('صور قبل الإصلاح (BEFORE Execution)||Photos BEFORE Execution')}</span>
+            <span class="badge b-urgent">${beforePhs.length} ${lb('صور||photos')}</span>
+          </div>
+          <div class="evidence-photo-thumbs">${phBHtml}</div>
+        </div>
+        <div class="evidence-photo-box">
+          <div class="evidence-photo-box-head after">
+            <span>✅ ${lb('صور بعد الإصلاح والتحقق (AFTER Execution)||Photos AFTER Execution')}</span>
+            <span class="badge b-done">${afterPhs.length} ${lb('صور||photos')}</span>
+          </div>
+          <div class="evidence-photo-thumbs">${phAHtml}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI UpKeep Nova Evidence Card -->
+    ${aiCardHtml}
+
+    <!-- Inspection Checklist Evidence -->
+    <div>
+      <h3 style="font-size:14px;margin-bottom:6px">📋 ${lb('تدقيق قائمة الفحص الميداني (Inspection Checklist Evidence)||Inspection Checklist Verification')}</h3>
+      <div class="tbl-wrap">
+        <table class="evidence-table">
+          <tr><th style="width:36px">#</th><th>${lb('بند الفحص / الاختبار||Inspection Task')}</th><th style="width:130px">${lb('حالة الامتثال||Status')}</th><th>${lb('القياس والملاحظة||Reading / Note')}</th></tr>
+          ${ckRows}
+        </table>
+      </div>
+      ${w.followUpNo?`<div style="margin-top:6px;font-size:12px;color:var(--red);font-weight:700">
+        ⚠️ ${lb('رُصد عطل واستُحدث له أمر تصحيحي مرتبط: ||Failure logged — linked corrective work order: ')}<b>${esc(w.followUpNo)}</b>
+      </div>`:''}
+    </div>
+
+    <!-- Replaced Parts & Deductions -->
+    ${(w.parts&&w.parts.length)?`
+    <div>
+      <h3 style="font-size:14px;margin-bottom:6px">📦 ${lb('قطع الغيار وحسم المخزون (Parts Deducted)||Parts Used & Stock Movement')}</h3>
+      <div class="tbl-wrap">
+        <table class="evidence-table">
+          <tr><th>${lb('القطعة||Part Name')}</th><th style="width:80px">${lb('الكمية||Qty')}</th><th style="width:140px">${lb('إثبات الحسم||Deduction Status')}</th></tr>
+          ${partRows}
+        </table>
+      </div>
+    </div>`:''}
+
+    <!-- Dual Signatures: Tech & Client -->
+    <div>
+      <h3 style="font-size:14px;margin-bottom:6px">✍️ ${lb('التوقيع الثنائي للإثبات والاعتماد (Dual Verification Sign-Off)||Dual Verification Signatures')}</h3>
+      <div class="evidence-sigs-grid">
+        <div class="evidence-sig-card">
+          <div style="font-weight:800;font-size:12.5px;color:var(--brand);margin-bottom:4px">
+            👷 ${lb('1. توقيع الفني المنفّذ (Execution Sign-Off)||1. Technician Execution Sign-Off')}
+          </div>
+          ${sigTechHtml}
+        </div>
+        <div class="evidence-sig-card">
+          <div style="font-weight:800;font-size:12.5px;color:var(--brand);margin-bottom:4px">
+            🏢 ${lb('2. توقيع العميل / المشرف المستلم (Acceptance Sign-Off)||2. Client / Manager Acceptance')}
+          </div>
+          ${sigClientHtml}
+        </div>
+      </div>
+    </div>
+
+    <!-- Digital Chain of Custody & Audit Trail -->
+    <div>
+      <h3 style="font-size:14px;margin-bottom:6px">📜 ${lb('سلسلة الحفظ وسجل التدقيق الزمني (Chain of Custody & Audit Trail)||Audit Trail & Activity Log')}</h3>
+      <div class="tbl-wrap">
+        <table class="evidence-table">
+          <tr><th style="width:140px">${lb('الوقت||Timestamp')}</th><th style="width:110px">${lb('المستخدم||Actor')}</th><th style="width:90px">${lb('العملية||Action')}</th><th>${lb('التفاصيل||Details')}</th></tr>
+          ${auditRows}
+        </table>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="ma no-print" style="margin-top:12px">
+      <button class="btn" onclick="printEvidenceCert(${i})">🖨️ ${lb('طباعة شهادة الإثبات الرسمية||Print Official Certificate')}</button>
+      <button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button>
+    </div>
+  </div>`;
+
+  modal(modalHtml,'modal-evidence');
+  if(!w.clientSig)initSig('client_sigpad');
+}
+
+async function generateAiEvidenceSummary(i){
+  const w=db.wos[i];if(!w)return;
+  toast(lb('جاري تشغيل تحليل الذكاء الاصطناعي للأدلة (UpKeep Nova)...||Running AI evidence assessment...'));
+  try{
+    const payload={
+      woNo:w.no,
+      title:w.title,
+      desc:w.desc,
+      assetName:w.assetName||w.assetLabel||w.title,
+      assetCategory:w.category||w.assetCategory||'',
+      closeNotes:w.closeNotes||'',
+      duration:durTxt(w.closedAt||Date.now(),w.startedAt||w.createdAt),
+      cost:w.cost||0,
+      parts:w.parts||[],
+      checklist:w.checklist||[],
+      photosCount:{
+        before:(w.photos||[]).filter(p=>p.tag==='before').length,
+        after:(w.photos||[]).filter(p=>p.tag==='after').length
+      },
+      hasSignature:!!w.sig,
+      lang:db.lang==='ar'?'ar':'en'
+    };
+    const res=await api('/ai/wo-evidence-summary',{
+      method:'POST',
+      body:JSON.stringify(payload)
+    });
+    const j=await res.json();
+    if(j.ok&&j.analysis){
+      w.aiEvidence=j.analysis;
+      w.integrityHash=await woComputeIntegrityHash(w);
+      persist();
+      toast(lb('تم توليد تقرير الامتثال وتشخيص السبب الجذري بنجاح!||AI Evidence Assessment completed!'),'ok');
+      woEvidenceModal(i);
+    }else{
+      toast(lb('تعذر إكمال التحليل: ')+(j.reason||'خطأ في المعالجة'),'err');
+    }
+  }catch(e){
+    console.error('AI evidence error:',e);
+    toast(lb('خطأ في الاتصال بخدمة الذكاء الاصطناعي||AI connection error'),'err');
+  }
+}
+
+async function saveClientSignOff(i){
+  const w=db.wos[i];if(!w)return;
+  if(!sigHasInk('client_sigpad')){
+    return toast(lb('يرجى رسم التوقيع أولاً في المربع المخصص||Please draw signature in the box first'),'err');
+  }
+  const name=($('csig_name')&&$('csig_name').value.trim())||(me?me.name:'');
+  const role=($('csig_role')&&$('csig_role').value)||'المستلم';
+  if(!name)return toast(lb('اكتب اسم الموقع / المستلم||Enter signer name'),'err');
+  const cv=$('client_sigpad');
+  const sigData=cv.toDataURL('image/png');
+  w.clientSig=await uploadMedia(sigData,'client_sig.png');
+  w.clientSigName=name;
+  w.clientSigRole=role;
+  w.clientSigAt=Date.now();
+  w.integrityHash=await woComputeIntegrityHash(w);
+  auditLog('sign','wo',w.no,lb('توقيع استلام من ')+name+' ('+role+')');
+  persist();
+  toast(lb('تم حفظ توقيع الاستلام واعتماد شهادة الإثبات!||Acceptance signature saved and certificate sealed!'),'ok');
+  woEvidenceModal(i);
+}
+
+function printEvidenceCert(i){
+  document.body.classList.add('printing-evidence');
+  window.print();
+  setTimeout(()=>document.body.classList.remove('printing-evidence'),1000);
 }
 
 /* ===== INVENTORY ===== */
