@@ -6021,6 +6021,8 @@ function vWOs(){
   <tr><th>${lb('الرقم||No.')}</th><th>${lb('البلاغ||Report')}</th><th>${lb('الأصل/الموقع||Asset/Loc')}</th><th>${lb('الأولوية||Priority')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الفني||Tech')}</th><th>${lb('واتساب||WhatsApp')}</th><th>${lb('فُتح||Opened')}</th><th>${lb('أُغلق||Closed')}</th><th></th></tr>
   ${list.length?list.map(w=>{
     const od=w.status!=='closed'&&w.dueDate&&daysUntil(w.dueDate)<0;
+    const isOpen=w.status!=='closed';
+    const isMine=isTech()?w.assigneeId===me.id:true;
     let acts=`<button class="btn sm ghost" title="${lb('عرض التفاصيل||View details')}" onclick="woView(${ix(w)})">${ic('view',13)}</button>`;
     if(w.status==='closed'||(w.photos&&w.photos.length)||w.sig||(w.checklist&&w.checklist.length)){
       acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff" title="${lb('شهادة إثبات العمل والامتثال (UpKeep Evidence)||Proof of Work Certificate')}" onclick="woEvidenceModal(${ix(w)})">🛡️ ${lb('إثبات||Evidence')}</button>`;
@@ -6029,7 +6031,7 @@ function vWOs(){
       acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="woApprove(${ix(w)})">${lb('اعتماد||Approve')}</button>`;
       acts+=`<button class="btn sm ghost" onclick="woDismiss(${ix(w)})">${lb('رفض||Dismiss')}</button>`;
     }
-    if(open&&w.status!=='planned'&&(mine||isEng())){
+    if(isOpen&&w.status!=='planned'&&(isMine||isEng())){
       if(w.status==='open')acts+=`<button class="btn sm" onclick="woSet(${ix(w)},'inprog')">${ic('play',13)}</button>`;
       acts+=`<button class="btn sm ghost" title="${lb('تأجيل بسبب||Defer with reason')}" onclick="woDefer(${ix(w)})">${ic('clock',13)}</button>`;
       acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="woCloseForm(${ix(w)})"> ${lb('إغلاق||Close')}</button>`;
@@ -6050,7 +6052,7 @@ function vWOs(){
   </table></div></div>`;
 }
 function woForm(idx,presetAsset){
-  const w=(idx!=null&&idx!=='')?db.wos[idx]:{};
+  const w=(idx!=null&&idx!==''&&db.wos[idx])?db.wos[idx]:{};
   const act=activeCmp();
   const techs=db.users.filter(u=>u.role==='tech'&&(u.cmpIds||[]).includes(act));
   const assets=db.assets.filter(a=>a.compoundId===act)
@@ -6060,14 +6062,14 @@ function woForm(idx,presetAsset){
   const prjOpts=db.projects.filter(p=>p.compoundId===act).map(p=>`<option value="${p.id}" ${w.projectId===p.id?'selected':''}>${esc(p.no)} — ${esc(p.name)}</option>`).join('');
   const uOpts=cmpUnits().slice().sort((a,b)=>String(a.code).localeCompare(String(b.code)))
     .map(u=>`<option value="${u.id}" ${w.unitId===u.id?'selected':''}>${esc(u.code)} — ${esc(bName(u.buildingId))}</option>`).join('');
-  modal(`<h3>${(idx!=null&&idx!=='')?lb('تعديل بلاغ||Edit Report'):lb('بلاغ عطل جديد||New Fault Report')}</h3>
+  modal(`<h3>${(idx!=null&&idx!==''&&db.wos[idx])?lb('تعديل بلاغ||Edit Report'):lb('بلاغ عطل جديد||New Fault Report')}</h3>
   <label>${lb('عنوان العطل *||Fault Title *')}</label><input id="fw_t" value="${esc(w.title||'')}">
   <div class="fg">
     <div><label>${lb('الأصل المرتبط (اكتب للبحث)||Linked Asset (type to search)')}</label><input id="fw_a" list="fw_adl" autocomplete="off" value="${esc(curAsset?assetFullLabel(curAsset):'')}" placeholder="${lb('اكتب اسم الأصل…||Type an asset name…')}" oninput="syncLoc()" onchange="syncLoc()"><datalist id="fw_adl">${adl}</datalist></div>
     <div><label>${lb('الوحدة (اختياري)||Unit (optional)')}</label><select id="fw_u"><option value="">—</option>${uOpts}</select></div>
     <div><label>${lb('الموقع (يدوي)||Location (manual)')}</label><input id="fw_l" value="${esc(w.bname||'')}"></div>
     <div><label>${lb('الأولوية (تحدد الاستحقاق)||Priority (sets due date)')}</label><select id="fw_p" onchange="slaDue()">${Object.keys(PRIO).map(k=>`<option value="${k}" ${(w.priority||'normal')===k?'selected':''}>${PRIO[k]}</option>`).join('')}</select></div>
-    <div><label>${lb('إسناد إلى||Assign To')}</label><select id="fw_as"><option value="">—</option>${techs.map(t=>`<option value="${t.id}" ${(w.assigneeId||(idx==null&&isTech()?me.id:''))===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
+    <div><label>${lb('إسناد إلى||Assign To')}</label><select id="fw_as"><option value="">—</option>${techs.map(t=>`<option value="${t.id}" ${(w.assigneeId||(!idx&&isTech()&&me?me.id:''))===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
     <div><label>${lb('موعد الاستحقاق||Due Date')}</label><input type="date" id="fw_d" value="${w.dueDate||todayISO()}"></div>
     <div><label>${lb('مشروع مرتبط (اختياري)||Linked Project (optional)')}</label><select id="fw_pr"><option value="">—</option>${prjOpts}</select></div>
   </div>
@@ -6108,11 +6110,11 @@ function saveWO(idxStr){
     assigneeName:tech?tech.name:'',dueDate:$('fw_d').value,projectId:$('fw_pr')?$('fw_pr').value:'',
     unitId:un?un.id:'',unitCode:un?un.code:'',
     tenantName:(un&&un.tenantId)?((db.tenants.find(x=>x.id===un.tenantId)||{}).name||''):''};
-  if(!isNew)Object.assign(db.wos[idxStr],o);
+  if(!isNew&&db.wos[idxStr])Object.assign(db.wos[idxStr],o);
   else{db.seq++;const y=new Date().getFullYear();
     db.wos.unshift(Object.assign({no:'WO-'+y+'-'+String(db.seq).padStart(4,'0'),type:'fault',compoundId:activeCmp(),
       status:'open',createdAt:Date.now(),startedAt:null,closedAt:null,cost:0,closeNotes:'',parts:[],photos:[],sig:'',
-      reportedBy:me.name},o));
+      reportedBy:me?me.name:''},o));
     notify('',lb('بلاغ جديد: ||New fault: ')+t,'wos','');
   }
   if(o.assigneeId){
@@ -6145,6 +6147,25 @@ function woDismiss(i){
   notifResolveWo(w);
   auditLog('dismiss','wo',w.no,reason);persist();paintTab();toast(lb('رُفض الأمر||Dismissed'),'ok');
 }
+function woDefer(i){
+  const w=db.wos[i];if(!w)return;
+  const r=prompt(lb('سبب تأجيل أمر الشغل (مطلوب):||Work order deferral reason (required):'));
+  if(r==null)return;
+  const reason=String(r).trim();
+  if(!reason)return toast(lb('اكتب سبب التأجيل||Enter deferral reason'),'err');
+  w.status='wait';
+  w.deferReason=reason;
+  auditLog('defer','wo',w.no,reason);
+  persist();paintTab();toast(lb('تم تأجيل أمر الشغل||Work order deferred'),'ok');
+}
+function woReview(i){
+  const w=db.wos[i];if(!w)return;
+  w.review='reviewed';
+  w.reviewedBy=me?me.name:'';
+  w.reviewedAt=Date.now();
+  auditLog('review','wo',w.no,lb('اعتماد المراجعة||Review approved'));
+  persist();paintTab();toast(lb('تم اعتماد مراجعة أمر الشغل||Work order review approved'),'ok');
+}
 /* تخطي دورة الخطة عند رفض/حذف أمر شغل مولّد تلقائياً من الصيانة الدورية */
 function skipPlanCycleFor(w,why){
   if(!w||w.type!=='pm'||!w.pmId)return null;
@@ -6156,7 +6177,7 @@ function skipPlanCycleFor(w,why){
 }
 function woDel(i){if(!confirm(lb('حذف البلاغ؟||Delete report?')))return;const w=db.wos[i];skipPlanCycleFor(w,lb('حذف أمر||deleted WO'));notifResolveWo(w);db.wos.splice(i,1);if(w)auditLog('delete','wo',w.no,'');persist();paintTab();}
 function woView(i){
-  const w=db.wos[i];
+  const w=db.wos[i];if(!w)return;
   const pj=w.projectId?db.projects.find(p=>p.id===w.projectId):null;
   modal(`<h3>${w.no} — ${esc(w.title)}</h3>
   <p class="muted">${esc(w.desc||'')}</p>
@@ -6194,7 +6215,7 @@ function woView(i){
   <button class="btn ghost" onclick="closeModal()">${lb('إغلاق النافذة||Close Window')}</button></div>`);
 }
 function woCloseForm(i){
-  const w=db.wos[i];
+  const w=db.wos[i];if(!w)return;
   let ck='';
   if(w.checklist&&w.checklist.length){
     ck=`<label>${lb('قائمة الفحص والتحقق (Checklist Evidence)||Inspection Checklist')}</label>`+
