@@ -1271,6 +1271,60 @@ mark.gs-hl{background:#fef08a;color:#713f12;font-weight:800;padding:0 2px;border
   body.printing-evidence .evidence-photo-box{border:1px solid #ccc!important}
   body.printing-evidence .no-print{display:none!important}
 }
+
+/* ===== UpKeep-Style Teams & Organizational Hierarchy ===== */
+.teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-top:14px}
+.team-card{position:relative;border-radius:16px;background:rgba(255,255,255,.65);border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;transition:all .2s ease}
+.dark .team-card{background:rgba(255,255,255,.05)}
+.team-card:hover{transform:translateY(-2px);box-shadow:0 14px 28px -10px rgba(0,0,0,.22)}
+.team-color-bar{height:6px;width:100%}
+.team-card-inner{padding:16px;display:flex;flex-direction:column;gap:12px;flex:1}
+.team-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.team-code-badge{font-family:monospace;font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.06)}
+.dark .team-code-badge{background:rgba(255,255,255,.1)}
+.team-title{font-size:16px;font-weight:800;color:var(--ink);margin:0}
+.team-parent-crumb{font-size:11.5px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:4px}
+.team-desc{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0}
+.team-leader-box{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:rgba(14,116,144,.07);border:1px solid rgba(14,116,144,.15)}
+.dark .team-leader-box{background:rgba(34,184,207,.1);border-color:rgba(34,184,207,.2)}
+.team-leader-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.team-members-chips{display:flex;flex-wrap:wrap;gap:6px}
+.team-member-pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:3px 9px;border-radius:20px;background:rgba(0,0,0,.05);border:1px solid rgba(0,0,0,.06);color:var(--ink)}
+.dark .team-member-pill{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1)}
+.team-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:rgba(0,0,0,.02);border-top:1px solid var(--line);font-size:12px;margin-top:auto}
+.dark .team-footer{background:rgba(255,255,255,.03)}
+
+/* Interactive Hierarchy Tree Diagram */
+.tree-container{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px 12px;overflow-x:auto}
+.tree-level{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;width:100%;position:relative}
+.tree-node{min-width:240px;max-width:320px;border-radius:14px;padding:14px;background:rgba(255,255,255,.75);border:1.5px solid var(--line);box-shadow:var(--shadow);text-align:center;cursor:pointer;transition:transform .2s,border-color .2s}
+.dark .tree-node{background:rgba(23,38,52,.85)}
+.tree-node:hover{transform:scale(1.02);border-color:var(--brand)}
+.tree-node.root{background:linear-gradient(135deg,rgba(14,116,144,.12),rgba(37,99,235,.08));border-color:var(--brand)}
+.tree-node-badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10.5px;font-weight:800;margin-bottom:6px}
+.tree-node-title{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:4px}
+.tree-node-sub{font-size:11.5px;color:var(--muted);font-weight:600}
+.tree-connector{width:2px;height:24px;background:var(--brand);opacity:.4;margin:-12px auto}
+
+/* Warranty Claim Alert Styles (UpKeep CMMS Model) */
+.warranty-alert-box{display:flex;gap:12px;padding:12px 14px;border-radius:12px;background:linear-gradient(135deg,rgba(16,185,129,.09),rgba(14,165,233,.08));border:1.5px solid rgba(16,185,129,.45);margin:12px 0;animation:warrantyPulse 2.4s infinite ease-in-out}
+.dark .warranty-alert-box{background:linear-gradient(135deg,rgba(16,185,129,.16),rgba(14,165,233,.12));border-color:rgba(16,185,129,.55)}
+.warranty-alert-box.expiring{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(239,68,68,.08));border-color:rgba(245,158,11,.55);animation:warrantyPulseAmber 2.4s infinite ease-in-out}
+.warranty-alert-icon{font-size:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.warranty-alert-content{flex:1;font-size:12.5px;color:var(--ink);line-height:1.5}
+.warranty-alert-title{font-size:13.5px;font-weight:800;color:#047857;margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.dark .warranty-alert-title{color:#34d399}
+.warranty-alert-box.expiring .warranty-alert-title{color:#b45309}
+.dark .warranty-alert-box.expiring .warranty-alert-title{color:#fbbf24}
+.warranty-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700}
+.warranty-badge.active{background:rgba(16,185,129,.14);color:#065f46;border:1px solid rgba(16,185,129,.35)}
+.dark .warranty-badge.active{background:rgba(16,185,129,.22);color:#6ee7b7;border-color:rgba(16,185,129,.45)}
+.warranty-badge.expiring{background:rgba(245,158,11,.14);color:#92400e;border:1px solid rgba(245,158,11,.35)}
+.dark .warranty-badge.expiring{background:rgba(245,158,11,.22);color:#fcd34d;border-color:rgba(245,158,11,.45)}
+.warranty-badge.expired{background:rgba(100,116,139,.12);color:#475569;border:1px solid rgba(100,116,139,.22)}
+.dark .warranty-badge.expired{background:rgba(100,116,139,.2);color:#94a3b8}
+@keyframes warrantyPulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}50%{box-shadow:0 0 10px 2px rgba(16,185,129,.25)}}
+@keyframes warrantyPulseAmber{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0)}50%{box-shadow:0 0 10px 2px rgba(245,158,11,.25)}}
 </style>
 </head>
 <body>
@@ -1325,8 +1379,9 @@ window.addEventListener('unhandledrejection',e=>{
   const r=e&&e.reason;
   reportClientError((r&&(r.message||r))||'unhandledrejection','promise');
 });
-let FILT={assets:'',assetCat:'all',assetStatus:'all',wos:'',woStatus:'all',woPrio:'all',woTech:'all',woBld:'all',woPreset:'all',inv:'',invCat:'all',invLowOnly:false,procTab:'pr',units:'',pmView:'plans',pmFcDays:30,pmGroup:'time',pmDisc:'all',pmCritF:'all',pmBld:'all',rcpt:''};
+let FILT={assets:'',assetCat:'all',assetStatus:'all',assetWarranty:'all',wos:'',woStatus:'all',woPrio:'all',woTech:'all',woTeam:'all',woBld:'all',woPreset:'all',inv:'',invCat:'all',invLowOnly:false,procTab:'pr',units:'',pmView:'plans',pmFcDays:30,pmGroup:'time',pmDisc:'all',pmCritF:'all',pmBld:'all',rcpt:''};
 let PRIO,WSTAT,ASTAT,ROLES,VILLA_FLOORS,PRSTAT,POSTAT,FREQUNIT,PRJSTAT,SHIFTK,BTYPES,UNITKIND,CTRSC,CYCLEK;
+let TEAM_TAB='directory', TEAM_FILT_SPEC='all', TEAM_FILT_Q='';
 const UNITKIND_NEW=['apt','villa','subunit','office','shop','annex','land'];
 const SUB_SUFFIX=['G','F1','F2','ANX','R'];
 const $=id=>document.getElementById(id);
@@ -1342,6 +1397,219 @@ function toast(m,t){const el=$('toast');el.textContent=m;el.className='toast sho
 function daysUntil(iso){if(!iso)return 9999;return Math.round((new Date(iso)-new Date(todayISO()))/86400000);}
 function addDays(iso,n){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+/* ===== WARRANTY TRACKING & CLAIM DETECTION (UpKeep CMMS Model) ===== */
+function isAssetUnderWarranty(a){
+  if(!a || !a.warrantyend) return false;
+  return daysUntil(a.warrantyend) >= 0;
+}
+function assetWarrantyInfo(a){
+  if(!a || !a.warrantyend) return { hasWarranty: false, isUnderWarranty: false, status: 'none', label: lb('بدون ضمان||No warranty'), badge: '' };
+  const days = daysUntil(a.warrantyend);
+  const vendor = a.warrantyVendor || a.provider || '';
+  const ref = a.warrantyRef || '';
+  const terms = a.warrantyTerms || '';
+  if(days < 0){
+    return {
+      hasWarranty: true,
+      isUnderWarranty: false,
+      isExpired: true,
+      daysLeft: days,
+      expDate: a.warrantyend,
+      vendor, ref, terms,
+      status: 'expired',
+      label: lb('منتهي منذ ' + Math.abs(days) + ' يوم||Expired ' + Math.abs(days) + 'd ago'),
+      badge: `<span class="warranty-badge expired" title="${lb('انتهى الضمان في ' + a.warrantyend)}">⌛ ${lb('منتهي||Expired')}</span>`
+    };
+  }
+  if(days <= 30){
+    return {
+      hasWarranty: true,
+      isUnderWarranty: true,
+      isExpiringSoon: true,
+      daysLeft: days,
+      expDate: a.warrantyend,
+      vendor, ref, terms,
+      status: 'expiring',
+      label: lb('ينتهي قريباً (متبقي ' + days + ' يوم)||Expiring soon (' + days + 'd left)'),
+      badge: `<span class="warranty-badge expiring" title="${lb('ينتهي في ' + a.warrantyend)}">⚠️ ${lb('ينتهي قريباً (' + days + ' ي)||Expiring (' + days + 'd)')}</span>`
+    };
+  }
+  return {
+    hasWarranty: true,
+    isUnderWarranty: true,
+    isExpiringSoon: false,
+    daysLeft: days,
+    expDate: a.warrantyend,
+    vendor, ref, terms,
+    status: 'active',
+    label: lb('سارٍ (متبقي ' + days + ' يوم)||Active (' + days + 'd left)'),
+    badge: `<span class="warranty-badge active" title="${lb('ضمان سارٍ حتى ' + a.warrantyend + (vendor ? ' — ' + vendor : ''))}">🛡️ ${lb('سارٍ (' + days + ' ي)||Active (' + days + 'd)')}</span>`
+  };
+}
+function renderWoWarrantyAlert(asset, isChecked){
+  const box = $('fw_warranty_box');
+  if(!box) return;
+  if(!asset){ box.innerHTML = ''; return; }
+  const wInfo = assetWarrantyInfo(asset);
+  if(!wInfo.isUnderWarranty){
+    if(wInfo.isExpired){
+      box.innerHTML = `<div class="card" style="padding:8px 12px;margin:8px 0;background:rgba(0,0,0,.02);font-size:12px;color:var(--muted)">
+        ⌛ ${lb('ملاحظة: انتهت فترة ضمان هذا الأصل بتاريخ ' + fmtD(wInfo.expDate) + ' (منتهي منذ ' + Math.abs(wInfo.daysLeft) + ' يوم).||Note: Warranty expired on ' + fmtD(wInfo.expDate) + ' (' + Math.abs(wInfo.daysLeft) + 'd ago).')}
+      </div>`;
+    } else {
+      box.innerHTML = '';
+    }
+    return;
+  }
+
+  box.innerHTML = `<div class="warranty-alert-box ${wInfo.isExpiringSoon ? 'expiring' : ''}">
+    <div class="warranty-alert-icon">🛡️</div>
+    <div class="warranty-alert-content">
+      <div class="warranty-alert-title">
+        <span>${lb('تنبيه سريان الضمان — مطالبة ضمان محتملة (UpKeep Warranty Claim Alert)||Active Warranty Alert — Potential Warranty Claim')}</span>
+      </div>
+      <div>
+        ${lb('هذا الأصل مشمول بضمان معتمد حتى||This asset is covered under active warranty until')} <b>${fmtD(wInfo.expDate)}</b> (${lb('متبقي||remaining')}: <b>${wInfo.daysLeft} ${lb('يوماً||days')}</b>).
+        ${wInfo.vendor ? `<br>${lb('المورّد / الضامن||Provider / Vendor')}: <b>${esc(wInfo.vendor)}</b>` : ''}
+        ${wInfo.ref ? ` · ${lb('رقم الوثيقة||Ref')}: <b>${esc(wInfo.ref)}</b>` : ''}
+        ${wInfo.terms ? `<br><span class="muted">${lb('نطاق التغطية||Coverage')}: ${esc(wInfo.terms)}</span>` : ''}
+      </div>
+      <div style="margin-top:8px;padding-top:6px;border-top:1px dashed rgba(16,185,129,.35)">
+        <label style="display:inline-flex;align-items:center;gap:6px;margin:0;font-weight:700;cursor:pointer">
+          <input type="checkbox" id="fw_is_warranty" ${isChecked ? 'checked' : ''}>
+          <span>🛡️ ${lb('تسجيل هذا البلاغ كـ "مطالبة ضمان" (Warranty Claim) — يتحمل المورّد الإصلاح مجاناً||Record as "Warranty Claim" (Vendor handles repair under warranty)')}</span>
+        </label>
+      </div>
+    </div>
+  </div>`;
+}
+
+function warrantyClaimLetterModal(woIdx){
+  const w = db.wos[woIdx];
+  if(!w) return;
+  const a = w.assetId ? db.assets.find(x => x.id === w.assetId) : null;
+  const wInfo = assetWarrantyInfo(a);
+  const claimNo = 'CLM-' + (w.no || uid('W'));
+  const today = todayISO();
+
+  const letterText = `إشعار رسمي: مطالبة بالضمان الفني (Warranty Claim Notice)
+--------------------------------------------------
+رقم المطالبة: ${claimNo}
+تاريخ الإشعار: ${today}
+أمر الشغل المرتبط: ${w.no} — ${w.title}
+
+إلى: ${wInfo.vendor || 'الشركة الضامنة / المورّد المعتمد'}
+رقم وثيقة/شهادة الضمان: ${wInfo.ref || 'سارية'}
+تاريخ انتهاء الضمان: ${wInfo.expDate || 'سارٍ'} (${wInfo.label})
+
+بيانات الأصل المعطّل:
+- اسم الأصل: ${a ? a.name : (w.assetLabel || '—')}
+- التصنيف: ${a ? a.category : '—'}
+- الطراز والسيريال: ${[a?.model, a?.serial].filter(Boolean).join(' · ') || '—'}
+- الموقع: ${a ? bName(a.building) + (a.floor ? ' / ' + a.floor : '') : (w.bname || '—')}
+
+تفاصيل العطل والخلل المشكو منه:
+${w.title}
+${w.desc ? 'تفاصيل: ' + w.desc : ''}
+
+المطلوب بموجب التزامات الضمان:
+1. إيفاد فني معتمد أو ممثل صيانة لمعاينة الأصل خلال 24 ساعة.
+2. استبدال القطع المتضررة بقطع غيار أصلية جديدة مجاناً بالكامل.
+3. إتمام الإصلاح دون تحميل المنشأة أية أجور صيانة أو مصاريف كشف.
+
+حرر بواسطة إدارة المرافق والصيانة.`;
+
+  modal(`<h3>🛡️ ${lb('إشعار مطالبة بالضمان الفني (Warranty Claim Notice)||Official Warranty Claim Notice')}</h3>
+  <div class="card" id="claim_letter_printable" style="padding:18px;background:var(--bg,#fff);border:1px solid var(--line);font-size:13px;line-height:1.6">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--line);padding-bottom:12px;margin-bottom:14px">
+      <div>
+        <h2 style="margin:0;font-size:16px;color:var(--brand)">🏛️ ${lb('إدارة المرافق والتشغيل والصيانة||Facilities & Operations Management')}</h2>
+        <div class="muted" style="font-size:11.5px">${lb('قسم مطالبات الضمان ومتابعة الموردين||Warranty Claims & Vendor Assurance')}</div>
+      </div>
+      <div style="text-align:end">
+        <span class="badge b-ok" style="font-size:11.5px;font-weight:800">${claimNo}</span>
+        <div class="muted" style="font-size:11px;margin-top:3px">${fmtD(today)}</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px;background:rgba(16,185,129,.06);padding:10px 14px;border-radius:8px;border:1px solid rgba(16,185,129,.25)">
+      <div style="font-weight:800;color:#047857">${lb('إلى السادة / جهة الضمان المعتمدة:||To: Authorized Warranty Provider:')}</div>
+      <div style="font-size:14px;font-weight:800;color:var(--ink)">${esc(wInfo.vendor || lb('المورّد الضامن||Warranty Provider'))}</div>
+      <div class="muted" style="font-size:11.5px">
+        ${lb('رقم وثيقة/شهادة الضمان||Policy Ref')}: <b>${esc(wInfo.ref || 'سارية')}</b> · 
+        ${lb('انتهاء الضمان||Warranty Expiration')}: <b>${fmtD(wInfo.expDate)}</b> (${wInfo.label})
+      </div>
+      ${wInfo.terms ? `<div class="muted" style="font-size:11.5px;margin-top:2px">${lb('نطاق التغطية||Coverage')}: ${esc(wInfo.terms)}</div>` : ''}
+    </div>
+
+    <table style="margin-bottom:14px">
+      <tr><th>${lb('بيان الأصل||Asset Information')}</th><th>${lb('الموقع والتفاصيل||Location & Info')}</th></tr>
+      <tr>
+        <td><b>${esc(a ? a.name : (w.assetLabel || '—'))}</b><br><span class="muted">${esc(a ? a.category : '—')}</span></td>
+        <td>${esc(a ? bName(a.building) + (a.floor ? ' / ' + a.floor : '') : (w.bname || '—'))}<br><span class="muted">${esc([a?.model, a?.serial].filter(Boolean).join(' · ') || '')}</span></td>
+      </tr>
+      <tr><th>${lb('رقم البلاغ وتاريخه||Work Order & Date')}</th><th>${lb('وصف العطل المطالب بإصلاحه||Reported Defect')}</th></tr>
+      <tr>
+        <td><b>${esc(w.no)}</b><br><span class="muted">${fmtDT(w.createdAt)}</span></td>
+        <td><b>${esc(w.title)}</b>${w.desc ? `<br><span class="muted">${esc(w.desc)}</span>` : ''}</td>
+      </tr>
+    </table>
+
+    <div style="background:rgba(0,0,0,.02);padding:10px 14px;border-radius:8px;border:1px solid var(--line);margin-bottom:14px">
+      <div style="font-weight:800;margin-bottom:4px">⚖️ ${lb('المطالبة بموجب شروط وبنود الضمان المعتمد:||Claim Action Demanded:')}</div>
+      <ul style="margin:0;padding-inline-start:18px;font-size:12px">
+        <li>${lb('إيفاد مندوب أو فني صيانة لمعاينة الموقع فوراً والتنسيق مع مهندس العمليات.||Immediate dispatch of authorized technician to inspect the asset.')}</li>
+        <li>${lb('استبدال القطع التالفة بقطع غيار أصلية جديدة مجاناً بالكامل دون تأخير.||Replacement of failed components with OEM spare parts at zero cost.')}</li>
+        <li>${lb('عدم تحميل المنشأة أية رسوم فحص أو أجور عمالة أو مصاريف انتقال.||Zero charge for labor, diagnosis, or travel.')}</li>
+      </ul>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;margin-top:18px;padding-top:10px;border-top:1px dashed var(--line);font-size:11.5px">
+      <div>${lb('مُصدر الإشعار||Issued by')}: <b>${esc(me ? me.name : 'إدارة الصيانة')}</b></div>
+      <div>${lb('التوقيع والاعتماد||Authorized Signature')}: ___________________</div>
+    </div>
+  </div>
+
+  <textarea id="claim_letter_copy_txt" style="display:none">${letterText}</textarea>
+
+  <div class="ma" style="margin-top:14px">
+    <button class="btn" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff" onclick="warrantyClaimWhatsApp('${encodeURIComponent(letterText)}')">💬 ${lb('إرسال عبر واتساب للمورّد||Send via WhatsApp')}</button>
+    <button class="btn ghost" onclick="warrantyClaimPrint()">🖨️ ${lb('طباعة الإشعار||Print Notice')}</button>
+    <button class="btn ghost" onclick="warrantyClaimCopy()">📋 ${lb('نسخ نص الإشعار||Copy Text')}</button>
+    <button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button>
+  </div>`);
+}
+
+function warrantyClaimPrint(){
+  const el = $('claim_letter_printable');
+  if(!el) return;
+  const w = window.open('','_blank','width=800,height=750');
+  w.document.write(`<!DOCTYPE html><html dir="${db.lang==='ar'?'rtl':'ltr'}"><head><meta charset="utf-8"><title>Warranty Claim Notice</title>
+  <style>body{font-family:system-ui,-apple-system,sans-serif;padding:24px;color:#1e293b;line-height:1.5}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid #cbd5e1;padding:8px 10px;text-align:start;font-size:12px}
+  th{background:#f1f5f9;font-weight:700}
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;background:#dcfce7;color:#166534;font-weight:700}
+  </style></head><body>${el.innerHTML}</body></html>`);
+  w.document.close();
+  setTimeout(()=>{ w.print(); }, 400);
+}
+
+function warrantyClaimWhatsApp(encodedTxt){
+  window.open('https://api.whatsapp.com/send?text=' + encodedTxt, '_blank');
+}
+
+function warrantyClaimCopy(){
+  const ta = $('claim_letter_copy_txt');
+  if(!ta) return;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(ta.value).then(()=>toast(lb('تم نسخ نص المطالبة بنجاح||Claim text copied'),'ok'));
+  } else {
+    ta.style.display='block';ta.select();document.execCommand('copy');ta.style.display='none';
+    toast(lb('تم نسخ نص المطالبة بنجاح||Claim text copied'),'ok');
+  }
+}
 
 /* ===== Vector icons (inline SVG — no emoji) ===== */
 const ICONS={
@@ -1920,9 +2188,14 @@ function migrate(d){
     d.ver=16;
     if(!Array.isArray(d.receipts))d.receipts=[];
   }
+  /* ---- v17: فِرق العمل وهيكل الصيانة (UpKeep-style Teams & Hierarchy) ---- */
+  if(d.ver<17){
+    d.ver=17;
+    if(!Array.isArray(d.teams))d.teams=[];
+  }
   /* ---- شبكة أمان تُنفَّذ دائماً (حتى مع أحدث ver) لضمان بيانات قابلة للاستخدام ---- */
   ['compounds','buildings','units','tenants','contracts','assets','wos','inv','moves','pms',
-   'suppliers','prs','pos','projects','employees','shifts','notifs','fuelLogs','utilityLogs','certs','providers','rfqs','pmTemplates','audit','orgs','receipts']
+   'suppliers','prs','pos','projects','employees','shifts','notifs','fuelLogs','utilityLogs','certs','providers','rfqs','pmTemplates','audit','orgs','receipts','teams']
    .forEach(k=>{if(!Array.isArray(d[k]))d[k]=[];});
   ['seq','prSeq','poSeq','rnSeq','prjSeq','ctSeq','rfqSeq'].forEach(k=>{if(d[k]==null)d[k]=0;});
   if(typeof d.lang!=='string')d.lang='ar';
@@ -1950,7 +2223,118 @@ function migrate(d){
     if(u.baths==null)u.baths=0;
     if(u.rent==null)u.rent=0;
   });
+
+  if(d.teams.length===0 && (d.users||[]).length>=2){
+    initFeDefaultTeams(d);
+  }
+  d.teams.forEach(t=>{
+    if(!t.id)t.id=uid('TM');
+    if(!Array.isArray(t.memberIds))t.memberIds=[];
+    if(!Array.isArray(t.autoCategories))t.autoCategories=[];
+    if(!t.specialty)t.specialty='general';
+    if(t.tier==null)t.tier=2;
+  });
+
   return d;
+}
+
+function initFeDefaultTeams(d){
+  if(!d || !Array.isArray(d.users) || d.users.length < 2) return;
+  const uEng = d.users.find(u => u.role === 'engineer') || d.users[1] || d.users[0];
+  const uSiteMgr = d.users.find(u => u.role === 'sitemgr') || d.users[2] || uEng;
+  const techs = d.users.filter(u => u.role === 'tech');
+  const uSami = techs[0] || uSiteMgr;
+  const uKhalid = techs[1] || uSami;
+  const defC = (d.compounds && d.compounds[0] && d.compounds[0].id) || null;
+  const tmOpsId = uid('TM');
+
+  d.teams = [
+    {
+      id: tmOpsId,
+      code: 'TM-OPS',
+      name: 'إدارة العمليات والصيانة المركزية',
+      desc: 'الإشراف الفني العام وتوزيع البلاغات وضمان الجودة والامتثال التشغيلي',
+      specialty: 'general',
+      leaderId: uEng.id,
+      leaderName: uEng.name,
+      memberIds: [uEng.id, uSiteMgr.id, uSami.id, uKhalid.id].filter(Boolean),
+      parentId: null,
+      compoundId: defC,
+      tier: 1,
+      color: '#2563eb',
+      shift: 'all',
+      autoCategories: ['أخرى', 'بوابة أوتوماتيكية'],
+      createdAt: Date.now() - 30 * 86400000
+    },
+    {
+      id: uid('TM'),
+      code: 'TM-HVAC',
+      name: 'فريق التكييف والتهوية الميكانيكية (HVAC)',
+      desc: 'صيانة وحدات التكييف المركزي، أنظمة السبليت، الدكت، وفلاتر الهواء والضواغط',
+      specialty: 'hvac',
+      leaderId: uSami.id,
+      leaderName: uSami.name,
+      memberIds: [uSami.id].filter(Boolean),
+      parentId: tmOpsId,
+      compoundId: defC,
+      tier: 2,
+      color: '#0284c7',
+      shift: 'morning',
+      autoCategories: ['تكييف سبليت', 'تكييف مركزي / دكت'],
+      createdAt: Date.now() - 25 * 86400000
+    },
+    {
+      id: uid('TM'),
+      code: 'TM-ELEC',
+      name: 'فريق الكهرباء وأنظمة الطاقة والإنارة',
+      desc: 'صيانة لوحات الكهرباء، المولدات الاحتياطية، شبكات الإنارة، وأنظمة السلامة',
+      specialty: 'electrical',
+      leaderId: uKhalid.id,
+      leaderName: uKhalid.name,
+      memberIds: [uKhalid.id].filter(Boolean),
+      parentId: tmOpsId,
+      compoundId: defC,
+      tier: 2,
+      color: '#d97706',
+      shift: 'evening',
+      autoCategories: ['لوحة كهرباء', 'إنارة داخلية', 'إنارة خارجية', 'مولد احتياطي', 'نظام إنذار حريق', 'كاشف دخان'],
+      createdAt: Date.now() - 25 * 86400000
+    },
+    {
+      id: uid('TM'),
+      code: 'TM-PLUMB',
+      name: 'فريق السباكة ومحطات المياه والمسابح',
+      desc: 'مضخات المياه، شبكات الصرف، سخانات المياه، وفلاتر المسابح ومحطات المعالجة',
+      specialty: 'plumbing',
+      leaderId: uSami.id,
+      leaderName: uSami.name,
+      memberIds: [uSami.id, uKhalid.id].filter(Boolean),
+      parentId: tmOpsId,
+      compoundId: defC,
+      tier: 2,
+      color: '#059669',
+      shift: 'morning',
+      autoCategories: ['مضخة مياه', 'سخان مياه', 'مضخة / فلتر مسبح', 'نظام معالجة مياه', 'جاكوزي / سبا', 'سباكة وصنابير', 'شبكة إطفاء / رشاشات'],
+      createdAt: Date.now() - 20 * 86400000
+    },
+    {
+      id: uid('TM'),
+      code: 'TM-EMERG',
+      name: 'فريق الاستجابة السريعة للطوارئ (24/7)',
+      desc: 'فريق التدخل الفوري للبلاغات الحرجة والطارئة والأعطال الجسيمة على مدار الساعة',
+      specialty: 'emergency',
+      leaderId: uSiteMgr.id,
+      leaderName: uSiteMgr.name,
+      memberIds: [uSiteMgr.id, uSami.id, uKhalid.id].filter(Boolean),
+      parentId: tmOpsId,
+      compoundId: defC,
+      tier: 1,
+      color: '#dc2626',
+      shift: 'oncall',
+      autoCategories: ['طفاية حريق', 'مصعد'],
+      createdAt: Date.now() - 15 * 86400000
+    }
+  ];
 }
 
 /* ===== BOOT (SERVER) ===== */
@@ -1983,12 +2367,14 @@ function freshDb(){
     {id:uid('U'),u:'store',p:demoPass(),defaultPw:true,name:'مسؤول المخزون',role:'store',phone:'',cmpIds:[],activeCmp:''},
     {id:uid('U'),u:'proc',p:demoPass(),defaultPw:true,name:'مسؤول المشتريات',role:'proc',phone:'',cmpIds:[],activeCmp:''}
   ],
+  teams:[],
   categories:['تكييف سبليت','تكييف مركزي / دكت','سخان مياه','مضخة مياه',
    'مضخة / فلتر مسبح','نظام معالجة مياه','جاكوزي / سبا','أجهزة الجيم','لوحة كهرباء','إنارة داخلية',
    'إنارة خارجية','مولد احتياطي','بوابة أوتوماتيكية','مصعد','نظام إنذار حريق','كاشف دخان',
    'طفاية حريق','شبكة إطفاء / رشاشات','سباكة وصنابير','أخرى'],
    compounds:[],buildings:[],units:[],tenants:[],contracts:[],assets:[],wos:[],inv:[],moves:[],pms:[],suppliers:[],prs:[],pos:[],
    projects:[],employees:[],shifts:[],notifs:[],providers:[],rfqs:[],pmTemplates:[],audit:[],orgs:[],woPhotoReq:false,receipts:[]};
+  initFeDefaultTeams(d);
   const addB=(name,type,floors)=>d.buildings.push({id:uid('B'),name,type,floors:floors.slice()});
   for(let i=1;i<=34;i++)addB('فيلا '+i,'villa',['الدور الأرضي','الدور الأول','الملحق']);
   addB('المسبح','area',['حمام السباحة','غرفة الفلاتر والمعدات']);
@@ -2147,7 +2533,8 @@ function setCmp(id){
 const COMMON_ROLES={dash:['admin','engineer','sitemgr','tech','store','proc','planner','supervisor','viewer'],wos:['admin','engineer','sitemgr','tech','planner','supervisor','viewer'],
   pm:['admin','engineer','sitemgr','planner','supervisor','viewer'],proj:['admin','engineer','sitemgr','planner','supervisor'],assets:['admin','engineer','sitemgr','planner','supervisor','viewer'],
   units:['admin','engineer','sitemgr','supervisor','viewer'],inv:['admin','engineer','store','planner'],proc:['admin','engineer','sitemgr','proc'],
-  contracts:['admin','engineer','sitemgr','supervisor','viewer'],hr:['admin','engineer'],rep:['admin','engineer','sitemgr','planner','supervisor','viewer'],users:['admin'],cmps:['admin'],
+  contracts:['admin','engineer','sitemgr','supervisor','viewer'],hr:['admin','engineer'],rep:['admin','engineer','sitemgr','planner','supervisor','viewer'],users:['admin'],
+  teams:['admin','engineer','sitemgr','tech','planner','supervisor','viewer'],cmps:['admin'],
   fuel:['admin','engineer','sitemgr'],utils:['admin','engineer','sitemgr'],certs:['admin','engineer','sitemgr','supervisor','viewer'],
   market:['admin','engineer']};
 function navDef(k){
@@ -2167,6 +2554,7 @@ function navDef(k){
     hr:['briefcase',d==='fleet'?lb('السائقون والموظفون||Drivers & workforce'):lb('الموظفون||Workforce')],
     rep:['chart',lb('التقارير||Reports')],
     users:['users',lb('المستخدمون||Users')],
+    teams:['users',lb('فِرق العمل والهيكل||Teams & Hierarchy')],
     market:['cart',lb('سوق المقدّمين||Provider Market')],
     fuel:['fuel',lb('سجل الوقود||Fuel log')],
     utils:['zap',lb('استهلاك المرافق||Utilities')],
@@ -2175,10 +2563,10 @@ function navDef(k){
   return L[k]||['home',k];
 }
 const DOMAIN_TABS={
-  realestate:['dash','wos','pm','proj','assets','units','utils','inv','proc','contracts','hr','rep','users','market'],
-  fleet:['dash','wos','pm','assets','fuel','inv','proc','contracts','proj','hr','rep','users','market'],
-  industrial:['dash','wos','pm','assets','utils','certs','contracts','inv','proc','proj','hr','rep','users','market'],
-  generic:['dash','wos','pm','assets','utils','contracts','inv','proc','proj','hr','rep','users','market']
+  realestate:['dash','wos','pm','proj','assets','units','utils','inv','proc','contracts','hr','rep','users','teams','market'],
+  fleet:['dash','wos','pm','assets','fuel','inv','proc','contracts','proj','hr','rep','users','teams','market'],
+  industrial:['dash','wos','pm','assets','utils','certs','contracts','inv','proc','proj','hr','rep','users','teams','market'],
+  generic:['dash','wos','pm','assets','utils','contracts','inv','proc','proj','hr','rep','users','teams','market']
 };
 /* شاشات إدارية لا تظهر في القائمة الجانبية — تُفتح من مبدّل الأصل في الهيدر */
 const HIDDEN_TABS=['cmps'];
@@ -2189,7 +2577,7 @@ function navItems(){
 }
 function tabAllowed(t){return HIDDEN_TABS.includes(t)||navItems().some(n=>n[0]===t);}
 function goTab(t){TAB=tabAllowed(t)?t:'dash';render();}
-function resetWOFilters(){FILT.wos='';FILT.woStatus='all';FILT.woPrio='all';FILT.woTech='all';FILT.woBld='all';FILT.woPreset='all';}
+function resetWOFilters(){FILT.wos='';FILT.woStatus='all';FILT.woPrio='all';FILT.woTech='all';FILT.woTeam='all';FILT.woBld='all';FILT.woPreset='all';}
 function dashStatus(st){resetWOFilters();FILT.woStatus=st;goTab('wos');}
 function sbFocus(){const sb=document.querySelector('#view .searchbar');if(sb){sb.focus();try{sb.setSelectionRange(sb.value.length,sb.value.length)}catch(e){}}}
 function togglePwVisibility(){
@@ -2836,6 +3224,7 @@ function paintTab(){
   else if(TAB==='proc'){v.innerHTML=vProc();paintProc();}
   else if(TAB==='rep')v.innerHTML=vRep();
   else if(TAB==='users')v.innerHTML=vUsers();
+  else if(TAB==='teams')v.innerHTML=vTeams();
   else if(TAB==='fuel')v.innerHTML=vFuel();
   else if(TAB==='utils')v.innerHTML=vUtils();
   else if(TAB==='certs')v.innerHTML=vCerts();
@@ -3027,7 +3416,8 @@ function pmGen(onlyId,force){
         db.seq++;const y=new Date().getFullYear();
         const ast=db.assets.find(a=>a.id===p.assetId)||{};
         const bld=db.buildings.find(b=>b.id===(ast.building||p.buildingId))||null;
-        if(g.meterDue&&ast&&ast.meter!=null&&ast.meter!=='')p.lastMeter=Number(ast.meter);
+        const tmId = p.teamId || (ast && ast.teamId) || '';
+        const tmName = p.teamName || (ast && (ast.teamName || ast.team)) || '';
         db.wos.unshift({no:'WO-'+y+'-'+String(db.seq).padStart(4,'0'),type:'pm',pmId:p.id,compoundId:p.compoundId||activeCmp(),
           title:(db.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name+(g.timeDue&&daysUntil(nextDueOf(p))<0?(db.lang==='ar'?' (متأخرة)':' (late)'):''),
           desc:p.tasks||'',assetId:p.assetId||'',assetName:ast?ast.name:'',assetLabel:ast&&ast.name?assetFullLabel(ast):'',
@@ -3035,6 +3425,7 @@ function pmGen(onlyId,force){
           priority:p.priority||'normal',status:(db.pmApproval!==false)?'planned':'open',approval:(db.pmApproval!==false)?'pending':'approved',auto:true,createdAt:Date.now(),startedAt:null,closedAt:null,projectId:'',
           unitId:'',unitCode:'',tenantName:'',
           dueDate:g.timeDue?nextDueOf(p):todayISO(),assigneeId:p.assigneeId||'',assigneeName:p.assigneeName||'',
+          teamId:tmId,teamName:tmName,
           cost:0,closeNotes:'',parts:[],photos:[],sig:'',
           estMins:p.estMins||stepsMins(p.steps)||0,skills:p.skills||'',tools:p.tools||'',permits:p.permits||'',safety:p.safety||'',
           tplId:p.tplId||'',tplVersion:p.tplVersion||0,leadDays:pmLead(p),graceDays:pmGrace(p),
@@ -3290,6 +3681,12 @@ function pmForm(pid){
       <option value="fixed" ${smode==='fixed'?'selected':''}>${lb('ثابت (من الاستحقاق السابق)||Fixed (from previous due)')}</option></select></div>
     <div><label>${lb('الأولوية||Priority')}</label><select id="fp_p">${['normal','high','urgent'].map(k=>`<option value="${k}" ${(p.priority||'normal')===k?'selected':''}>${PRIO[k]}</option>`).join('')}</select></div>
     <div><label>${lb('المدة التقديرية (دقيقة)||Est. duration (min)')}</label><input type="number" min="0" id="fp_e" value="${p.estMins||''}"></div>
+    <div><label>${lb('الفريق المسؤول (UpKeep Team)||Assigned Team')}</label>
+      <select id="fp_tm">
+        <option value="">${lb('— بدون فريق (فردي) —||— None (Individual) —')}</option>
+        ${(db.teams||[]).map(t=>`<option value="${t.id}" ${(p.teamId===t.id||p.team===t.name)?'selected':''}>${esc(t.name)}</option>`).join('')}
+      </select>
+    </div>
     <div><label>${lb('الفني المسؤول||Technician')}</label><select id="fp_as"><option value="">—</option>${techs.map(t=>`<option value="${t.id}" ${p.assigneeId===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
   </div>
   <label>${lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')}</label><textarea id="fp_t" rows="3">${esc(p.tasks||'')}</textarea>
@@ -3319,8 +3716,12 @@ function savePM(pid){
   const n=$('fp_n').value.trim();if(!n)return toast(lb(' الاسم مطلوب|| Name required'),'err');
   const tech=db.users.find(u=>u.id===$('fp_as').value);
   const tgt=$('fp_tt')?$('fp_tt').value:'asset';
+  const tmId=$('fp_tm')?$('fp_tm').value:'';
+  const tmObj=tmId?(db.teams||[]).find(t=>t.id===tmId):null;
   const o={name:n,compoundId:activeCmp(),freqVal:Math.max(1,+$('fp_fv').value||1),freqUnit:$('fp_fu').value,
-    lastDone:$('fp_l').value||todayISO(),assigneeId:$('fp_as').value||'',assigneeName:tech?tech.name:'',tasks:$('fp_t').value,
+    lastDone:$('fp_l').value||todayISO(),assigneeId:$('fp_as').value||'',assigneeName:tech?tech.name:'',
+    teamId:tmId,teamName:tmObj?tmObj.name:'',
+    tasks:$('fp_t').value,
     mEvery:+$('fp_me').value||0,
     leadDays:$('fp_ld').value===''?null:Math.max(0,Math.min(365,+$('fp_ld').value||0)),
     graceDays:Math.max(0,+$('fp_gr').value||0),
@@ -4591,7 +4992,7 @@ function bOpts(sel){return db.buildings.slice()
 function vAssets(){
   const act=activeCmp();
   const allCats = Array.from(new Set(db.assets.filter(a=>a.compoundId===act).map(a=>a.category).filter(Boolean))).sort();
-  const hasActive = !!(FILT.assets || (FILT.assetCat && FILT.assetCat !== 'all') || (FILT.assetStatus && FILT.assetStatus !== 'all'));
+  const hasActive = !!(FILT.assets || (FILT.assetCat && FILT.assetCat !== 'all') || (FILT.assetStatus && FILT.assetStatus !== 'all') || (FILT.assetWarranty && FILT.assetWarranty !== 'all'));
 
   return `<div class="toolbar">
     ${isEng()?`<button class="btn" onclick="assetForm()">＋ ${lb('إضافة أصل||Add Asset')}</button>
@@ -4615,7 +5016,15 @@ function vAssets(){
       ${Object.keys(ASTAT).map(k=>`<option value="${k}" ${(FILT.assetStatus||'all')===k?'selected':''}>${ASTAT[k][0]}</option>`).join('')}
     </select>
 
-    ${hasActive?`<button class="wo-reset-btn" onclick="FILT.assets='';FILT.assetCat='all';FILT.assetStatus='all';paintTab();drawAssetsTable()">
+    <select class="wo-facet-select" onchange="FILT.assetWarranty=this.value;drawAssetsTable()" title="${lb('تصفية حسب سريان الضمان||Filter by warranty')}">
+      <option value="all">${lb('كل حالات الضمان||All Warranties')}</option>
+      <option value="active" ${(FILT.assetWarranty||'all')==='active'?'selected':''}>🛡️ ${lb('ضمان سارٍ||Active Warranty')}</option>
+      <option value="expiring" ${(FILT.assetWarranty||'all')==='expiring'?'selected':''}>⚠️ ${lb('ينتهي قريباً (≤30 يوم)||Expiring Soon')}</option>
+      <option value="expired" ${(FILT.assetWarranty||'all')==='expired'?'selected':''}>⌛ ${lb('ضمان منتهٍ||Expired Warranty')}</option>
+      <option value="none" ${(FILT.assetWarranty||'all')==='none'?'selected':''}>— ${lb('بدون ضمان||No Warranty')}</option>
+    </select>
+
+    ${hasActive?`<button class="wo-reset-btn" onclick="FILT.assets='';FILT.assetCat='all';FILT.assetStatus='all';FILT.assetWarranty='all';paintTab();drawAssetsTable()">
       ✕ ${lb('إعادة ضبط||Reset')}
     </button>`:''}
   </div>
@@ -4636,6 +5045,16 @@ function drawAssetsTable(){
     if(FILT.assetStatus && FILT.assetStatus !== 'all'){
       list = list.filter(a => a.status === FILT.assetStatus);
     }
+    if(FILT.assetWarranty && FILT.assetWarranty !== 'all'){
+      list = list.filter(a => {
+        const info = assetWarrantyInfo(a);
+        if(FILT.assetWarranty === 'active') return info.isUnderWarranty;
+        if(FILT.assetWarranty === 'expiring') return info.isExpiringSoon;
+        if(FILT.assetWarranty === 'expired') return info.isExpired;
+        if(FILT.assetWarranty === 'none') return !info.hasWarranty;
+        return true;
+      });
+    }
     if(tokens.length){
       list = list.filter(a => matchSearchTokens([
         a.name, a.category, bName(a.building), a.floor, a.barcode,
@@ -4653,13 +5072,16 @@ function drawAssetsTable(){
     if(!list.length)rows=`<tr><td colspan="7"><div class="empty">${db.assets.filter(a=>a.compoundId===act).length?lb('لا نتائج مطابقة للبحث||No search matches'):lb('لا أصول بعد — اضغط «إضافة أصل»||No assets yet — click Add Asset')}</div></td></tr>`;
     list.forEach(a=>{
       const st=ASTAT[a.status]||ASTAT.ok;
-      const wr=a.warrantyend&&daysUntil(a.warrantyend)>=0&&daysUntil(a.warrantyend)<90;
+      const wInfo=assetWarrantyInfo(a);
+      const wCell=wInfo.hasWarranty
+        ? `${wInfo.badge}${a.warrantyVendor ? `<br><small class="muted" style="font-size:11px">${esc(a.warrantyVendor)}</small>` : ''}`
+        : `<span class="muted">—</span>`;
       const par=a.parentId?(db.assets.find(x=>x.id===a.parentId)||null):null;
       const kids=db.assets.filter(x=>x.parentId===a.id).length;
       rows+=`<tr><td><b>${highlightSearchText(a.name, FILT.assets)}</b>${a.critical==='critical'?' <span class="badge b-down">'+lb('حرج||Critical')+'</span>':a.critical==='high'?' <span class="badge b-maint">'+lb('عالية||High')+'</span>':''}${(a.photos&&a.photos.length)?' 📷':''}${a.meter!=null&&a.meter!==''?'<br><span class="muted">⏱ '+a.meter+' '+esc(a.meterUnit||'')+'</span>':''}${(a.manufacturer||a.model)?`<br><span class="muted">${esc([a.manufacturer,a.model].filter(Boolean).join(' / '))}</span>`:''}${par?`<br><span class="muted">↳ ${esc(par.name)}</span>`:''}${kids?` <span class="badge b-open" title="${lb('مكوّنات تابعة||Components')}">${kids}</span>`:''}${a.barcode?`<br><span class="muted" style="font-family:monospace;font-size:10.5px">🏷 ${esc(a.barcode)}</span>`:''}</td><td>${highlightSearchText(a.category||'—', FILT.assets)}</td>
       <td>${highlightSearchText(bName(a.building), FILT.assets)}${a.zone?`<br><span class="muted">${esc(a.zone)}${a.room?' / '+esc(a.room):''}</span>`:''}</td><td>${esc(a.floor||'—')}</td>
       <td><span class="badge ${st[1]}">${st[0]}</span></td>
-      <td>${wr?`<span class="badge b-prog">${fmtD(a.warrantyend)}</span>`:fmtD(a.warrantyend)}</td>
+      <td>${wCell}</td>
       ${isEng()?`<td nowrap><button class="btn sm ghost" title="${lb('صور ومستندات||Photos')}" onclick="assetPhotos('${a.id}')">${ic('cam',13)}</button>
         <button class="btn sm ghost" title=" ${lb('تسجيل قراءة عداد||Log meter')}" onclick="meterLog('${a.id}')">${ic('clock',13)}</button>
         <button class="btn sm ghost" title="${lb('ملصق QR للطباعة||Printable QR tag')}" onclick="assetTag('${a.id}')">${ic('tag',13)}</button>
@@ -5230,7 +5652,10 @@ function assetForm(id){
     <div><label>${lb('الطراز/الموديل||Model')}</label><input id="fa_m" value="${esc(a.model||'')}"></div>
     <div><label>${lb('رقم السيريال||Serial No.')}</label><input id="fa_s" value="${esc(a.serial||'')}"></div>
     <div><label>${lb('تاريخ التركيب||Installed')}</label><input type="date" id="fa_i" value="${a.installdate||''}"></div>
-    <div><label>${lb('انتهاء الضمان||Warranty End')}</label><input type="date" id="fa_w" value="${a.warrantyend||''}"></div>
+    <div><label>${lb('انتهاء الضمان||Warranty Expiration')}</label><input type="date" id="fa_w" value="${a.warrantyend||''}"></div>
+    <div><label>${lb('الشركة الضامنة / المورّد (UpKeep Vendor)||Warranty Provider / Vendor')}</label><input id="fa_wv" list="fa_supl" value="${esc(a.warrantyVendor||a.provider||'')}" placeholder="${lb('مثال: شركة الزامل للتكييف||e.g. Carrier Dealer')}"></div>
+    <div><label>${lb('رقم وثيقة/شهادة الضمان||Warranty Policy / Certificate No.')}</label><input id="fa_wr" value="${esc(a.warrantyRef||'')}" placeholder="WAR-2025-XXXX"></div>
+    <div style="grid-column:1/-1"><label>${lb('شروط ونطاق تغطية الضمان (قطع / عمالة / شامل)||Warranty Coverage Terms & Scope')}</label><input id="fa_wt" value="${esc(a.warrantyTerms||'')}" placeholder="${lb('مثال: ضمان شامل للكمبروسر والقطع الكهربائية والعمالة لمدة 5 سنوات||e.g. 5-year full parts and labor')}"></div>
     <div><label>${lb('الحالة||Status')}</label><select id="fa_st">${Object.keys(ASTAT).map(k=>`<option value="${k}" ${(a.status||'ok')===k?'selected':''}>${ASTAT[k][0]}</option>`).join('')}</select></div>
     <div><label> ${lb('قراءة العداد الحالية||Current Meter Reading')}</label><input type="number" step="any" min="0" id="fa_mr" value="${a.meter??''}" placeholder="مثال: 1250"></div>
     <div><label>${lb('وحدة العداد||Meter Unit')}</label><select id="fa_mu"><option value="">—</option>${['ساعة','كم','دورة'].map(u=>`<option ${a.meterUnit===u?'selected':''}>${u}</option>`).join('')}</select></div>
@@ -5240,7 +5665,12 @@ function assetForm(id){
       <option value="critical" ${a.critical==='critical'?'selected':''}>${lb('حرجة — تؤثر على التشغيل||Critical')}</option></select></div>
     <div><label>${lb('الجهة المسؤولة / مزوّد الخدمة||Responsible provider')}</label><input id="fa_pv" list="fa_supl" value="${esc(a.provider||'')}"><datalist id="fa_supl">${supOpts}</datalist></div>
     <div><label>${lb('الأصل الأب (مكوّن تابع له)||Parent asset (component of)')}</label><select id="fa_par"><option value="">—</option>${parOpts}</select></div>
-    <div><label>${lb('الفريق المسؤول||Responsible team')}</label><input id="fa_tm" value="${esc(a.team||'')}"></div>
+    <div><label>${lb('الفريق المسؤول (UpKeep Team)||Responsible team')}</label>
+      <select id="fa_tm">
+        <option value="">${lb('— بدون فريق محدد —||— None —')}</option>
+        ${(db.teams||[]).map(t=>`<option value="${t.id}" ${(a.teamId===t.id||a.team===t.name)?'selected':''}>${esc(t.name)}</option>`).join('')}
+      </select>
+    </div>
     ${dom==='fleet'?`
     <div><label>${lb('لوحة المركبة||Plate No.')}</label><input id="fa_pl" value="${esc(a.plate||'')}" placeholder="أ ب ج 1234"></div>
     <div><label>${lb('السائق||Driver')}</label><input id="fa_dr" list="fa_empdl" value="${esc(a.driver||'')}"><datalist id="fa_empdl">${empOpts}</datalist></div>
@@ -5267,12 +5697,18 @@ function fillFloors(sel){
 }
 function saveAsset(id){
   const name=$('fa_n').value.trim();if(!name)return toast(lb(' الاسم مطلوب|| Name required'),'err');
+  const tmId=$('fa_tm')?$('fa_tm').value:'';
+  const tmObj=tmId?(db.teams||[]).find(t=>t.id===tmId):null;
   const o={name,category:$('fa_c').value,building:$('fa_b').value,floor:$('fa_f').value,detail:$('fa_d').value,
     zone:$('fa_zn')?$('fa_zn').value.trim():'',room:$('fa_rm')?$('fa_rm').value.trim():'',
     manufacturer:$('fa_mf')?$('fa_mf').value.trim():'',model:$('fa_m').value,serial:$('fa_s').value,
     installdate:$('fa_i').value,warrantyend:$('fa_w').value,
+    warrantyVendor:$('fa_wv')?$('fa_wv').value.trim():'',
+    warrantyRef:$('fa_wr')?$('fa_wr').value.trim():'',
+    warrantyTerms:$('fa_wt')?$('fa_wt').value.trim():'',
     status:$('fa_st').value,notes:$('fa_no').value,
-    parentId:$('fa_par')?$('fa_par').value:'',team:$('fa_tm')?$('fa_tm').value.trim():'',
+    parentId:$('fa_par')?$('fa_par').value:'',
+    teamId:tmId,team:tmObj?tmObj.name:'',
     inspectionReq:$('fa_ir')?$('fa_ir').value.trim():'',docs:parseDocsTxt($('fa_docs')?$('fa_docs').value:''),
     meter:$('fa_mr').value===''||$('fa_mr').value==null?null:+$('fa_mr').value,meterUnit:$('fa_mu').value};
   o.compoundId=activeCmp();
@@ -5897,7 +6333,60 @@ function ctrCsv(){
   csvExport('contracts',[lb('الرقم||No.'),lb('المورد||Vendor'),lb('النطاق||Scope'),lb('البداية||Start'),lb('النهاية||End'),lb('القيمة||Value'),lb('الدورة||Cycle'),lb('الحالة||Status'),lb('المسؤول||Manager')],rows);
 }
 
-/* ===== WORK ORDERS ===== */
+/* ===== WORK ORDERS & TEAMS INTEGRATION (UpKeep Style) ===== */
+function myUserTeamIds(){
+  if(!me) return [];
+  return (db.teams||[]).filter(t=>t.leaderId===me.id || (t.memberIds||[]).includes(me.id)).map(t=>t.id);
+}
+function teamColor(tid){
+  if(!tid) return 'var(--brand)';
+  const t = (db.teams||[]).find(x => x.id === tid);
+  if(t && t.color) return t.color;
+  const spec = (t && t.specialty) || '';
+  const specColors = {
+    hvac: '#0284c7',
+    elec: '#d97706',
+    plumb: '#0d9488',
+    emergency: '#ef4444',
+    general: '#6366f1',
+    civil: '#8b5cf6',
+    elevator: '#ec4899',
+    fire: '#dc2626'
+  };
+  return specColors[spec] || '#0284c7';
+}
+function woClaim(i){
+  const w=db.wos[i];if(!w)return;
+  w.assigneeId = me.id;
+  w.assigneeName = me.name;
+  if(w.status==='open') w.status='inprog';
+  if(!w.startedAt) w.startedAt=Date.now();
+  auditLog('claim','wo',w.no,lb('استلام أمر الشغل وتكليف النفس به||Claimed and self-assigned by ')+me.name);
+  persist();
+  paintTab();
+  toast(lb('تم استلام أمر الشغل وتكليفك به بنجاح||Work order claimed successfully'),'ok');
+}
+function woTeamChanged(){
+  const tid = $('fw_team') ? $('fw_team').value : '';
+  const selTech = $('fw_as');
+  if(!selTech) return;
+  const act = activeCmp();
+  const allTechs = db.users.filter(u=>u.role==='tech'&&(u.cmpIds||[]).includes(act));
+  if(!tid){
+    selTech.innerHTML = `<option value="">— ${lb('اختر الفني المسؤول||Select Tech')} —</option>` +
+      allTechs.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('');
+    return;
+  }
+  const tm = (db.teams||[]).find(t => t.id === tid);
+  if(tm){
+    const tmMembers = allTechs.filter(u => (tm.memberIds||[]).includes(u.id) || tm.leaderId === u.id);
+    const otherTechs = allTechs.filter(u => !tmMembers.some(m => m.id === u.id));
+    selTech.innerHTML = `<option value="">— ${lb('فريق العمل فقط (بدون تحديد فرد)||Team Only (Unassigned)')} —</option>` +
+      (tmMembers.length ? `<optgroup label="${lb('أعضاء الفريق المختص||Team Members')}">${tmMembers.map(t=>`<option value="${t.id}" ${tm.leaderId===t.id?'style="font-weight:bold"':''}>${t.id===tm.leaderId?'👑 ':''}${esc(t.name)}</option>`).join('')}</optgroup>` : '') +
+      (otherTechs.length ? `<optgroup label="${lb('فنيون آخرون||Other Technicians')}">${otherTechs.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}</optgroup>` : '');
+  }
+}
+
 function durTxt(a,b){const m=Math.max(0,Math.round((a-b)/60000));
   if(m<60)return m+' '+lb('دقيقة||min');
   const h=m/60;return (h>=10?Math.round(h):h.toFixed(1))+' '+lb('ساعة||hr');}
@@ -5907,17 +6396,19 @@ function slaDue(){
 }
 function vWOs(){
   const act=activeCmp();
-  const rawList=(isTech()?db.wos.filter(w=>w.assigneeId===me.id):db.wos).filter(w=>w.compoundId===act);
+  const myTIds = myUserTeamIds();
+  const rawList=(isTech()?db.wos.filter(w=>w.assigneeId===me.id || (w.teamId && myTIds.includes(w.teamId))):db.wos).filter(w=>w.compoundId===act);
   let list = rawList;
 
   // 1. Presets (Saved Views inspired by UpKeep)
   const preset = FILT.woPreset || 'all';
-  if(preset === 'mine') list = list.filter(w => w.assigneeId === me.id && w.status !== 'closed');
+  if(preset === 'mine') list = list.filter(w => (w.assigneeId === me.id || (w.teamId && myTIds.includes(w.teamId))) && w.status !== 'closed');
   else if(preset === 'urgent') list = list.filter(w => w.status !== 'closed' && (w.priority === 'urgent' || w.priority === 'high'));
   else if(preset === 'overdue') list = list.filter(w => w.status !== 'closed' && w.dueDate && daysUntil(w.dueDate) < 0);
   else if(preset === 'parts') list = list.filter(w => w.status !== 'closed' && w.partsReady === false);
   else if(preset === 'deferred') list = list.filter(w => w.status === 'wait' && !!w.deferReason);
   else if(preset === 'review') list = list.filter(w => w.status === 'closed' && w.review === 'pending');
+  else if(preset === 'warranty') list = list.filter(w => w.isWarrantyClaim || (w.assetId && (()=>{const a=db.assets.find(x=>x.id===w.assetId);return a&&isAssetUnderWarranty(a);})()));
 
   // 2. Status Filter
   if(FILT.woStatus && FILT.woStatus !== 'all') list = list.filter(w => w.status === FILT.woStatus);
@@ -5927,6 +6418,12 @@ function vWOs(){
 
   // 4. Assignee / Tech Filter
   if(FILT.woTech && FILT.woTech !== 'all') list = list.filter(w => w.assigneeId === FILT.woTech);
+
+  // 4.5 Team Filter (UpKeep Multi-Team Dispatch)
+  if(FILT.woTeam && FILT.woTeam !== 'all') {
+    if(FILT.woTeam === 'none') list = list.filter(w => !w.teamId);
+    else list = list.filter(w => w.teamId === FILT.woTeam);
+  }
 
   // 5. Building / Location Filter
   if(FILT.woBld && FILT.woBld !== 'all') {
@@ -5944,7 +6441,7 @@ function vWOs(){
   if(tokens.length) {
     list = list.filter(w => matchSearchTokens([
       w.no, w.title, w.desc, w.assetLabel, w.assetName, w.bname, w.unitCode,
-      w.tenantName, w.assigneeName, w.deferReason, PRIO[w.priority], (WSTAT[w.status]||[])[0]
+      w.tenantName, w.assigneeName, w.teamName, w.deferReason, PRIO[w.priority], (WSTAT[w.status]||[])[0]
     ].filter(Boolean).join(' '), tokens));
   }
 
@@ -5954,9 +6451,10 @@ function vWOs(){
   const portalBadge=` <span class="badge b-open" title="${lb('من بوابة المستأجرين||From tenant portal')}">بوابة</span>`;
 
   // Preset Counts for UpKeep Saved Views
-  const cMine = rawList.filter(w => w.assigneeId === me.id && w.status !== 'closed').length;
+  const cMine = rawList.filter(w => (w.assigneeId === me.id || (w.teamId && myTIds.includes(w.teamId))) && w.status !== 'closed').length;
   const cUrgent = rawList.filter(w => w.status !== 'closed' && (w.priority === 'urgent' || w.priority === 'high')).length;
   const cOverdue = rawList.filter(w => w.status !== 'closed' && w.dueDate && daysUntil(w.dueDate) < 0).length;
+  const cWarranty = rawList.filter(w => w.isWarrantyClaim || (w.assetId && (()=>{const a=db.assets.find(x=>x.id===w.assetId);return a&&isAssetUnderWarranty(a);})())).length;
   const cParts = rawList.filter(w => w.status !== 'closed' && w.partsReady === false).length;
   const cDeferred = rawList.filter(w => w.status === 'wait' && !!w.deferReason).length;
   const cReview = rawList.filter(w => w.status === 'closed' && w.review === 'pending').length;
@@ -5968,8 +6466,9 @@ function vWOs(){
 
   const techs = db.users.filter(u => u.role === 'tech' && (u.cmpIds||[]).includes(act));
   const blds = db.buildings.filter(b => b.compoundId === act);
+  const teamsList = (db.teams || []).filter(t => !t.compoundId || t.compoundId === act);
 
-  const hasActiveFilters = !!(FILT.wos || (FILT.woStatus && FILT.woStatus !== 'all') || (FILT.woPrio && FILT.woPrio !== 'all') || (FILT.woTech && FILT.woTech !== 'all') || (FILT.woBld && FILT.woBld !== 'all') || (FILT.woPreset && FILT.woPreset !== 'all'));
+  const hasActiveFilters = !!(FILT.wos || (FILT.woStatus && FILT.woStatus !== 'all') || (FILT.woPrio && FILT.woPrio !== 'all') || (FILT.woTech && FILT.woTech !== 'all') || (FILT.woTeam && FILT.woTeam !== 'all') || (FILT.woBld && FILT.woBld !== 'all') || (FILT.woPreset && FILT.woPreset !== 'all'));
 
   return `<div class="toolbar">${isViewer()?'':`<button class="btn" onclick="woForm()">＋ ${lb('بلاغ عطل جديد||New Fault Report')}</button>`}
     ${isAdmin()?`<button class="btn ghost" onclick="settingsModal()">⚙ ${db.woPhotoReq?lb('صور الإغلاق: مطلوبة||Close photos: required'):lb('صور الإغلاق: اختيارية||Close photos: optional')}</button>`:''}
@@ -5979,9 +6478,10 @@ function vWOs(){
     <!-- UpKeep-Style Saved Views / Presets Bar -->
     <div class="wo-presets-bar">
       ${pChip('all', lb('📋 الكل||All'), rawList.length)}
-      ${pChip('mine', lb('👤 مهامي||My Tasks'), cMine)}
+      ${pChip('mine', lb('👤 مهامي وفريقي||My & Team Tasks'), cMine)}
       ${pChip('urgent', lb('🚨 عاجل/مرتفع||Urgent/High'), cUrgent)}
       ${pChip('overdue', lb('⏰ متأخرة||Overdue'), cOverdue)}
+      ${cWarranty ? pChip('warranty', lb('🛡️ تحت الضمان||Under Warranty'), cWarranty) : ''}
       ${cParts ? pChip('parts', lb('📦 نقص قطع||Parts Shortage'), cParts) : ''}
       ${cDeferred ? pChip('deferred', lb('⏸️ مؤجلة||Deferred'), cDeferred) : ''}
       ${cReview ? pChip('review', lb('📝 بانتظار المراجعة||Review'), cReview) : ''}
@@ -5994,12 +6494,18 @@ function vWOs(){
 
     <!-- Facets & Search Bar Row -->
     <div class="wo-facets-row">
-      <input class="searchbar" placeholder="${lb('🔍 ابحث بالرقم أو البلاغ أو الأصل أو الموقع أو الفني...||Search by no, report, asset, location, tech...')}" value="${esc(FILT.wos)}" oninput="FILT.wos=this.value;paintTab();sbFocus()">
+      <input class="searchbar" placeholder="${lb('🔍 ابحث بالرقم أو البلاغ أو الأصل أو الموقع أو الفني أو الفريق...||Search by no, report, asset, location, tech, team...')}" value="${esc(FILT.wos)}" oninput="FILT.wos=this.value;paintTab();sbFocus()">
 
       <select class="wo-facet-select" onchange="FILT.woPrio=this.value;paintTab()" title="${lb('تصفية حسب الأولوية||Filter by priority')}">
         <option value="all">${lb('كل الأولويات||All Priorities')}</option>
         ${Object.keys(PRIO).map(k=>`<option value="${k}" ${(FILT.woPrio||'all')===k?'selected':''}>${PRIO[k]}</option>`).join('')}
       </select>
+
+      ${teamsList.length?`<select class="wo-facet-select" onchange="FILT.woTeam=this.value;paintTab()" title="${lb('تصفية حسب الفريق||Filter by team')}">
+        <option value="all">${lb('كل الفِرق||All Teams')}</option>
+        <option value="none" ${(FILT.woTeam||'all')==='none'?'selected':''}>${lb('بدون فريق||No Team')}</option>
+        ${teamsList.map(t=>`<option value="${t.id}" ${(FILT.woTeam||'all')===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}
+      </select>`:''}
 
       ${techs.length?`<select class="wo-facet-select" onchange="FILT.woTech=this.value;paintTab()" title="${lb('تصفية حسب الفني||Filter by technician')}">
         <option value="all">${lb('كل الفنيين||All Technicians')}</option>
@@ -6018,11 +6524,11 @@ function vWOs(){
   </div>
 
   <div class="card"><h2>${lb('أوامر الشغل||Work Orders')} — ${list.length} ${lb('نتيجة||results')} ${hasActiveFilters?`<small style="font-size:12px;font-weight:600;color:var(--muted)">(${lb('مصفاة من أصل||filtered from')} ${rawList.length})</small>`:''}</h2><div class="tbl-wrap"><table>
-  <tr><th>${lb('الرقم||No.')}</th><th>${lb('البلاغ||Report')}</th><th>${lb('الأصل/الموقع||Asset/Loc')}</th><th>${lb('الأولوية||Priority')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الفني||Tech')}</th><th>${lb('واتساب||WhatsApp')}</th><th>${lb('فُتح||Opened')}</th><th>${lb('أُغلق||Closed')}</th><th></th></tr>
+  <tr><th>${lb('الرقم||No.')}</th><th>${lb('البلاغ||Report')}</th><th>${lb('الأصل/الموقع||Asset/Loc')}</th><th>${lb('الأولوية||Priority')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الفريق / الفني||Team / Tech')}</th><th>${lb('واتساب||WhatsApp')}</th><th>${lb('فُتح||Opened')}</th><th>${lb('أُغلق||Closed')}</th><th></th></tr>
   ${list.length?list.map(w=>{
     const od=w.status!=='closed'&&w.dueDate&&daysUntil(w.dueDate)<0;
     const isOpen=w.status!=='closed';
-    const isMine=isTech()?w.assigneeId===me.id:true;
+    const isMine=isTech()?(w.assigneeId===me.id || (w.teamId && myTIds.includes(w.teamId))):true;
     let acts=`<button class="btn sm ghost" title="${lb('عرض التفاصيل||View details')}" onclick="woView(${ix(w)})">${ic('view',13)}</button>`;
     if(w.status==='closed'||(w.photos&&w.photos.length)||w.sig||(w.checklist&&w.checklist.length)){
       acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff" title="${lb('شهادة إثبات العمل والامتثال (UpKeep Evidence)||Proof of Work Certificate')}" onclick="woEvidenceModal(${ix(w)})">🛡️ ${lb('إثبات||Evidence')}</button>`;
@@ -6041,17 +6547,24 @@ function vWOs(){
     if(isEng()){acts+=`<button class="btn sm ghost" onclick="woForm('${ix(w)}')">${ic('edit',13)}</button>
       <button class="btn sm danger" onclick="woDel(${ix(w)})">${ic('del',13)}</button>`;}
     const wa=(w.status!=='closed')?`<button class="btn sm ghost" title="${lb('إرسال واتساب||Send WhatsApp')}" onclick="waBtn(${ix(w)})">${ic('chat',13)}</button>`:'';
-    return `<tr class="${od?'overdue':''}"><td>${highlightSearchText(w.no, FILT.wos)}${w.type==='pm'?' <span class="badge b-maint">PM</span>':''}${w.status==='planned'?` <span class="badge b-open">${lb('مخطّط||Planned')}</span>`:''}${w.auto?` <span class="badge b-wait" title="${lb('أُنشئ تلقائياً||Auto-generated')}">${lb('تلقائي||Auto')}</span>`:''}${w.partsReady===false?` <span class="badge b-urgent" title="${lb('قطع غير متوفرة||Parts not ready')}">${lb('نقص قطع||Parts')}</span>`:''}${(w.status==='wait'&&w.deferReason)?` <span class="badge b-maint" title="${esc(w.deferReason)}">${lb('مؤجّل||Deferred')}</span>`:''}${(w.status==='closed'&&w.review==='pending')?` <span class="badge b-wait">${lb('بانتظار المراجعة||Review')}</span>`:''}${w.source==='portal'?portalBadge:''}${w.source==='corrective'?` <span class="badge b-down">${lb('تصحيحي||Corrective')}</span>`:''}${w.projectId?' <span class="badge b-open">مشروع</span>':''}${w.unitCode?' <span class="badge b-ok">وحدة</span>':''}</td>
+    const tmCol = w.teamName ? `<span class="badge" style="background:${teamColor(w.teamId)}20;color:${teamColor(w.teamId)};border:1px solid ${teamColor(w.teamId)}40;font-size:11px">👥 ${esc(w.teamName)}</span><br>` : '';
+    const techCol = w.assigneeName ? `<b>${highlightSearchText(w.assigneeName, FILT.wos)}</b>` : `<span class="badge b-wait">${lb('بانتظار الاستلام||Unassigned')}</span>`;
+    const claimBtn = (!w.assigneeId && w.status!=='closed' && (isTech()||isEng())) ? `<br><button class="btn sm" style="background:#0e7490;color:#fff;margin-top:4px" onclick="woClaim(${ix(w)})" title="${lb('استلام أمر الشغل وتكليفي به||Claim and self-assign')}">✋ ${lb('استلام||Claim')}</button>` : '';
+    const wClaimBadge = (w.isWarrantyClaim || (w.assetId && (()=>{const a=db.assets.find(x=>x.id===w.assetId);return a&&isAssetUnderWarranty(a);})()))
+      ? ` <span class="warranty-badge active" style="font-size:10px;padding:2px 6px;cursor:pointer" onclick="event.stopPropagation();warrantyClaimLetterModal(${ix(w)})" title="${lb('مطالبة ضمان — اضغط لإصدار الإشعار||Warranty Claim — click for notice')}">🛡️ ${lb('ضمان||Warranty')}</span>`
+      : '';
+
+    return `<tr class="${od?'overdue':''}"><td>${highlightSearchText(w.no, FILT.wos)}${wClaimBadge}${w.type==='pm'?' <span class="badge b-maint">PM</span>':''}${w.status==='planned'?` <span class="badge b-open">${lb('مخطّط||Planned')}</span>`:''}${w.auto?` <span class="badge b-wait" title="${lb('أُنشئ تلقائياً||Auto-generated')}">${lb('تلقائي||Auto')}</span>`:''}${w.partsReady===false?` <span class="badge b-urgent" title="${lb('قطع غير متوفرة||Parts not ready')}">${lb('نقص قطع||Parts')}</span>`:''}${(w.status==='wait'&&w.deferReason)?` <span class="badge b-maint" title="${esc(w.deferReason)}">${lb('مؤجّل||Deferred')}</span>`:''}${(w.status==='closed'&&w.review==='pending')?` <span class="badge b-wait">${lb('بانتظار المراجعة||Review')}</span>`:''}${w.source==='portal'?portalBadge:''}${w.source==='corrective'?` <span class="badge b-down">${lb('تصحيحي||Corrective')}</span>`:''}${w.projectId?' <span class="badge b-open">مشروع</span>':''}${w.unitCode?' <span class="badge b-ok">وحدة</span>':''}</td>
     <td><b>${highlightSearchText(w.title, FILT.wos)}</b><br><span class="muted">${highlightSearchText((w.desc||'').slice(0,55), FILT.wos)}</span></td>
     <td>${highlightSearchText(w.assetLabel||w.assetName||'—', FILT.wos)}<br><span class="muted">${esc([(w.assetLabel?'':w.bname),w.unitCode,w.tenantName].filter(Boolean).join(' · ')||'')}</span></td>
     <td><span class="badge b-${w.priority}">${PRIO[w.priority]}</span></td>
     <td><span class="badge ${WSTAT[w.status][1]}">${WSTAT[w.status][0]}</span></td>
-    <td>${highlightSearchText(w.assigneeName||'—', FILT.wos)}</td><td>${wa}</td><td>${fmtDT(w.createdAt)}</td>
+    <td>${tmCol}${techCol}${claimBtn}</td><td>${wa}</td><td>${fmtDT(w.createdAt)}</td>
     <td>${w.closedAt?`${fmtDT(w.closedAt)}<br><span class="muted">${durTxt(w.closedAt,w.startedAt||w.createdAt)}</span>`:'—'}</td>
     <td nowrap>${acts}</td></tr>`}).join(''):`<tr><td colspan="10"><div class="empty">${hasActiveFilters?lb('لا نتائج تطابق الفلاتر المحددة — اضغط «إعادة ضبط»||No results match active filters — click Reset'):lb('لا بلاغات||Nothing here')}</div></td></tr>`}
   </table></div></div>`;
 }
-function woForm(idx,presetAsset){
+function woForm(idx,presetAsset,presetTeam){
   const w=(idx!=null&&idx!==''&&db.wos[idx])?db.wos[idx]:{};
   const act=activeCmp();
   const techs=db.users.filter(u=>u.role==='tech'&&(u.cmpIds||[]).includes(act));
@@ -6062,6 +6575,10 @@ function woForm(idx,presetAsset){
   const prjOpts=db.projects.filter(p=>p.compoundId===act).map(p=>`<option value="${p.id}" ${w.projectId===p.id?'selected':''}>${esc(p.no)} — ${esc(p.name)}</option>`).join('');
   const uOpts=cmpUnits().slice().sort((a,b)=>String(a.code).localeCompare(String(b.code)))
     .map(u=>`<option value="${u.id}" ${w.unitId===u.id?'selected':''}>${esc(u.code)} — ${esc(bName(u.buildingId))}</option>`).join('');
+  const initialTeamId = w.teamId || presetTeam || (curAsset?curAsset.teamId:'') || '';
+  const initialTeam = (db.teams||[]).find(t => t.id === initialTeamId);
+  const teamMembers = initialTeam ? techs.filter(u => (initialTeam.memberIds||[]).includes(u.id) || initialTeam.leaderId === u.id) : [];
+
   modal(`<h3>${(idx!=null&&idx!==''&&db.wos[idx])?lb('تعديل بلاغ||Edit Report'):lb('بلاغ عطل جديد||New Fault Report')}</h3>
   <label>${lb('عنوان العطل *||Fault Title *')}</label><input id="fw_t" value="${esc(w.title||'')}">
   <div class="fg">
@@ -6069,13 +6586,24 @@ function woForm(idx,presetAsset){
     <div><label>${lb('الوحدة (اختياري)||Unit (optional)')}</label><select id="fw_u"><option value="">—</option>${uOpts}</select></div>
     <div><label>${lb('الموقع (يدوي)||Location (manual)')}</label><input id="fw_l" value="${esc(w.bname||'')}"></div>
     <div><label>${lb('الأولوية (تحدد الاستحقاق)||Priority (sets due date)')}</label><select id="fw_p" onchange="slaDue()">${Object.keys(PRIO).map(k=>`<option value="${k}" ${(w.priority||'normal')===k?'selected':''}>${PRIO[k]}</option>`).join('')}</select></div>
-    <div><label>${lb('إسناد إلى||Assign To')}</label><select id="fw_as"><option value="">—</option>${techs.map(t=>`<option value="${t.id}" ${(w.assigneeId||(!idx&&isTech()&&me?me.id:''))===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
+    <div><label>${lb('الفريق المسؤول (UpKeep Team)||Assigned Team')}</label>
+      <select id="fw_team" onchange="woTeamChanged()">
+        <option value="">${lb('— بدون فريق (فردي) —||— None (Individual) —')}</option>
+        ${(db.teams||[]).filter(t=>!t.compoundId||t.compoundId===act).map(t=>`<option value="${t.id}" ${initialTeamId===t.id?'selected':''}>${esc(t.name)} (${(t.memberIds||[]).length} ${lb('فني||techs')})</option>`).join('')}
+      </select>
+    </div>
+    <div><label>${lb('إسناد إلى فني||Assign To Tech')}</label><select id="fw_as">
+      <option value="">— ${lb('فريق العمل فقط (بدون تحديد)||Team Only (Unassigned)')} —</option>
+      ${techs.map(t=>`<option value="${t.id}" ${(w.assigneeId||(!idx&&isTech()&&me?me.id:''))===t.id?'selected':''}>${teamMembers.some(m=>m.id===t.id)?'⭐ ':''}${esc(t.name)}</option>`).join('')}
+    </select></div>
     <div><label>${lb('موعد الاستحقاق||Due Date')}</label><input type="date" id="fw_d" value="${w.dueDate||todayISO()}"></div>
     <div><label>${lb('مشروع مرتبط (اختياري)||Linked Project (optional)')}</label><select id="fw_pr"><option value="">—</option>${prjOpts}</select></div>
+    <div id="fw_warranty_box" style="grid-column:1/-1"></div>
   </div>
   <label>${lb('وصف المشكلة||Problem Description')}</label><textarea id="fw_de" rows="3">${esc(w.desc||'')}</textarea>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="saveWO('${idx??''}')">${lb('حفظ||Save')}</button></div>`);
+  window._fwInitIsWarranty = (w.isWarrantyClaim != null) ? !!w.isWarrantyClaim : (curAsset ? isAssetUnderWarranty(curAsset) : false);
   syncLoc(true);
   if(idx==null||idx==='')slaDue();
 }
@@ -6095,6 +6623,12 @@ function fwAsset(){
 function syncLoc(keep){
   const a=fwAsset();
   if(a&&(!keep||!$('fw_l').value))$('fw_l').value=bName(a.building);
+  if(a&&a.teamId&&$('fw_team')&&!$('fw_team').value){
+    $('fw_team').value=a.teamId;
+    woTeamChanged();
+  }
+  const curChk = $('fw_is_warranty') ? $('fw_is_warranty').checked : (window._fwInitIsWarranty ?? (a ? isAssetUnderWarranty(a) : false));
+  renderWoWarrantyAlert(a, curChk);
 }
 function saveWO(idxStr){
   const isNew=(idxStr===''||idxStr==null);
@@ -6104,18 +6638,29 @@ function saveWO(idxStr){
   const aid=a?a.id:'';
   const typed=String(($('fw_a')&&$('fw_a').value)||'').trim();
   const tech=db.users.find(u=>u.id===$('fw_as').value);
+  const tmId=$('fw_team')?$('fw_team').value:'';
+  const tmObj=tmId?(db.teams||[]).find(x=>x.id===tmId):null;
   const unSel=$('fw_u'),un=unSel?db.units.find(x=>x.id===unSel.value):null;
+  const isWarranty = !!($('fw_is_warranty') && $('fw_is_warranty').checked);
+  const wInfo = a ? assetWarrantyInfo(a) : null;
+  const prevW = !isNew ? (db.wos[idxStr]||{}) : {};
   const o={title:t,desc:$('fw_de').value,assetId:aid,assetName:a?a.name:'',assetLabel:a?assetFullLabel(a):'',
     bname:$('fw_l').value.trim()||(!a?typed:''),priority:$('fw_p').value,assigneeId:$('fw_as').value||'',
-    assigneeName:tech?tech.name:'',dueDate:$('fw_d').value,projectId:$('fw_pr')?$('fw_pr').value:'',
+    assigneeName:tech?tech.name:'',
+    teamId:tmId,teamName:tmObj?tmObj.name:'',
+    dueDate:$('fw_d').value,projectId:$('fw_pr')?$('fw_pr').value:'',
     unitId:un?un.id:'',unitCode:un?un.code:'',
-    tenantName:(un&&un.tenantId)?((db.tenants.find(x=>x.id===un.tenantId)||{}).name||''):''};
+    tenantName:(un&&un.tenantId)?((db.tenants.find(x=>x.id===un.tenantId)||{}).name||''):'',
+    isWarrantyClaim: isWarranty,
+    warrantyVendor: isWarranty && wInfo ? (wInfo.vendor || '') : (prevW.warrantyVendor || ''),
+    warrantyRef: isWarranty && wInfo ? (wInfo.ref || '') : (prevW.warrantyRef || ''),
+    warrantyExp: isWarranty && wInfo ? (wInfo.expDate || '') : (prevW.warrantyExp || '')};
   if(!isNew&&db.wos[idxStr])Object.assign(db.wos[idxStr],o);
   else{db.seq++;const y=new Date().getFullYear();
     db.wos.unshift(Object.assign({no:'WO-'+y+'-'+String(db.seq).padStart(4,'0'),type:'fault',compoundId:activeCmp(),
       status:'open',createdAt:Date.now(),startedAt:null,closedAt:null,cost:0,closeNotes:'',parts:[],photos:[],sig:'',
       reportedBy:me?me.name:''},o));
-    notify('',lb('بلاغ جديد: ||New fault: ')+t,'wos','');
+    notify('',(isWarranty?'🛡️ ['+lb('مطالبة ضمان||Warranty Claim')+'] ':'')+lb('بلاغ جديد: ||New fault: ')+t,'wos','');
   }
   if(o.assigneeId){
     const cmp=activeCmp()||'',woNo=isNew?db.wos[0].no:db.wos[idxStr].no;
@@ -6179,7 +6724,32 @@ function woDel(i){if(!confirm(lb('حذف البلاغ؟||Delete report?')))retur
 function woView(i){
   const w=db.wos[i];if(!w)return;
   const pj=w.projectId?db.projects.find(p=>p.id===w.projectId):null;
+  const myTids=(typeof myUserTeamIds==='function')?myUserTeamIds():[];
+  const canClaim=!w.assigneeId&&w.teamId&&w.status!=='closed'&&(isAdmin()||isEng()||myTids.includes(w.teamId));
+  const a=w.assetId?db.assets.find(x=>x.id===w.assetId):null;
+  const wInfo=a?assetWarrantyInfo(a):(w.warrantyExp?{hasWarranty:true,isUnderWarranty:daysUntil(w.warrantyExp)>=0,expDate:w.warrantyExp,vendor:w.warrantyVendor,ref:w.warrantyRef,badge:`<span class="warranty-badge active">🛡️ ${lb('سارٍ||Active')}</span>`}:null);
+  const showWarrantyAlert=!!(w.isWarrantyClaim||(wInfo&&wInfo.isUnderWarranty));
   modal(`<h3>${w.no} — ${esc(w.title)}</h3>
+  ${showWarrantyAlert ? `
+  <div class="warranty-alert-box ${wInfo&&wInfo.isExpiringSoon?'expiring':''}" style="margin:10px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:24px">🛡️</span>
+      <div>
+        <div style="font-weight:800;color:var(--brand)">
+          ${w.isWarrantyClaim?lb('مطالبة ضمان معتمدة (Warranty Claim)||Active Warranty Claim'):lb('الأصل مشمول بضمان معتمد||Asset Under Active Warranty')}
+          ${wInfo?wInfo.badge:`<span class="warranty-badge active">🛡️ ${lb('سارٍ||Active')}</span>`}
+        </div>
+        <div class="muted" style="font-size:12px">
+          ${lb('الضامن/المورّد||Provider')}: <b>${esc(w.warrantyVendor||(wInfo?wInfo.vendor:'')||'—')}</b>
+          ${(w.warrantyRef||(wInfo?wInfo.ref:''))?` · ${lb('رقم الوثيقة||Ref')}: <b>${esc(w.warrantyRef||(wInfo?wInfo.ref:''))}</b>`:''}
+          ${(w.warrantyExp||(wInfo?wInfo.expDate:''))?` · ${lb('انتهاء الضمان||Expires')}: <b>${fmtD(w.warrantyExp||(wInfo?wInfo.expDate:''))}</b>`:''}
+        </div>
+      </div>
+    </div>
+    <button class="btn sm" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff" onclick="warrantyClaimLetterModal(${i})">
+      📄 ${lb('إشعار مطالبة بالضمان||Warranty Claim Notice')}
+    </button>
+  </div>` : ''}
   <p class="muted">${esc(w.desc||'')}</p>
   <ul class="tl">
     <li> ${lb('فُتح||Opened')}: ${fmtDT(w.createdAt)} — ${esc(w.reportedBy||'')}</li>
@@ -6197,10 +6767,12 @@ function woView(i){
   ${w.followUpNo?`<p class="muted"> ${lb('إجراء تصحيحي مرتبط||Linked follow-up')}: <b>${esc(w.followUpNo)}</b></p>`:''}
   ${(w.reqParts&&w.reqParts.length)?`<label>${lb('قطع مطلوبة||Required parts')}</label><ul style="padding-inline-start:18px">${w.reqParts.map(p=>`<li>${esc(p.name)} × ${p.qty}</li>`).join('')}</ul>`:''}
   ${(w.steps&&w.steps.length)?`<label>${lb('خطوات العمل (Job Plan)||Job steps (Job Plan)')}</label><div class="tbl-wrap"><table><tr><th>#</th><th>${lb('المهمة||Task')}</th><th>${lb('دقائق||Min')}</th><th>${lb('التخصص||Trade')}</th><th>${lb('المواد||Materials')}</th><th>${lb('الأدوات||Tools')}</th><th>${lb('السلامة||Safety')}</th></tr>${w.steps.map(s=>`<tr><td>${s.seq||''}</td><td>${esc(s.t||'')}</td><td>${s.mins||''}</td><td>${esc(s.trade||'')}</td><td>${esc(s.mats||'')}</td><td>${esc(s.tools||'')}</td><td>${esc(s.safety||'')}</td></tr>`).join('')}</table></div>`:''}
-  <table><tr><th>${lb('الأولوية||Priority')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الفني||Tech')}</th><th>${lb('التكلفة||Cost')}</th></tr>
+  <table><tr><th>${lb('الأولوية||Priority')}</th><th>${lb('الحالة||Status')}</th><th>${lb('فريق العمل||Team')}</th><th>${lb('الفني||Tech')}</th><th>${lb('التكلفة||Cost')}</th></tr>
   <tr><td><span class="badge b-${w.priority}">${PRIO[w.priority]}</span></td>
   <td><span class="badge ${WSTAT[w.status][1]}">${WSTAT[w.status][0]}</span></td>
-  <td>${esc(w.assigneeName||'—')}</td><td>${money(w.cost)}</td></tr></table>
+  <td>${w.teamName?`<span class="badge" style="background:#e0e7ff;color:#3730a3;font-weight:700">👥 ${esc(w.teamName)}</span>`:`<span class="muted">—</span>`}</td>
+  <td>${w.assigneeName?esc(w.assigneeName):`<span class="badge" style="background:#fef3c7;color:#92400e">${lb('غير مخصص (في قائمة الفريق)||Unassigned (Team Queue)')}</span>`}</td>
+  <td>${money(w.cost)}</td></tr></table>
   ${(w.photos&&w.photos.length)?`<label> ${lb('صور التوثيق||Documentation Photos')}</label><div class="pgrid">${w.photos.map(p=>`<span class="phwrap"><img class="pthumb" loading="lazy" src="${p.d}" onclick="lbShow('${phReg(p.d)}')"><span class="phtag">${p.tag==='before'?lb('قبل||BEFORE'):lb('بعد||AFTER')}</span></span>`).join('')}</div>`:''}
   ${w.sig?`<label> ${lb('توقيع المنفّذ||Technician Signature')}</label><br><img class="sigimg" src="${w.sig}">`:''}
   ${(w.parts&&w.parts.length)?`<label>${lb('قطع الغيار المستخدمة||Parts Used')}</label><ul style="padding-inline-start:18px">${w.parts.map(p=>`<li>${esc(p.name)} × ${p.qty}</li>`).join('')}</ul>`:''}
@@ -6208,6 +6780,7 @@ function woView(i){
   ${w.closeNotes?`<label>${lb('ملاحظات الإغلاق||Closing Notes')}</label><p>${esc(w.closeNotes)}</p>`:''}
   ${w.status==='planned'?`<p class="muted">${lb('بانتظار الاعتماد — أُنشئ تلقائياً بواسطة المجدول||Awaiting approval — auto-generated by the scheduler')}${w.partsReady===false?` · ${lb('بعض القطع غير متوفرة||some parts are not available')}`:''}</p>`:''}
   <div class="ma">
+  ${canClaim?`<button class="btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff" onclick="closeModal();woClaim(${i})">✋ ${lb('استلام أمر الشغل وتكليفي به||Claim Work Order')}</button>`:''}
   ${(w.status==='planned'&&canAppr())?`<button class="btn" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="closeModal();woApprove(${i})">${lb('اعتماد||Approve')}</button>
   <button class="btn ghost" onclick="closeModal();woDismiss(${i})">${lb('رفض||Dismiss')}</button>`:''}
   <button class="btn" style="background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff" onclick="closeModal();woEvidenceModal(${i})">🛡️ ${lb('شهادة إثبات العمل والامتثال (UpKeep Evidence)||Evidence & Proof of Work')}</button>
@@ -6216,6 +6789,9 @@ function woView(i){
 }
 function woCloseForm(i){
   const w=db.wos[i];if(!w)return;
+  const a=w.assetId?db.assets.find(x=>x.id===w.assetId):null;
+  const isW=!!(w.isWarrantyClaim||(a&&isAssetUnderWarranty(a)));
+  const wVendor=w.warrantyVendor||(a?(a.warrantyVendor||a.provider):'')||lb('المورّد الضامن||Warranty Provider');
   let ck='';
   if(w.checklist&&w.checklist.length){
     ck=`<label>${lb('قائمة الفحص والتحقق (Checklist Evidence)||Inspection Checklist')}</label>`+
@@ -6231,6 +6807,16 @@ function woCloseForm(i){
   }
   modal(`<h3> ${lb('إغلاق أمر الشغل||Close Work Order')} ${w.no}</h3>
   <p class="muted">${esc(w.title)}</p>
+  ${isW ? `
+  <div class="warranty-alert-box" style="margin:10px 0;padding:10px 14px;border-left:4px solid #10b981;border-right:4px solid #10b981">
+    <div style="font-weight:800;color:#047857;display:flex;align-items:center;gap:6px">
+      <span>🛡️</span>
+      <span>${lb('تنبيه تسوية تكاليف الضمان (Warranty Recovery Advisory)||Warranty Cost Recovery Notice')}</span>
+    </div>
+    <div style="font-size:12px;color:var(--ink);margin-top:4px">
+      ${lb('هذا الأصل تحت الضمان المعتمد. أي قطع غيار مستهلكة أو أجور عمالة مسجلة هنا يجب فوترتها ومطالبة المورّد (' + esc(wVendor) + ') بالتعويض عنها.||This asset is under active warranty. Any parts consumed or labor logged here should be reclaimed from the vendor.')}
+    </div>
+  </div>` : ''}
   ${ck}
   <label>${lb('ما الذي تم عمله؟||What was done?')}</label><textarea id="wc_n" rows="2"></textarea>
   <div class="fg"><div><label>${lb('تكلفة العمالة (ريال)||Labor Cost (SAR)')}</label><input type="number" step="any" id="wc_c" value="0"></div></div>
@@ -7994,13 +8580,18 @@ function vUsers(){
     <button class="btn ghost" onclick="auditModal('')">${lb('سجل التدقيق||Audit log')}</button>
     <button class="btn ghost" onclick="settingsModal()">⚙ ${lb('الإعدادات||Settings')}</button></div>
   <div class="card"><h2>${lb('المستخدمون||Users')} (${db.users.length})</h2><div class="tbl-wrap"><table>
-  <tr><th>${lb('الاسم||Name')}</th><th>${lb('الدخول||Username')}</th><th>${lb('الدور||Role')}</th><th>${lb('الجوال||Mobile')}</th><th>${lb('المجمعات||Compounds')}</th><th></th></tr>
-  ${db.users.map(u=>`<tr><td><b>${esc(u.name)}</b></td><td>${esc(u.u)}${u.email?`<br><span class="muted" dir="ltr">${esc(u.email)}</span>`:''}</td>
+  <tr><th>${lb('الاسم||Name')}</th><th>${lb('الدخول||Username')}</th><th>${lb('الدور||Role')}</th><th>${lb('فِرق العمل||Teams')}</th><th>${lb('الجوال||Mobile')}</th><th>${lb('المجمعات||Compounds')}</th><th></th></tr>
+  ${db.users.map(u=>{
+    const uTeams=(db.teams||[]).filter(t=>(t.memberIds||[]).includes(u.id)||t.leaderId===u.id);
+    const teamChips=uTeams.length?uTeams.map(t=>`<span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:11px;margin:2px">${t.leaderId===u.id?'👑 ':''}${esc(t.name.split('||')[0])}</span>`).join(' '):`<span class="muted">—</span>`;
+    return `<tr><td><b>${esc(u.name)}</b></td><td>${esc(u.u)}${u.email?`<br><span class="muted" dir="ltr">${esc(u.email)}</span>`:''}</td>
     <td><span class="badge ${u.role==='admin'?'b-down':u.role==='tech'?'b-open':'b-prog'}">${ROLES[u.role]}</span></td>
+    <td>${teamChips}</td>
     <td>${esc(u.phone||'—')}</td>
     <td>${u.role==='admin'?`<span class="badge b-ok">${lb('الكل||All')}</span>`:(u.cmpIds||[]).map(id=>cmpName(id)).join('، ')||'—'}</td>
     <td nowrap><button class="btn sm ghost" onclick="userForm('${u.id}')">${ic('edit',13)}</button>
-    ${u.id!==me.id?`<button class="btn sm danger" onclick="delUser('${u.id}')">${ic('del',13)}</button>`:`<span class="muted">${lb('أنت||You')}</span>`}</td></tr>`).join('')}
+    ${u.id!==me.id?`<button class="btn sm danger" onclick="delUser('${u.id}')">${ic('del',13)}</button>`:`<span class="muted">${lb('أنت||You')}</span>`}</td></tr>`;
+  }).join('')}
   </table></div></div>
   <p class="muted"> ${lb('رقم الجوال مطلوب لإرسال البلاغات عبر واتساب للفنيين.||Mobile number is needed for WhatsApp reports to technicians.')}</p>`;
 }
@@ -8020,6 +8611,17 @@ function userForm(id){
     ${db.compounds.map(c=>`<option value="${c.id}" ${(u.cmpIds||[])[0]===c.id?'selected':''}>${esc(c.name)} — ${KINDL()[c.kind||'property']||''}</option>`).join('')}
   </select>
   <p class="muted">${lb('كل مستخدم أو فني مرتبط بأصل واحد فقط. لو الفني يعمل في أكثر من أصل، أنشئ له حساباً مستقلاً لكل أصل حتى لا تتداخل بياناته.||Each user or technician belongs to one asset only. If a technician works in several assets, create a separate account for each so their data never mixes.')}</p>
+  <label>${lb('فِرق العمل المنتمي إليها (UpKeep Team Membership)||Assigned Teams')}</label>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;background:rgba(0,0,0,.03);padding:10px;border-radius:8px;border:1px solid var(--line)">
+    ${(db.teams||[]).map(t=>{
+      const isMem=(t.memberIds||[]).includes(u.id);
+      const isLead=t.leaderId===u.id;
+      return `<label style="display:inline-flex;align-items:center;gap:6px;margin:0;font-size:12px;cursor:pointer">
+        <input type="checkbox" class="fu_team_ck" value="${t.id}" ${isMem||isLead?'checked':''}>
+        <span>${esc(t.name.split('||')[0])}</span> <span class="muted">(${esc(t.code)})${isLead?' 👑 '+lb('قائد||Lead'):''}</span>
+      </label>`;
+    }).join('')||`<span class="muted">${lb('لا توجد فِرق عمل معرّفة بعد||No teams defined yet')}</span>`}
+  </div>
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="saveUser('${id||''}')">${lb('حفظ||Save')}</button></div>`);
 }
@@ -8040,17 +8642,606 @@ async function saveUserAsync(id,n,un,p,email){
   if(role!=='admin'&&!cmpIds.length)return toast(lb(' اختر أصلاً لهذا المستخدم|| Pick an asset for this user'),'err');
   const phone=$('fu_ph').value.trim();
   const pHash=p?await hashLocalPw(p):'';    /* نُخزّن نسخة مشفّرة مطابقة للخادم */
+  const targetId=id||uid('U');
+  const checkedTeamIds=Array.from(document.querySelectorAll('.fu_team_ck:checked')).map(el=>el.value);
+  (db.teams||[]).forEach(t=>{
+    if(!Array.isArray(t.memberIds)) t.memberIds=[];
+    const had=t.memberIds.includes(targetId);
+    const should=checkedTeamIds.includes(t.id);
+    if(should&&!had) t.memberIds.push(targetId);
+    else if(!should&&had&&t.leaderId!==targetId) t.memberIds=t.memberIds.filter(mid=>mid!==targetId);
+  });
   if(id){const x=db.users.find(y=>y.id===id);
     const upd={name:n,u:un,email,role,phone,cmpIds,activeCmp:(x.activeCmp&&(cmpIds.includes(x.activeCmp)||role==='admin'))?x.activeCmp:''};
     if(p){upd.p=pHash;upd.defaultPw=(p==='1234');} /* فارغة = إبقاء القديمة؛ الجديدة الافتراضية تُعلَّم للتغيير */
     Object.assign(x,upd);
     if(id===me.id)AUTH.mustChange=false;}
-  else db.users.push({id:uid('U'),name:n,u:un,p:pHash,email,role,phone,cmpIds,activeCmp:'',defaultPw:(p==='1234')});
+  else db.users.push({id:targetId,name:n,u:un,p:pHash,email,role,phone,cmpIds,activeCmp:'',defaultPw:(p==='1234')});
   SAVE.usersIntent=true;
   persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
 function delUser(id){if(!confirm(lb('حذف المستخدم؟||Delete user?')))return;
-  db.users=db.users.filter(u=>u.id!==id);SAVE.usersIntent=true;persist();paintTab();}
+  db.users=db.users.filter(u=>u.id!==id);
+  (db.teams||[]).forEach(t=>{
+    if(t.memberIds) t.memberIds=t.memberIds.filter(mid=>mid!==id);
+    if(t.leaderId===id){t.leaderId='';t.leaderName='';}
+  });
+  SAVE.usersIntent=true;persist();paintTab();}
+
+/* ============================================================
+   فِرق العمل والهيكل التنظيمي الهرمي (Teams & Hierarchy — UpKeep CMMS Model)
+   يدعم: الهيكل الهرمي، التوزيع التلقائي، استلام البلاغات، وإدارة الكوادر
+   ============================================================ */
+const TEAM_SPEC_L = {
+  general: ['إدارة وعمليات عامة', 'General / Operations'],
+  hvac: ['تكييف وتبريد', 'HVAC'],
+  elec: ['كهرباء وأنظمة طاقة', 'Electrical'],
+  plumb: ['سباكة وشبكات مياه', 'Plumbing'],
+  emergency: ['طوارئ واستجابة سريعة', 'Emergency 24/7'],
+  civil: ['مدني وتشطيبات', 'Civil & Finishing'],
+  elevator: ['مصاعد وسلالم متحركة', 'Elevators'],
+  fire: ['إطفاء وسلامة', 'Fire & Safety'],
+  other: ['أخرى', 'Other']
+};
+function teamSpecL(k){
+  const e = TEAM_SPEC_L[k] || TEAM_SPEC_L.other;
+  return lb(e[0] + '||' + e[1]);
+}
+
+function vTeams(){
+  const teams = db.teams || [];
+  const techs = (db.users || []).filter(u => u.role === 'tech');
+  const openTeamWos = (db.wos || []).filter(w => w.teamId && w.status !== 'closed');
+  const unassignedWos = (db.wos || []).filter(w => w.teamId && !w.assigneeId && w.status !== 'closed');
+
+  return `<div class="toolbar" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div style="display:inline-flex;background:rgba(0,0,0,.06);padding:3px;border-radius:10px;gap:4px">
+      <button class="btn sm ${TEAM_TAB==='directory'?'':'ghost'}" onclick="teamSetTab('directory')">📋 ${lb('دليل الفِرق والكوادر||Teams Directory')}</button>
+      <button class="btn sm ${TEAM_TAB==='hierarchy'?'':'ghost'}" onclick="teamSetTab('hierarchy')">🌳 ${lb('الهيكل التنظيمي الهرمي||Hierarchy Tree')}</button>
+      <button class="btn sm ${TEAM_TAB==='dispatch'?'':'ghost'}" onclick="teamSetTab('dispatch')">⚡ ${lb('مصفوفة التوزيع التلقائي||Auto-Dispatch Rules')}</button>
+    </div>
+    <div style="display:inline-flex;gap:8px">
+      ${(isAdmin()||isEng())?`<button class="btn" onclick="teamForm()">＋ ${lb('فريق عمل جديد||New Team')}</button>`:''}
+      <button class="btn ghost" onclick="teamExportCsv()">📥 ${lb('تصدير CSV||Export CSV')}</button>
+    </div>
+  </div>
+
+  <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin:12px 0 18px 0">
+    <div class="card" style="padding:14px;border-inline-start:4px solid var(--brand)">
+      <div class="muted" style="font-size:12px;font-weight:700">👥 ${lb('إجمالي فِرق العمل||Total Teams')}</div>
+      <div style="font-size:24px;font-weight:900;color:var(--ink);margin-top:4px">${teams.length}</div>
+    </div>
+    <div class="card" style="padding:14px;border-inline-start:4px solid #0284c7">
+      <div class="muted" style="font-size:12px;font-weight:700">👷 ${lb('فنيو الميدان النشطون||Active Field Techs')}</div>
+      <div style="font-size:24px;font-weight:900;color:var(--ink);margin-top:4px">${techs.length}</div>
+    </div>
+    <div class="card" style="padding:14px;border-inline-start:4px solid #d97706">
+      <div class="muted" style="font-size:12px;font-weight:700">📋 ${lb('أوامر شغل الفِرق المفتوحة||Open Team WOs')}</div>
+      <div style="font-size:24px;font-weight:900;color:var(--ink);margin-top:4px">${openTeamWos.length}</div>
+    </div>
+    <div class="card" style="padding:14px;border-inline-start:4px solid #ef4444">
+      <div class="muted" style="font-size:12px;font-weight:700">✋ ${lb('في قائمة انتظار الفريق (غير مخصص)||In Team Queue (Unassigned)')}</div>
+      <div style="font-size:24px;font-weight:900;color:var(--ink);margin-top:4px">${unassignedWos.length}</div>
+    </div>
+  </div>
+
+  ${TEAM_TAB === 'hierarchy' ? vTeamsHierarchyTree() : (TEAM_TAB === 'dispatch' ? vTeamsDispatchRules() : vTeamsDirectory())}
+  `;
+}
+
+function teamSetTab(t){
+  TEAM_TAB = t;
+  paintTab();
+}
+
+function vTeamsDirectory(){
+  const teams = db.teams || [];
+  const q = String(TEAM_FILT_Q || '').trim().toLowerCase();
+  const spec = TEAM_FILT_SPEC || 'all';
+
+  const filtered = teams.filter(t => {
+    if(spec !== 'all' && t.specialty !== spec) return false;
+    if(q){
+      const tName = lb(t.name || '').toLowerCase();
+      const tCode = String(t.code || '').toLowerCase();
+      const tDesc = lb(t.desc || '').toLowerCase();
+      const lName = String(t.leaderName || '').toLowerCase();
+      const memNames = (t.memberIds || []).map(mid => {
+        const u = (db.users || []).find(x => x.id === mid);
+        return u ? u.name.toLowerCase() : '';
+      }).join(' ');
+      if(!tName.includes(q) && !tCode.includes(q) && !tDesc.includes(q) && !lName.includes(q) && !memNames.includes(q)) return false;
+    }
+    return true;
+  });
+
+  return `<div class="card" style="margin-bottom:14px">
+    <div class="facets" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="search" placeholder="🔍 ${lb('بحث في الفِرق، القادة، والأعضاء…||Search teams, leaders, members…')}" value="${esc(TEAM_FILT_Q)}" oninput="TEAM_FILT_Q=this.value;paintTab()" style="min-width:240px;flex:1">
+      <select onchange="TEAM_FILT_SPEC=this.value;paintTab()" style="max-width:200px">
+        <option value="all" ${spec==='all'?'selected':''}>🏷️ ${lb('كل التخصصات||All Specialties')}</option>
+        <option value="general" ${spec==='general'?'selected':''}>🏢 ${lb('إدارة وعمليات عامة||General / Operations')}</option>
+        <option value="hvac" ${spec==='hvac'?'selected':''}>❄️ ${lb('تكييف وتبريد||HVAC')}</option>
+        <option value="elec" ${spec==='elec'?'selected':''}>⚡ ${lb('كهرباء وأنظمة طاقة||Electrical')}</option>
+        <option value="plumb" ${spec==='plumb'?'selected':''}>🚰 ${lb('سباكة وشبكات مياه||Plumbing')}</option>
+        <option value="emergency" ${spec==='emergency'?'selected':''}>🚨 ${lb('طوارئ واستجابة سريعة||Emergency 24/7')}</option>
+        <option value="civil" ${spec==='civil'?'selected':''}>🧱 ${lb('مدني وتشطيبات||Civil & Finishing')}</option>
+        <option value="elevator" ${spec==='elevator'?'selected':''}>🛗 ${lb('مصاعد||Elevators')}</option>
+      </select>
+    </div>
+  </div>
+
+  ${filtered.length ? `<div class="teams-grid">
+    ${filtered.map(t => {
+      const color = teamColor(t.id);
+      const parent = t.parentId ? (db.teams || []).find(x => x.id === t.parentId) : null;
+      const leader = t.leaderId ? (db.users || []).find(x => x.id === t.leaderId) : null;
+      const mems = (t.memberIds || []).map(mid => (db.users || []).find(x => x.id === mid)).filter(Boolean);
+      const openWOs = (db.wos || []).filter(w => w.teamId === t.id && w.status !== 'closed');
+      const unassignedCount = openWOs.filter(w => !w.assigneeId).length;
+      const shiftLabels = { morning: lb('صباحي||Morning'), evening: lb('مسائي||Evening'), night: lb('ليلي||Night'), '24/7': lb('طوارئ 24/7||24/7 Emergency') };
+
+      return `<div class="team-card">
+        <div class="team-color-bar" style="background:${color}"></div>
+        <div class="team-card-inner">
+          <div class="team-card-head">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span class="team-code-badge" style="border:1px solid ${color};color:${color}">${esc(t.code || 'TEAM')}</span>
+              <span class="badge" style="background:rgba(0,0,0,.05);font-size:11px">${teamSpecL(t.specialty || 'general')}</span>
+              ${t.shift ? `<span class="badge b-ok" style="font-size:10.5px">${shiftLabels[t.shift] || t.shift}</span>` : ''}
+            </div>
+            ${(isAdmin()||isEng()) ? `<div style="display:inline-flex;gap:4px">
+              <button class="btn sm ghost" onclick="teamForm('${t.id}')">${ic('edit',13)}</button>
+              <button class="btn sm danger" onclick="delTeam('${t.id}')">${ic('del',13)}</button>
+            </div>` : ''}
+          </div>
+
+          <div>
+            <h3 class="team-title">${esc(lb(t.name))}</h3>
+            ${parent ? `<div class="team-parent-crumb">↳ ${lb('تابعة لـ||Sub-team of')}: <b>${esc(lb(parent.name))}</b></div>` : `<div class="team-parent-crumb" style="color:var(--brand)">⭐ ${lb('فريق رئيسي (Tier 1 Parent Team)||Tier 1 Parent Team')}</div>`}
+            ${t.desc ? `<p class="team-desc" style="margin-top:6px">${esc(lb(t.desc))}</p>` : ''}
+          </div>
+
+          <!-- Leader Box -->
+          <div class="team-leader-box">
+            <div class="team-leader-avatar">${(leader && leader.name ? leader.name.charAt(0) : '👑').toUpperCase()}</div>
+            <div style="flex:1;overflow:hidden">
+              <div style="font-size:11px;font-weight:700;color:var(--brand);text-transform:uppercase">${lb('قائد الفريق (Team Lead)||Team Lead')}</div>
+              <div style="font-size:13px;font-weight:800;color:var(--ink);white-space:nowrap;text-overflow:ellipsis;overflow:hidden">${esc(leader ? leader.name : (t.leaderName || '—'))}</div>
+              ${leader && leader.phone ? `<a href="https://wa.me/${leader.phone.replace(/[^0-9]/g,'')}" target="_blank" class="muted" style="font-size:11px;text-decoration:none;display:inline-flex;align-items:center;gap:3px;margin-top:2px">💬 ${esc(leader.phone)}</a>` : ''}
+            </div>
+          </div>
+
+          <!-- Members Chips -->
+          <div>
+            <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px">👥 ${lb('أعضاء الفريق الفنيون||Field Members')} (${mems.length})</div>
+            <div class="team-members-chips">
+              ${mems.length ? mems.map(m => {
+                const isLeader = m.id === t.leaderId;
+                const mOpenWos = (db.wos || []).filter(w => w.assigneeId === m.id && w.status !== 'closed').length;
+                return `<span class="team-member-pill" title="${esc(m.name)} (${ROLES[m.role]||m.role})">
+                  ${isLeader ? '👑' : '👷'} <b>${esc(m.name.split(' ')[0])}</b>
+                  ${mOpenWos ? `<span class="badge b-open" style="padding:1px 5px;font-size:9.5px">${mOpenWos}</span>` : ''}
+                </span>`;
+              }).join('') : `<span class="muted" style="font-size:11.5px">${lb('لا يوجد أعضاء مضافون بعد||No members added yet')}</span>`}
+            </div>
+          </div>
+
+          <!-- Assigned Categories -->
+          ${(t.categories && t.categories.length) ? `<div>
+            <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">⚡ ${lb('التوزيع التلقائي للتصنيفات||Auto-Routed Categories')}:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px">
+              ${t.categories.map(c => `<span class="badge" style="background:rgba(0,0,0,.04);font-size:10px">${esc(c)}</span>`).join('')}
+            </div>
+          </div>` : ''}
+        </div>
+
+        <div class="team-footer">
+          <div style="display:flex;gap:10px;align-items:center">
+            <span title="${lb('أوامر قيد التنفيذ للفريق||Team Open WOs')}">📋 <b>${openWOs.length}</b> ${lb('مفتوح||open')}</span>
+            ${unassignedCount ? `<span class="badge b-wait" title="${lb('في قائمة الانتظار بانتظار استلام أحد الفنيين||In team queue waiting for technician claim')}">✋ ${unassignedCount} ${lb('للاستلام||claimable')}</span>` : `<span class="badge b-ok" style="font-size:10.5px">✓ ${lb('موزع بالكامل||assigned')}</span>`}
+          </div>
+          <button class="btn sm" style="font-size:11px;padding:4px 8px;background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff" onclick="teamQuickWO('${t.id}')">＋ ${lb('أمر شغل||New WO')}</button>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>` : `<div class="card"><div class="empty">${lb('لا توجد فِرق مطابقة لمعايير البحث||No matching teams found')}</div></div>`}`;
+}
+
+function vTeamsHierarchyTree(){
+  const teams = db.teams || [];
+  const rootTeams = teams.filter(t => !t.parentId || t.parentId === '' || !teams.some(x => x.id === t.parentId));
+  const childTeamsOf = pid => teams.filter(t => t.parentId === pid);
+  const adminUsers = (db.users || []).filter(u => u.role === 'admin' || u.role === 'eng');
+
+  return `<div class="card" style="margin-bottom:14px;background:linear-gradient(135deg,rgba(14,116,144,.04),rgba(59,130,246,.04))">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div>
+        <h3 style="margin:0 0 4px 0">🌳 ${lb('الهيكل الهرمي لفِرق الصيانة والتشغيل (UpKeep Organizational Hierarchy)||Maintenance & Operations Hierarchy Tree')}</h3>
+        <p class="muted" style="margin:0;font-size:12.5px">${lb('مخطط تفاعلي يوضّح التبعية الإدارية من القيادة الهندسية وحتى الفنيين المتخصصين في الميدان.||Interactive chart showing command hierarchy from engineering leadership down to field technicians.')}</p>
+      </div>
+      <div style="display:inline-flex;gap:6px">
+        <span class="badge" style="background:#e0e7ff;color:#3730a3">👑 ${lb('المستوى 1: القيادة الهندسية||Tier 1: Leadership')}</span>
+        <span class="badge" style="background:#dbeafe;color:#1e40af">🏢 ${lb('المستوى 2: العمليات المركزية||Tier 2: Operations')}</span>
+        <span class="badge" style="background:#fef3c7;color:#92400e">⚙️ ${lb('المستوى 3: الفِرق التخصصية||Tier 3: Specialized')}</span>
+        <span class="badge" style="background:#f1f5f9;color:#334155">👷 ${lb('المستوى 4: فنيو الميدان||Tier 4: Technicians')}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tree-container">
+    <!-- Level 1: Apex Leadership -->
+    <div class="tree-level">
+      <div class="tree-node root" style="max-width:440px;width:100%">
+        <span class="tree-node-badge" style="background:#6366f1;color:#fff">TIER 1 · LEADERSHIP</span>
+        <div class="tree-node-title">🏛️ ${lb('الإدارة العامة وهندسة الصيانة والتشغيل||Executive & Engineering Management')}</div>
+        <div class="tree-node-sub">${lb('الإشراف الاستراتيجي، الميزانيات، وتوزيع المشاريع والأصول||Strategic oversight, budget, project & asset allocation')}</div>
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:10px;flex-wrap:wrap">
+          ${adminUsers.map(u => `<span class="badge" style="background:rgba(255,255,255,.8);color:#1e293b;border:1px solid rgba(0,0,0,.1);font-weight:700">👑 ${esc(u.name)} (${ROLES[u.role]||u.role})</span>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="tree-connector"></div>
+
+    <!-- Level 2 & 3: Parent Teams and Child Teams -->
+    ${rootTeams.map(pt => {
+      const pColor = teamColor(pt.id);
+      const children = childTeamsOf(pt.id);
+      const pLeader = (db.users || []).find(u => u.id === pt.leaderId);
+      const pOpenWos = (db.wos || []).filter(w => w.teamId === pt.id && w.status !== 'closed').length;
+
+      return `<div style="display:flex;flex-direction:column;align-items:center;width:100%">
+        <div class="tree-level">
+          <div class="tree-node" style="border-top:4px solid ${pColor};min-width:320px;max-width:420px" onclick="teamForm('${pt.id}')">
+            <span class="tree-node-badge" style="background:${pColor};color:#fff">${esc(pt.code)} · TIER 2 PARENT</span>
+            <div class="tree-node-title">${esc(lb(pt.name))}</div>
+            <div class="tree-node-sub">${esc(lb(pt.desc || ''))}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11.5px;padding-top:8px;border-top:1px dashed var(--line)">
+              <span>👑 ${lb('المشرف||Lead')}: <b>${esc(pLeader ? pLeader.name : (pt.leaderName || '—'))}</b></span>
+              <span class="badge b-open">${pOpenWos} ${lb('أوامر شغل||WOs')}</span>
+            </div>
+          </div>
+        </div>
+
+        ${children.length ? `
+          <div class="tree-connector"></div>
+          <div class="tree-level" style="gap:24px">
+            ${children.map(ct => {
+              const cColor = teamColor(ct.id);
+              const cLeader = (db.users || []).find(u => u.id === ct.leaderId);
+              const cMems = (ct.memberIds || []).map(mid => (db.users || []).find(u => u.id === mid)).filter(Boolean);
+              const cOpenWos = (db.wos || []).filter(w => w.teamId === ct.id && w.status !== 'closed').length;
+
+              return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:280px;max-width:340px">
+                <div class="tree-node" style="border-top:4px solid ${cColor};width:100%" onclick="teamForm('${ct.id}')">
+                  <span class="tree-node-badge" style="background:${cColor};color:#fff">${esc(ct.code)} · TIER 3</span>
+                  <div class="tree-node-title">${esc(lb(ct.name))}</div>
+                  <div class="tree-node-sub">${teamSpecL(ct.specialty)} · ${ct.shift || 'standard'}</div>
+                  <div style="margin-top:8px;font-size:11.5px;text-align:start">
+                    <div style="color:var(--brand);font-weight:700">👑 ${esc(cLeader ? cLeader.name : (ct.leaderName || '—'))}</div>
+                    <div class="muted" style="margin-top:2px">📋 ${cOpenWos} ${lb('أمر نشط||active tickets')}</div>
+                  </div>
+                </div>
+
+                <!-- Level 4: Technicians under this team -->
+                ${cMems.length ? `
+                  <div class="tree-connector" style="height:16px"></div>
+                  <div style="display:flex;flex-direction:column;gap:6px;width:95%">
+                    ${cMems.map(m => {
+                      const mTasks = (db.wos || []).filter(w => w.assigneeId === m.id && w.status !== 'closed').length;
+                      return `<div class="card" style="padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:12px;background:rgba(255,255,255,.5);border:1px solid var(--line)">
+                        <div style="display:flex;align-items:center;gap:6px">
+                          <span>${m.id === ct.leaderId ? '👑' : '👷'}</span>
+                          <div>
+                            <div style="font-weight:700">${esc(m.name)}</div>
+                            <div class="muted" style="font-size:10px">${ROLES[m.role] || m.role}</div>
+                          </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px">
+                          <span class="badge ${mTasks ? 'b-open' : 'b-ok'}" style="font-size:10px">${mTasks ? mTasks + ' ' + lb('مهام||tasks') : lb('جاهز||idle')}</span>
+                          ${m.phone ? `<a href="https://wa.me/${m.phone.replace(/[^0-9]/g,'')}" target="_blank" style="text-decoration:none" title="WhatsApp">💬</a>` : ''}
+                        </div>
+                      </div>`;
+                    }).join('')}
+                  </div>
+                ` : ''}
+              </div>`;
+            }).join('')}
+          </div>
+        ` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function vTeamsDispatchRules(){
+  const teams = db.teams || [];
+  const categories = [
+    { cat: 'hvac', label: lb('تكييف وتبريد وتدفئة||HVAC & Refrigeration'), icon: '❄️', defaultPrio: 'high' },
+    { cat: 'elec', label: lb('كهرباء، إنارة، ولوحات توزيع||Electrical & Power Systems'), icon: '⚡', defaultPrio: 'high' },
+    { cat: 'plumb', label: lb('سباكة، شبكات مياه، ومضخات||Plumbing & Water Systems'), icon: '🚰', defaultPrio: 'medium' },
+    { cat: 'emergency', label: lb('طوارئ، تسربات، وأعطال خطرة||24/7 Emergency & Safety Hazards'), icon: '🚨', defaultPrio: 'urgent' },
+    { cat: 'elevator', label: lb('مصاعد وسلالم متحركة||Elevators & Escalators'), icon: '🛗', defaultPrio: 'high' },
+    { cat: 'civil', label: lb('أعمال مدنية، دهانات، ونجارة||Civil, Painting & Carpentry'), icon: '🧱', defaultPrio: 'medium' },
+    { cat: 'general', label: lb('صيانة عامة ونظافة ومرافق||General Facilities Maintenance'), icon: '🏢', defaultPrio: 'low' }
+  ];
+
+  return `<div class="card" style="margin-bottom:14px">
+    <h3>⚡ ${lb('مصفوفة التوزيع التلقائي للبلاغات وأوامر الشغل (UpKeep Auto-Dispatch Matrix)||Auto-Dispatch Matrix')}</h3>
+    <p class="muted" style="font-size:12.5px;line-height:1.5">
+      ${lb('مطابق لمنظومة UpKeep CMMS Workflow Automation: عند ورود أي بلاغ صيانة جديد (سواء عبر بوابة المستأجر العامة، مسح رمز QR، أو مجدول الصيانة الوقائية)، يقوم النظام فوراً بربط البلاغ بالفريق المسؤول المختص وإدراجه في قائمة انتظار الفريق (Team Queue) ليتولى الفنيون استلامه، أو تكليف قائد الفريق تلقائياً.||Matching UpKeep CMMS Workflow Automation: when a new request is submitted (via tenant portal, QR code scan, or PM scheduler), the system instantly routes it to the designated team queue for technicians to claim, or assigns it to the team lead.')}
+    </p>
+
+    <div class="tbl-wrap" style="margin-top:14px">
+      <table>
+        <tr>
+          <th>${lb('التصنيف الميداني||Maintenance Category')}</th>
+          <th>${lb('الفريق المكلّف تلقائياً||Assigned Team')}</th>
+          <th>${lb('الأولوية التلقائية||Default Priority')}</th>
+          <th>${lb('آلية التوزيع||Dispatch Policy')}</th>
+          <th>${lb('إجراءات||Actions')}</th>
+        </tr>
+        ${categories.map(c => {
+          const matchedTeam = teams.find(t => (t.categories || []).includes(c.cat) || t.specialty === c.cat) || teams.find(t => t.id === 'TM-OPS') || teams[0];
+          const prioBadges = { urgent: 'b-urgent', high: 'b-high', medium: 'b-med', low: 'b-low' };
+
+          return `<tr>
+            <td><b>${c.icon} ${c.label}</b><br><span class="muted" style="font-family:monospace;font-size:11px">${c.cat}</span></td>
+            <td>
+              ${matchedTeam ? `<span class="badge" style="background:#e0e7ff;color:#3730a3;font-weight:700;font-size:12px">👥 ${esc(lb(matchedTeam.name))}</span><br><span class="muted" style="font-size:11px">${lb('القائد||Lead')}: ${esc(matchedTeam.leaderName||'—')}</span>` : `<span class="muted">—</span>`}
+            </td>
+            <td><span class="badge ${prioBadges[c.defaultPrio]||'b-med'}">${PRIO[c.defaultPrio] || c.defaultPrio}</span></td>
+            <td>
+              <span class="badge b-wait" style="font-size:11px">✋ ${lb('إدراج في قائمة الفريق (استلام ذاتي)||Team Queue (Self-Claim)')}</span>
+              <div class="muted" style="font-size:10.5px;margin-top:2px">${lb('إشعار فوري لجميع أعضاء الفريق||Instant notification to all members')}</div>
+            </td>
+            <td>
+              ${(isAdmin()||isEng()) && matchedTeam ? `<button class="btn sm ghost" onclick="teamForm('${matchedTeam.id}')">${lb('تعديل الفريق||Edit Team')}</button>` : ''}
+            </td>
+          </tr>`;
+        }).join('')}
+      </table>
+    </div>
+  </div>`;
+}
+
+function teamForm(id){
+  if(!isAdmin() && !isEng()) return;
+  const t = id ? (db.teams || []).find(x => x.id === id) : {};
+  const teams = (db.teams || []).filter(x => x.id !== id);
+  const users = db.users || [];
+  const cmps = db.compounds || [];
+  const curMems = t.memberIds || [];
+  const curCats = t.categories || [];
+
+  const allCats = [
+    { id: 'hvac', label: lb('تكييف وتبريد||HVAC') },
+    { id: 'elec', label: lb('كهرباء وأنظمة طاقة||Electrical') },
+    { id: 'plumb', label: lb('سباكة وشبكات مياه||Plumbing') },
+    { id: 'emergency', label: lb('طوارئ 24/7||Emergency') },
+    { id: 'civil', label: lb('مدني وتشطيبات||Civil & Finishing') },
+    { id: 'elevator', label: lb('مصاعد||Elevators') },
+    { id: 'general', label: lb('مرافق وعمليات عامة||General Facilities') }
+  ];
+
+  modal(`<h3>${id ? lb('تعديل فريق العمل||Edit Team') : lb('فريق عمل جديد (UpKeep Team)||New Team')}</h3>
+  <div class="fg">
+    <div>
+      <label>${lb('رمز الفريق (كود فريد) *||Team Code *')}</label>
+      <input id="ft_code" value="${esc(t.code || (id ? '' : 'TM-' + Math.floor(Math.random()*900+100)))}" placeholder="e.g. TM-HVAC" style="font-family:monospace;font-weight:700">
+    </div>
+    <div>
+      <label>${lb('اسم الفريق * (عربي || إنجليزي)||Team Name *')}</label>
+      <input id="ft_name" value="${esc(t.name || '')}" placeholder="${lb('فريق التكييف المركزي||Central HVAC Team')}">
+    </div>
+    <div>
+      <label>${lb('التخصص الرئيسي||Specialty')}</label>
+      <select id="ft_spec">
+        <option value="general" ${(t.specialty||'general')==='general'?'selected':''}>🏢 ${lb('إدارة وعمليات عامة||General / Operations')}</option>
+        <option value="hvac" ${t.specialty==='hvac'?'selected':''}>❄️ ${lb('تكييف وتبريد||HVAC')}</option>
+        <option value="elec" ${t.specialty==='elec'?'selected':''}>⚡ ${lb('كهرباء وأنظمة طاقة||Electrical')}</option>
+        <option value="plumb" ${t.specialty==='plumb'?'selected':''}>🚰 ${lb('سباكة وشبكات مياه||Plumbing')}</option>
+        <option value="emergency" ${t.specialty==='emergency'?'selected':''}>🚨 ${lb('طوارئ واستجابة سريعة||Emergency 24/7')}</option>
+        <option value="civil" ${t.specialty==='civil'?'selected':''}>🧱 ${lb('مدني وتشطيبات||Civil & Finishing')}</option>
+        <option value="elevator" ${t.specialty==='elevator'?'selected':''}>🛗 ${lb('مصاعد||Elevators')}</option>
+      </select>
+    </div>
+    <div>
+      <label>${lb('التبعية الهرمية (الفريق الأب)||Parent Team (Hierarchy)')}</label>
+      <select id="ft_parent">
+        <option value="">— ${lb('لا يوجد (فريق رئيسي Tier 1 Parent)||None (Tier 1 Parent Team)')} —</option>
+        ${teams.map(x => `<option value="${x.id}" ${t.parentId===x.id?'selected':''}>↳ ${esc(lb(x.name))} (${esc(x.code)})</option>`).join('')}
+      </select>
+    </div>
+    <div>
+      <label>${lb('قائد الفريق (Team Lead)||Team Lead')}</label>
+      <select id="ft_lead">
+        <option value="">— ${lb('بدون تحديد||Unassigned')} —</option>
+        ${users.map(u => `<option value="${u.id}" ${t.leaderId===u.id?'selected':''}>${esc(u.name)} (${ROLES[u.role]||u.role})</option>`).join('')}
+      </select>
+    </div>
+    <div>
+      <label>${lb('نظام المناوبة / الوردية||Shift')}</label>
+      <select id="ft_shift">
+        <option value="morning" ${(t.shift||'morning')==='morning'?'selected':''}>☀️ ${lb('صباحي (Morning 8am-4pm)||Morning')}</option>
+        <option value="evening" ${t.shift==='evening'?'selected':''}>🌆 ${lb('مسائي (Evening 4pm-12am)||Evening')}</option>
+        <option value="night" ${t.shift==='night'?'selected':''}>🌙 ${lb('ليلي (Night 12am-8am)||Night')}</option>
+        <option value="24/7" ${t.shift==='24/7'?'selected':''}>🚨 ${lb('طوارئ على مدار الساعة 24/7||24/7 Emergency')}</option>
+      </select>
+    </div>
+    <div>
+      <label>${lb('نطاق العقار / المجمع||Compound Scope')}</label>
+      <select id="ft_cmp">
+        <option value="">🌐 ${lb('جميع العقارات والمشاريع||All Properties')}</option>
+        ${cmps.map(c => `<option value="${c.id}" ${t.compoundId===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div>
+      <label>${lb('لون التمييز (Hex Color)||Accent Color')}</label>
+      <input type="color" id="ft_color" value="${t.color || teamColor(t.id) || '#0284c7'}" style="height:38px;padding:2px;cursor:pointer">
+    </div>
+  </div>
+
+  <label>${lb('الوصف والمهام||Description & Responsibilities')}</label>
+  <textarea id="ft_desc" rows="2" placeholder="${lb('وصف مسؤوليات الفريق، الأنظمة التي يتولاها، وساعات العمل…||Describe responsibilities, systems, working hours…')}">${esc(t.desc || '')}</textarea>
+
+  <label style="margin-top:10px">${lb('أعضاء الفريق الفنيون (Team Members Multi-Select)||Team Members')}</label>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;max-height:160px;overflow-y:auto;background:rgba(0,0,0,.03);padding:10px;border-radius:8px;border:1px solid var(--line);margin-bottom:12px">
+    ${users.map(u => {
+      const checked = curMems.includes(u.id) || t.leaderId === u.id;
+      return `<label style="display:inline-flex;align-items:center;gap:6px;margin:0;font-size:12px;cursor:pointer">
+        <input type="checkbox" class="ft_mem_ck" value="${u.id}" ${checked?'checked':''}>
+        <span>${esc(u.name)}</span> <span class="muted">(${ROLES[u.role]||u.role})</span>
+      </label>`;
+    }).join('')}
+  </div>
+
+  <label>${lb('التصنيفات الموزعة تلقائياً لهذا الفريق (Auto-Dispatch Categories)||Auto-Dispatch Categories')}</label>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;background:rgba(0,0,0,.03);padding:10px;border-radius:8px;border:1px solid var(--line)">
+    ${allCats.map(c => {
+      const checked = curCats.includes(c.id) || t.specialty === c.id;
+      return `<label style="display:inline-flex;align-items:center;gap:6px;margin:0;font-size:12px;cursor:pointer">
+        <input type="checkbox" class="ft_cat_ck" value="${c.id}" ${checked?'checked':''}>
+        <span>${c.label}</span>
+      </label>`;
+    }).join('')}
+  </div>
+
+  <div class="ma" style="margin-top:16px">
+    <button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
+    <button class="btn" onclick="saveTeam('${id || ''}')">${lb('حفظ الفريق||Save Team')}</button>
+  </div>`);
+}
+
+function saveTeam(id){
+  const code = $('ft_code').value.trim();
+  const name = $('ft_name').value.trim();
+  if(!code || !name) return toast(lb('أدخل رمز واسم الفريق||Enter team code and name'), 'err');
+
+  const specialty = $('ft_spec').value;
+  const parentId = $('ft_parent').value || null;
+  const leaderId = $('ft_lead').value || '';
+  const shift = $('ft_shift').value || 'morning';
+  const compoundId = $('ft_cmp').value || '';
+  const color = $('ft_color').value || '#0284c7';
+  const desc = $('ft_desc').value.trim();
+
+  const memberIds = Array.from(document.querySelectorAll('.ft_mem_ck:checked')).map(el => el.value);
+  if(leaderId && !memberIds.includes(leaderId)) memberIds.unshift(leaderId);
+
+  const categories = Array.from(document.querySelectorAll('.ft_cat_ck:checked')).map(el => el.value);
+
+  const leaderUser = leaderId ? (db.users || []).find(u => u.id === leaderId) : null;
+  const leaderName = leaderUser ? leaderUser.name : '';
+
+  if(!db.teams) db.teams = [];
+
+  const teamData = {
+    code,
+    name,
+    specialty,
+    parentId,
+    leaderId,
+    leaderName,
+    shift,
+    compoundId,
+    color,
+    desc,
+    memberIds,
+    categories,
+    updatedAt: Date.now()
+  };
+
+  if(id){
+    const idx = db.teams.findIndex(x => x.id === id);
+    if(idx !== -1) Object.assign(db.teams[idx], teamData);
+    auditLog('update', 'team', code, name);
+  } else {
+    teamData.id = uid('TM');
+    teamData.createdAt = Date.now();
+    db.teams.push(teamData);
+    auditLog('create', 'team', code, name);
+  }
+
+  persist();
+  closeModal();
+  paintTab();
+  toast(lb('تم حفظ الفريق بنجاح||Team saved successfully'), 'ok');
+}
+
+function delTeam(id){
+  const t = (db.teams || []).find(x => x.id === id);
+  if(!t) return;
+
+  const openWos = (db.wos || []).filter(w => w.teamId === id && w.status !== 'closed');
+  if(openWos.length){
+    if(!confirm(lb(`تنبيه: يوجد ${openWos.length} أوامر شغل مفتوحة مرتبطة بهذا الفريق. سيتم فك ارتباط الفريق عنها مع إبقاء الأوامر. هل تريد الاستمرار؟||Warning: There are ${openWos.length} open work orders assigned to this team. Deleting will unlink the team. Continue?`))) return;
+  } else {
+    if(!confirm(lb('حذف فريق العمل نهائياً؟||Permanently delete this team?'))) return;
+  }
+
+  /* فك ارتباط الفريق من أوامر الشغل والأصول وخطط الصيانة الوقائية */
+  (db.wos || []).forEach(w => {
+    if(w.teamId === id){ w.teamId = ''; w.teamName = ''; }
+  });
+  (db.assets || []).forEach(a => {
+    if(a.teamId === id){ a.teamId = ''; a.team = ''; }
+  });
+  (db.pms || []).forEach(p => {
+    if(p.teamId === id){ p.teamId = ''; p.teamName = ''; }
+  });
+  /* تصعيد أي فرق فرعية تابعة */
+  (db.teams || []).forEach(child => {
+    if(child.parentId === id) child.parentId = t.parentId || null;
+  });
+
+  db.teams = db.teams.filter(x => x.id !== id);
+  auditLog('delete', 'team', t.code, t.name);
+  persist();
+  paintTab();
+  toast(lb('تم حذف الفريق||Team deleted'), 'ok');
+}
+
+function teamQuickWO(teamId){
+  const t = (db.teams || []).find(x => x.id === teamId);
+  if(!t) return;
+  woForm(null, null, t.id);
+}
+
+function teamExportCsv(){
+  const teams = db.teams || [];
+  const rows = teams.map(t => {
+    const parent = t.parentId ? (teams.find(x => x.id === t.parentId) || {}).name : '—';
+    const mems = (t.memberIds || []).map(mid => {
+      const u = (db.users || []).find(x => x.id === mid);
+      return u ? u.name : '';
+    }).filter(Boolean).join('; ');
+    const openWos = (db.wos || []).filter(w => w.teamId === t.id && w.status !== 'closed').length;
+
+    return [
+      t.code || '',
+      lb(t.name || ''),
+      teamSpecL(t.specialty || 'general'),
+      lb(parent || '—'),
+      t.leaderName || '—',
+      t.shift || 'morning',
+      mems,
+      openWos
+    ];
+  });
+
+  csvExport('teams-hierarchy', [
+    lb('رمز الفريق||Team Code'),
+    lb('اسم الفريق||Team Name'),
+    lb('التخصص||Specialty'),
+    lb('الفريق الأب||Parent Team'),
+    lb('قائد الفريق||Team Leader'),
+    lb('الوردية||Shift'),
+    lb('الأعضاء||Members'),
+    lb('أوامر مفتوحة||Open WOs')
+  ], rows);
+}
 
 /* ============================================================
    سوق أملاكي — منصة الملاك والمقدّمين (Owner / Contractor / Supplier)

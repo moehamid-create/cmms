@@ -232,6 +232,107 @@ setInterval(() => {
   for (const [k, v] of sessions) if (now - v.at > SESSION_TTL) sessions.delete(k);
 }, 15 * 60 * 1000).unref();
 
+/* التهيئة الافتراضية لهيكل وفِرق الصيانة (UpKeep-style Teams Hierarchy) */
+function initDefaultTeams(d){
+  if(!d || !Array.isArray(d.users) || d.users.length < 2) return;
+  const rid=p=>p+crypto.randomBytes(5).toString('hex');
+  const uEng = d.users.find(u => u.role === 'engineer') || d.users[1] || d.users[0];
+  const uSiteMgr = d.users.find(u => u.role === 'sitemgr') || d.users[2] || uEng;
+  const techs = d.users.filter(u => u.role === 'tech');
+  const uSami = techs[0] || uSiteMgr;
+  const uKhalid = techs[1] || uSami;
+  const defC = (d.compounds && d.compounds[0] && d.compounds[0].id) || null;
+  const tmOpsId = rid('TM');
+
+  d.teams = [
+    {
+      id: tmOpsId,
+      code: 'TM-OPS',
+      name: 'إدارة العمليات والصيانة المركزية',
+      desc: 'الإشراف الفني العام وتوزيع البلاغات وضمان الجودة والامتثال التشغيلي',
+      specialty: 'general',
+      leaderId: uEng.id,
+      leaderName: uEng.name,
+      memberIds: [uEng.id, uSiteMgr.id, uSami.id, uKhalid.id].filter(Boolean),
+      parentId: null,
+      compoundId: defC,
+      tier: 1,
+      color: '#2563eb',
+      shift: 'all',
+      autoCategories: ['أخرى', 'بوابة أوتوماتيكية'],
+      createdAt: Date.now() - 30 * 86400000
+    },
+    {
+      id: rid('TM'),
+      code: 'TM-HVAC',
+      name: 'فريق التكييف والتهوية الميكانيكية (HVAC)',
+      desc: 'صيانة وحدات التكييف المركزي، أنظمة السبليت، الدكت، وفلاتر الهواء والضواغط',
+      specialty: 'hvac',
+      leaderId: uSami.id,
+      leaderName: uSami.name,
+      memberIds: [uSami.id].filter(Boolean),
+      parentId: tmOpsId,
+      compoundId: defC,
+      tier: 2,
+      color: '#0284c7',
+      shift: 'morning',
+      autoCategories: ['تكييف سبليت', 'تكييف مركزي / دكت'],
+      createdAt: Date.now() - 25 * 86400000
+    },
+    {
+      id: rid('TM'),
+      code: 'TM-ELEC',
+      name: 'فريق الكهرباء وأنظمة الطاقة والإنارة',
+      desc: 'صيانة لوحات الكهرباء، المولدات الاحتياطية، شبكات الإنارة، وأنظمة السلامة',
+      specialty: 'electrical',
+      leaderId: uKhalid.id,
+      leaderName: uKhalid.name,
+      memberIds: [uKhalid.id].filter(Boolean),
+      parentId: tmOpsId,
+      compoundId: defC,
+      tier: 2,
+      color: '#d97706',
+      shift: 'evening',
+      autoCategories: ['لوحة كهرباء', 'إنارة داخلية', 'إنارة خارجية', 'مولد احتياطي', 'نظام إنذار حريق', 'كاشف دخان'],
+      createdAt: Date.now() - 25 * 86400000
+    },
+    {
+      id: rid('TM'),
+      code: 'TM-PLUMB',
+      name: 'فريق السباكة ومحطات المياه والمسابح',
+      desc: 'مضخات المياه، شبكات الصرف، سخانات المياه، وفلاتر المسابح ومحطات المعالجة',
+      specialty: 'plumbing',
+      leaderId: uSami.id,
+      leaderName: uSami.name,
+      memberIds: [uSami.id, uKhalid.id].filter(Boolean),
+      parentId: tmOpsId,
+      compoundId: defC,
+      tier: 2,
+      color: '#059669',
+      shift: 'morning',
+      autoCategories: ['مضخة مياه', 'سخان مياه', 'مضخة / فلتر مسبح', 'نظام معالجة مياه', 'جاكوزي / سبا', 'سباكة وصنابير', 'شبكة إطفاء / رشاشات'],
+      createdAt: Date.now() - 20 * 86400000
+    },
+    {
+      id: rid('TM'),
+      code: 'TM-EMERG',
+      name: 'فريق الاستجابة السريعة للطوارئ (24/7)',
+      desc: 'فريق التدخل الفوري للبلاغات الحرجة والطارئة والأعطال الجسيمة على مدار الساعة',
+      specialty: 'emergency',
+      leaderId: uSiteMgr.id,
+      leaderName: uSiteMgr.name,
+      memberIds: [uSiteMgr.id, uSami.id, uKhalid.id].filter(Boolean),
+      parentId: tmOpsId,
+      compoundId: defC,
+      tier: 1,
+      color: '#dc2626',
+      shift: 'oncall',
+      autoCategories: ['طفاية حريق', 'مصعد'],
+      createdAt: Date.now() - 15 * 86400000
+    }
+  ];
+}
+
 /* ---- التهيئة الأولى: حالة ابتدائية مطابقة لنسخة المتصفح ---- */
 function seedState(){
   const rid=p=>p+crypto.randomBytes(5).toString('hex');
@@ -248,6 +349,7 @@ function seedState(){
       U({u:'store',  p:'1234',name:'مسؤول المخزون',  role:'store', defaultPw:true}),
       U({u:'proc',   p:'1234',name:'مسؤول المشتريات',role:'proc', defaultPw:true})
     ],
+    teams:[],
     categories:['تكييف سبليت','تكييف مركزي / دكت','سخان مياه','مضخة مياه',
      'مضخة / فلتر مسبح','نظام معالجة مياه','جاكوزي / سبا','أجهزة الجيم','لوحة كهرباء','إنارة داخلية',
      'إنارة خارجية','مولد احتياطي','بوابة أوتوماتيكية','مصعد','نظام إنذار حريق','كاشف دخان',
@@ -257,6 +359,7 @@ function seedState(){
     pms:[],suppliers:[],prs:[],pos:[],projects:[],employees:[],shifts:[],notifs:[],
     providers:[],rfqs:[],pmTemplates:[],audit:[],orgs:[],woPhotoReq:false,receipts:[]
   };
+  initDefaultTeams(d);
   const addB=(name,type,floors)=>d.buildings.push({id:rid('B'),name,type,floors:floors.slice(),compoundId:C});
   for(let i=1;i<=34;i++)addB('فيلا '+i,'villa',['الدور الأرضي','الدور الأول','الملحق']);
   addB('المسبح','area',['حمام السباحة','غرفة الفلاتر والمعدات']);
@@ -293,11 +396,27 @@ function normalizeState(d){
   if(!Array.isArray(d.audit))d.audit=[];
   if(!Array.isArray(d.orgs))d.orgs=[];
   if(!Array.isArray(d.receipts))d.receipts=[];
+  if(!Array.isArray(d.teams))d.teams=[];
   if(d.rfqSeq==null) d.rfqSeq=0;
   ['seq','prSeq','poSeq','rnSeq','prjSeq','ctSeq'].forEach(k=>{ if(d[k]==null) d[k]=0; });
   if(!Array.isArray(d.users)) d.users=[];
   if(!Array.isArray(d.compounds)) d.compounds=[];
   if(!Array.isArray(d.assets)) d.assets=[];
+
+  // إذا لم تكن هناك فِرق موجودة في قاعدة بيانات قديمة، ننشئ الفِرق الافتراضية
+  if(d.teams.length === 0 && d.users.length >= 2){
+    initDefaultTeams(d);
+  }
+
+  // تطبيع بيانات الفِرق
+  d.teams.forEach(t => {
+    if(!t.id) t.id = 'TM' + crypto.randomBytes(5).toString('hex');
+    if(!Array.isArray(t.memberIds)) t.memberIds = [];
+    if(!Array.isArray(t.autoCategories)) t.autoCategories = [];
+    if(!t.specialty) t.specialty = 'general';
+    if(t.tier == null) t.tier = 2;
+  });
+
   return d;
 }
 
@@ -839,10 +958,15 @@ app.get('/api/search', async (req, res) => {
   if (types.includes('all') || types.includes('wos')) {
     let list = d.wos || [];
     if (compoundId) list = list.filter(w => w.compoundId === compoundId);
-    if (actor && actor.session.role === 'tech') list = list.filter(w => w.assigneeId === actor.session.userId);
+    if (actor && actor.session.role === 'tech') {
+      const myTeamIds = (d.teams || [])
+        .filter(t => t.leaderId === actor.session.userId || (t.memberIds || []).includes(actor.session.userId))
+        .map(t => t.id);
+      list = list.filter(w => w.assigneeId === actor.session.userId || (w.teamId && myTeamIds.includes(w.teamId)));
+    }
     const hits = list.filter(w => matchTokens([
       w.no, w.title, w.desc, w.assetName, w.assetLabel, w.bname, w.unitCode,
-      w.tenantName, w.assigneeName, w.priority, w.status, w.deferReason
+      w.tenantName, w.assigneeName, w.teamName, w.priority, w.status, w.deferReason
     ].filter(Boolean).join(' ')))
     .slice(0, limit)
     .map(w => ({
@@ -857,6 +981,8 @@ app.get('/api/search', async (req, res) => {
       priority: w.priority || 'normal',
       status: w.status || 'open',
       assigneeName: w.assigneeName || '',
+      teamId: w.teamId || '',
+      teamName: w.teamName || '',
       dueDate: w.dueDate || null,
       compoundId: w.compoundId
     }));
@@ -993,7 +1119,7 @@ app.get('/api/search', async (req, res) => {
     total += hits.length;
   }
 
-  // 7. المستخدمين وفرق الصيانة (Users & Techs)
+  // 7. المستخدمين (Users & Techs)
   if (types.includes('all') || types.includes('users')) {
     let list = d.users || [];
     const hits = list.filter(u => matchTokens([
@@ -1013,6 +1139,31 @@ app.get('/api/search', async (req, res) => {
     total += hits.length;
   }
 
+  // 8. فِرق العمل وهيكل الصيانة (Maintenance Teams & Hierarchy)
+  if (types.includes('all') || types.includes('teams')) {
+    let list = d.teams || [];
+    if (compoundId) list = list.filter(t => !t.compoundId || t.compoundId === compoundId);
+    const hits = list.filter(t => matchTokens([
+      t.name, t.code, t.desc, t.specialty, t.leaderName
+    ].filter(Boolean).join(' ')))
+    .slice(0, limit)
+    .map(t => ({
+      type: 'team',
+      id: t.id,
+      code: t.code || '',
+      name: t.name,
+      desc: (t.desc || '').slice(0, 100),
+      specialty: t.specialty || 'general',
+      leaderName: t.leaderName || '',
+      memberCount: (t.memberIds || []).length,
+      parentId: t.parentId || null,
+      tier: t.tier || 2,
+      compoundId: t.compoundId || null
+    }));
+    results.teams = hits;
+    total += hits.length;
+  }
+
   res.json({ query: q, total, results });
 });
 
@@ -1024,7 +1175,7 @@ app.get('/api/public/compounds', async (req, res) => {
   res.json((st.data.compounds || []).map(c => ({ id: c.id, name: c.name })));
 });
 
-/* ---- بوابة المستأجرين: إرسال بلاغ جديد (يتحول لأمر شغل) ---- */
+/* ---- بوابة المستأجرين: إرسال بلاغ جديد (يتحول لأمر شغل مع إسناد ذكي للفريق) ---- */
 app.post('/api/public/requests', pubLimit, async (req, res) => {
   try {
     const b = req.body || {};
@@ -1043,6 +1194,13 @@ app.post('/api/public/requests', pubLimit, async (req, res) => {
         return { err: 400 };
       st.data.seq = (st.data.seq || 0) + 1;
       const y = new Date().getFullYear();
+
+      // التوجيه التلقائي للفريق المختص حسب تصنيف البلاغ (UpKeep-style Auto-Dispatch)
+      let assignedTeam = null;
+      if (cat && Array.isArray(st.data.teams)) {
+        assignedTeam = st.data.teams.find(t => (t.autoCategories || []).includes(cat) || t.specialty === cat);
+      }
+
       const wo = {
         id: 'W' + crypto.randomBytes(6).toString('hex'),
         no: 'WO-' + y + '-' + String(st.data.seq).padStart(4, '0'),
@@ -1050,6 +1208,8 @@ app.post('/api/public/requests', pubLimit, async (req, res) => {
         title: (cat ? '[' + cat + '] ' : '') + title, desc: details,
         assetId: '', assetName: '', bname: '', priority: 'normal',
         assigneeId: '', assigneeName: '',
+        teamId: assignedTeam ? assignedTeam.id : '',
+        teamName: assignedTeam ? assignedTeam.name : '',
         dueDate: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10),
         projectId: '', unitId: '', unitCode, tenantName: name,
         source: 'portal', requester: { name, phone }, trackToken: crypto.randomBytes(18).toString('hex'), cat,
