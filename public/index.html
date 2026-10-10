@@ -1217,7 +1217,7 @@ input[type=checkbox]{transform:scale(1.15);accent-color:var(--brand)}
 label{font-size:11.5px;font-weight:800;color:var(--muted);margin:10px 0 5px;letter-spacing:.2px}
 .searchbar{max-width:340px}
 
-/* ── UpKeep-Style Global Search & Faceted Filtering ──────────────── */
+/* ── Enterprise Global Search & Faceted Filtering ──────────────── */
 .topbar-search{
   display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:12px;
   background:rgba(255,255,255,.55);border:1px solid var(--glass-border);color:var(--muted);
@@ -1547,7 +1547,7 @@ mark.gs-hl{background:#fef08a;color:#713f12;font-weight:800;padding:0 3px;border
   th{background:#f2f5f6!important}
 }
 
-/* ===== UpKeep-Style Evidence & Proof of Work Platform ===== */
+/* ===== Evidence & Proof of Work Platform ===== */
 .modal.modal-evidence{max-width:960px;width:95vw;padding:26px}
 .evidence-cert{display:flex;flex-direction:column;gap:18px}
 .evidence-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;
@@ -1577,7 +1577,7 @@ mark.gs-hl{background:#fef08a;color:#713f12;font-weight:800;padding:0 3px;border
 .evidence-thumb-wrap img{width:100%;height:100%;object-fit:cover;display:block}
 .evidence-thumb-tag{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.75);color:#fff;font-size:9.5px;padding:2px 6px;border-radius:4px;font-weight:700}
 
-/* AI UpKeep Nova Card */
+/* AI Nova Evidence Card */
 .evidence-ai-card{border-radius:16px;padding:18px;border:1.5px solid rgba(14,116,144,.35);
   background:radial-gradient(120% 120% at 90% 10%, rgba(14,116,144,.12) 0%, rgba(124,58,237,.08) 50%, rgba(255,255,255,.5) 100%);
   position:relative;overflow:hidden}
@@ -1610,7 +1610,7 @@ mark.gs-hl{background:#fef08a;color:#713f12;font-weight:800;padding:0 3px;border
   body.printing-evidence .no-print{display:none!important}
 }
 
-/* ===== UpKeep-Style Teams & Organizational Hierarchy ===== */
+/* ===== Teams & Organizational Hierarchy ===== */
 .teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-top:14px}
 .team-card{position:relative;border-radius:16px;background:rgba(255,255,255,.65);border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;transition:all .2s ease}
 .dark .team-card{background:rgba(255,255,255,.05)}
@@ -1659,7 +1659,7 @@ mark.gs-hl{background:#fef08a;color:#713f12;font-weight:800;padding:0 3px;border
 .tree-node-sub{font-size:11.5px;color:var(--muted);font-weight:600}
 .tree-connector{width:2px;height:24px;background:linear-gradient(180deg,var(--brand),#06b6d4);opacity:.6;margin:-12px auto;box-shadow:0 0 8px rgba(14,116,144,.4)}
 
-/* Warranty Claim Alert Styles (UpKeep CMMS Model) — Luminescent Liquid Badges */
+/* Warranty Claim Alert Styles — Luminescent Liquid Badges */
 .warranty-alert-box{
   display:flex;gap:14px;padding:14px 18px;border-radius:16px;
   background:linear-gradient(135deg,rgba(16,185,129,.14),rgba(14,165,233,.10));
@@ -1838,7 +1838,7 @@ function daysUntil(iso){if(!iso)return 9999;return Math.round((new Date(iso)-new
 function addDays(iso,n){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 
-/* ===== WARRANTY TRACKING & CLAIM DETECTION (UpKeep CMMS Model) ===== */
+/* ===== WARRANTY TRACKING & CLAIM DETECTION ===== */
 function isAssetUnderWarranty(a){
   if(!a || !a.warrantyend) return false;
   return daysUntil(a.warrantyend) >= 0;
@@ -1907,7 +1907,7 @@ function renderWoWarrantyAlert(asset, isChecked){
     <div class="warranty-alert-icon">🛡️</div>
     <div class="warranty-alert-content">
       <div class="warranty-alert-title">
-        <span>${lb('تنبيه سريان الضمان — مطالبة ضمان محتملة (UpKeep Warranty Claim Alert)||Active Warranty Alert — Potential Warranty Claim')}</span>
+        <span>${lb('تنبيه سريان الضمان — مطالبة ضمان محتملة||Active Warranty Alert — Potential Warranty Claim')}</span>
       </div>
       <div>
         ${lb('هذا الأصل مشمول بضمان معتمد حتى||This asset is covered under active warranty until')} <b>${fmtD(wInfo.expDate)}</b> (${lb('متبقي||remaining')}: <b>${wInfo.daysLeft} ${lb('يوماً||days')}</b>).
@@ -2628,7 +2628,7 @@ function migrate(d){
     d.ver=16;
     if(!Array.isArray(d.receipts))d.receipts=[];
   }
-  /* ---- v17: فِرق العمل وهيكل الصيانة (UpKeep-style Teams & Hierarchy) ---- */
+  /* ---- v17: فِرق العمل وهيكل الصيانة (Teams & Organizational Hierarchy) ---- */
   if(d.ver<17){
     d.ver=17;
     if(!Array.isArray(d.teams))d.teams=[];
@@ -4121,7 +4121,7 @@ function pmForm(pid){
       <option value="fixed" ${smode==='fixed'?'selected':''}>${lb('ثابت (من الاستحقاق السابق)||Fixed (from previous due)')}</option></select></div>
     <div><label>${lb('الأولوية||Priority')}</label><select id="fp_p">${['normal','high','urgent'].map(k=>`<option value="${k}" ${(p.priority||'normal')===k?'selected':''}>${PRIO[k]}</option>`).join('')}</select></div>
     <div><label>${lb('المدة التقديرية (دقيقة)||Est. duration (min)')}</label><input type="number" min="0" id="fp_e" value="${p.estMins||''}"></div>
-    <div><label>${lb('الفريق المسؤول (UpKeep Team)||Assigned Team')}</label>
+    <div><label>${lb('الفريق المسؤول||Assigned Team')}</label>
       <select id="fp_tm">
         <option value="">${lb('— بدون فريق (فردي) —||— None (Individual) —')}</option>
         ${(db.teams||[]).map(t=>`<option value="${t.id}" ${(p.teamId===t.id||p.team===t.name)?'selected':''}>${esc(t.name)}</option>`).join('')}
@@ -5536,7 +5536,7 @@ function drawAssetsTable(){
     if(b)b.innerHTML=`<tr><td colspan="7"><div class="empty"> ${lb('خطأ في عرض الجدول: ||Table error: ')}${esc(e.message)}</div></td></tr>`;
   }
 }
-/* ===== UPKEEP-INSPIRED SEARCH ENGINE (محرك البحث الشامل والمتقدم) ===== */
+/* ===== ENTERPRISE SEARCH ENGINE (محرك البحث الشامل والمتقدم) ===== */
 function normSearchStr(s){
   return String(s||'')
     .toLowerCase()
@@ -5618,7 +5618,7 @@ function openGlobalSearch(initialQuery){
           </div>
           <div class="gs-engine-info" style="display:flex;align-items:center;gap:6px">
             <span style="width:7px;height:7px;border-radius:99px;background:#22c55e;display:inline-block"></span>
-            <span>UpKeep Fast-Search Indexer</span>
+            <span>Fast-Search Indexer</span>
           </div>
         </div>
       </div>
@@ -5750,7 +5750,7 @@ function renderGlobalSearchResults(){
           <div class="gs-quick-tx"><b>${lb('أوامر الشغل المسندة لي||My Assigned Tasks')}</b><small>${lb('مهام فريق العمل||Assigned to my account')}</small></div>
         </div>
       </div>
-      <div class="gs-sec-title" style="margin-top:12px">${lb('نصيحة بحث UpKeep||UpKeep Search Tip')}</div>
+      <div class="gs-sec-title" style="margin-top:12px">${lb('نصيحة بحث ذكي||Smart Search Tip')}</div>
       <p style="font-size:12px;color:var(--muted);padding:4px 10px;line-height:1.6">
         ${lb('يمكنك كتابة اسم الأصل ورقم الغرفة معاً (مثال: «مكيف 101»)، أو رقم البلاغ، أو مسح باركود أي قطعة أو أصل مباشرة.||Type any combination like "chiller 101", work order number, asset name, or scan a barcode tag.')}
       </p>
@@ -6093,7 +6093,7 @@ function assetForm(id){
     <div><label>${lb('رقم السيريال||Serial No.')}</label><input id="fa_s" value="${esc(a.serial||'')}"></div>
     <div><label>${lb('تاريخ التركيب||Installed')}</label><input type="date" id="fa_i" value="${a.installdate||''}"></div>
     <div><label>${lb('انتهاء الضمان||Warranty Expiration')}</label><input type="date" id="fa_w" value="${a.warrantyend||''}"></div>
-    <div><label>${lb('الشركة الضامنة / المورّد (UpKeep Vendor)||Warranty Provider / Vendor')}</label><input id="fa_wv" list="fa_supl" value="${esc(a.warrantyVendor||a.provider||'')}" placeholder="${lb('مثال: شركة الزامل للتكييف||e.g. Carrier Dealer')}"></div>
+    <div><label>${lb('الشركة الضامنة / المورّد||Warranty Provider / Vendor')}</label><input id="fa_wv" list="fa_supl" value="${esc(a.warrantyVendor||a.provider||'')}" placeholder="${lb('مثال: شركة الزامل للتكييف||e.g. Carrier Dealer')}"></div>
     <div><label>${lb('رقم وثيقة/شهادة الضمان||Warranty Policy / Certificate No.')}</label><input id="fa_wr" value="${esc(a.warrantyRef||'')}" placeholder="WAR-2025-XXXX"></div>
     <div style="grid-column:1/-1"><label>${lb('شروط ونطاق تغطية الضمان (قطع / عمالة / شامل)||Warranty Coverage Terms & Scope')}</label><input id="fa_wt" value="${esc(a.warrantyTerms||'')}" placeholder="${lb('مثال: ضمان شامل للكمبروسر والقطع الكهربائية والعمالة لمدة 5 سنوات||e.g. 5-year full parts and labor')}"></div>
     <div><label>${lb('الحالة||Status')}</label><select id="fa_st">${Object.keys(ASTAT).map(k=>`<option value="${k}" ${(a.status||'ok')===k?'selected':''}>${ASTAT[k][0]}</option>`).join('')}</select></div>
@@ -6105,7 +6105,7 @@ function assetForm(id){
       <option value="critical" ${a.critical==='critical'?'selected':''}>${lb('حرجة — تؤثر على التشغيل||Critical')}</option></select></div>
     <div><label>${lb('الجهة المسؤولة / مزوّد الخدمة||Responsible provider')}</label><input id="fa_pv" list="fa_supl" value="${esc(a.provider||'')}"><datalist id="fa_supl">${supOpts}</datalist></div>
     <div><label>${lb('الأصل الأب (مكوّن تابع له)||Parent asset (component of)')}</label><select id="fa_par"><option value="">—</option>${parOpts}</select></div>
-    <div><label>${lb('الفريق المسؤول (UpKeep Team)||Responsible team')}</label>
+    <div><label>${lb('الفريق المسؤول||Responsible team')}</label>
       <select id="fa_tm">
         <option value="">${lb('— بدون فريق محدد —||— None —')}</option>
         ${(db.teams||[]).map(t=>`<option value="${t.id}" ${(a.teamId===t.id||a.team===t.name)?'selected':''}>${esc(t.name)}</option>`).join('')}
@@ -6773,7 +6773,7 @@ function ctrCsv(){
   csvExport('contracts',[lb('الرقم||No.'),lb('المورد||Vendor'),lb('النطاق||Scope'),lb('البداية||Start'),lb('النهاية||End'),lb('القيمة||Value'),lb('الدورة||Cycle'),lb('الحالة||Status'),lb('المسؤول||Manager')],rows);
 }
 
-/* ===== WORK ORDERS & TEAMS INTEGRATION (UpKeep Style) ===== */
+/* ===== WORK ORDERS & TEAMS INTEGRATION ===== */
 function myUserTeamIds(){
   if(!me) return [];
   return (db.teams||[]).filter(t=>t.leaderId===me.id || (t.memberIds||[]).includes(me.id)).map(t=>t.id);
@@ -6840,7 +6840,7 @@ function vWOs(){
   const rawList=(isTech()?db.wos.filter(w=>w.assigneeId===me.id || (w.teamId && myTIds.includes(w.teamId))):db.wos).filter(w=>w.compoundId===act);
   let list = rawList;
 
-  // 1. Presets (Saved Views inspired by UpKeep)
+  // 1. Presets (Saved Views)
   const preset = FILT.woPreset || 'all';
   if(preset === 'mine') list = list.filter(w => (w.assigneeId === me.id || (w.teamId && myTIds.includes(w.teamId))) && w.status !== 'closed');
   else if(preset === 'urgent') list = list.filter(w => w.status !== 'closed' && (w.priority === 'urgent' || w.priority === 'high'));
@@ -6859,7 +6859,7 @@ function vWOs(){
   // 4. Assignee / Tech Filter
   if(FILT.woTech && FILT.woTech !== 'all') list = list.filter(w => w.assigneeId === FILT.woTech);
 
-  // 4.5 Team Filter (UpKeep Multi-Team Dispatch)
+  // 4.5 Team Filter (Multi-Team Dispatch)
   if(FILT.woTeam && FILT.woTeam !== 'all') {
     if(FILT.woTeam === 'none') list = list.filter(w => !w.teamId);
     else list = list.filter(w => w.teamId === FILT.woTeam);
@@ -6876,7 +6876,7 @@ function vWOs(){
     });
   }
 
-  // 6. Tokenized Search with Arabic normalization (UpKeep Engine)
+  // 6. Tokenized Search with Arabic normalization (Smart Search Engine)
   const tokens = tokenizeSearch(FILT.wos);
   if(tokens.length) {
     list = list.filter(w => matchSearchTokens([
@@ -6890,7 +6890,7 @@ function vWOs(){
   const ix=w=>db.wos.indexOf(w);
   const portalBadge=` <span class="badge b-open" title="${lb('من بوابة المستأجرين||From tenant portal')}">بوابة</span>`;
 
-  // Preset Counts for UpKeep Saved Views
+  // Preset Counts for Saved Views
   const cMine = rawList.filter(w => (w.assigneeId === me.id || (w.teamId && myTIds.includes(w.teamId))) && w.status !== 'closed').length;
   const cUrgent = rawList.filter(w => w.status !== 'closed' && (w.priority === 'urgent' || w.priority === 'high')).length;
   const cOverdue = rawList.filter(w => w.status !== 'closed' && w.dueDate && daysUntil(w.dueDate) < 0).length;
@@ -6915,7 +6915,7 @@ function vWOs(){
     <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
 
   <div class="wo-filter-container">
-    <!-- UpKeep-Style Saved Views / Presets Bar -->
+    <!-- Saved Views / Presets Bar -->
     <div class="wo-presets-bar">
       ${pChip('all', lb('📋 الكل||All'), rawList.length)}
       ${pChip('mine', lb('👤 مهامي وفريقي||My & Team Tasks'), cMine)}
@@ -6971,7 +6971,7 @@ function vWOs(){
     const isMine=isTech()?(w.assigneeId===me.id || (w.teamId && myTIds.includes(w.teamId))):true;
     let acts=`<button class="btn sm ghost" title="${lb('عرض التفاصيل||View details')}" onclick="woView(${ix(w)})">${ic('view',13)}</button>`;
     if(w.status==='closed'||(w.photos&&w.photos.length)||w.sig||(w.checklist&&w.checklist.length)){
-      acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff" title="${lb('شهادة إثبات العمل والامتثال (UpKeep Evidence)||Proof of Work Certificate')}" onclick="woEvidenceModal(${ix(w)})">🛡️ ${lb('إثبات||Evidence')}</button>`;
+      acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff" title="${lb('شهادة إثبات العمل والامتثال||Proof of Work Certificate')}" onclick="woEvidenceModal(${ix(w)})">🛡️ ${lb('إثبات||Evidence')}</button>`;
     }
     if(w.status==='planned'&&canAppr()){
       acts+=`<button class="btn sm" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="woApprove(${ix(w)})">${lb('اعتماد||Approve')}</button>`;
@@ -7026,7 +7026,7 @@ function woForm(idx,presetAsset,presetTeam){
     <div><label>${lb('الوحدة (اختياري)||Unit (optional)')}</label><select id="fw_u"><option value="">—</option>${uOpts}</select></div>
     <div><label>${lb('الموقع (يدوي)||Location (manual)')}</label><input id="fw_l" value="${esc(w.bname||'')}"></div>
     <div><label>${lb('الأولوية (تحدد الاستحقاق)||Priority (sets due date)')}</label><select id="fw_p" onchange="slaDue()">${Object.keys(PRIO).map(k=>`<option value="${k}" ${(w.priority||'normal')===k?'selected':''}>${PRIO[k]}</option>`).join('')}</select></div>
-    <div><label>${lb('الفريق المسؤول (UpKeep Team)||Assigned Team')}</label>
+    <div><label>${lb('الفريق المسؤول||Assigned Team')}</label>
       <select id="fw_team" onchange="woTeamChanged()">
         <option value="">${lb('— بدون فريق (فردي) —||— None (Individual) —')}</option>
         ${(db.teams||[]).filter(t=>!t.compoundId||t.compoundId===act).map(t=>`<option value="${t.id}" ${initialTeamId===t.id?'selected':''}>${esc(t.name)} (${(t.memberIds||[]).length} ${lb('فني||techs')})</option>`).join('')}
@@ -7223,7 +7223,7 @@ function woView(i){
   ${canClaim?`<button class="btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff" onclick="closeModal();woClaim(${i})">✋ ${lb('استلام أمر الشغل وتكليفي به||Claim Work Order')}</button>`:''}
   ${(w.status==='planned'&&canAppr())?`<button class="btn" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="closeModal();woApprove(${i})">${lb('اعتماد||Approve')}</button>
   <button class="btn ghost" onclick="closeModal();woDismiss(${i})">${lb('رفض||Dismiss')}</button>`:''}
-  <button class="btn" style="background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff" onclick="closeModal();woEvidenceModal(${i})">🛡️ ${lb('شهادة إثبات العمل والامتثال (UpKeep Evidence)||Evidence & Proof of Work')}</button>
+  <button class="btn" style="background:linear-gradient(135deg,#0e7490,#0284c7);color:#fff" onclick="closeModal();woEvidenceModal(${i})">🛡️ ${lb('شهادة إثبات العمل والامتثال||Evidence & Proof of Work')}</button>
   ${(w.status!=='closed')?`<button class="btn ghost" onclick="closeModal();waModal(${i})"> ${lb('واتساب||WhatsApp')}</button>`:''}
   <button class="btn ghost" onclick="closeModal()">${lb('إغلاق النافذة||Close Window')}</button></div>`);
 }
@@ -7360,13 +7360,13 @@ async function doCloseWO(i){
 }
 
 /* ============================================================
-   UPKEEP EVIDENCE & PROOF OF WORK PLATFORM
+   EVIDENCE & PROOF OF WORK PLATFORM
    - توليد الختم الرقمي لمكافحة التلاعب (SHA-256 Tamper Seal)
    - ملف الإثبات الجنائي والامتثال المعتمد للتدقيق (Audit-Proof Dossier)
    - مقارنة صور قبل/بعد الإصلاح (Before & After Visual Proof)
    - قوائم فحص متعددة الحالات (Pass/Fail/Flagged Checklist)
    - توقيع ثنائي (الفني المنفذ + اعتماد العميل/المشرف)
-   - ملخص الذكاء الاصطناعي للأدلة والسبب الجذري (UpKeep Nova)
+   - ملخص الذكاء الاصطناعي للأدلة والسبب الجذري (Nova AI)
    ============================================================ */
 async function woComputeIntegrityHash(w){
   try{
@@ -7443,7 +7443,7 @@ function woEvidenceModal(i){
       `<span class="badge b-wait">🟡 ${lb('متوسطة||MEDIUM')}</span>`;
     aiCardHtml=`<div class="evidence-ai-card">
       <div class="evidence-ai-head">
-        <span class="evidence-ai-badge">🤖 ${lb('تحليل الذكاء الاصطناعي للأدلة (UpKeep Intelligence — Nova)||AI Evidence & Root Cause Analysis')}</span>
+        <span class="evidence-ai-badge">🤖 ${lb('تحليل الذكاء الاصطناعي للأدلة (Nova AI)||AI Evidence & Root Cause Analysis')}</span>
         <div style="display:flex;gap:8px;align-items:center">
           <span style="font-size:11px;font-weight:700">${lb('مستوى المخاطر: ||Risk Score: ')}${rBadge}</span>
           <button class="btn sm ghost" onclick="generateAiEvidenceSummary(${i})">🔄 ${lb('تحديث التحليل||Refresh')}</button>
@@ -7473,7 +7473,7 @@ function woEvidenceModal(i){
       <h4 style="margin-bottom:4px">${lb('تحليل الذكاء الاصطناعي للأدلة والسبب الجذري||AI Evidence & Root-Cause Assessment')}</h4>
       <p class="muted" style="margin-bottom:12px">${lb('توليد تشخيص هندسي فوري للسبب الجذري وتوصيات الصيانة الاستباقية لمنع تكرار العطل استناداً لأدلة أمر الشغل.||Generate automated engineering root cause analysis, execution summary, and preventive actions from work order evidence.')}</p>
       <button class="btn sm" style="background:linear-gradient(135deg,#0e7490,#7c3aed);color:#fff" onclick="generateAiEvidenceSummary(${i})">
-        ✨ ${lb('توليد تحليل الذكاء الاصطناعي الآن (UpKeep Nova)||Generate AI Evidence Summary Now')}
+        ✨ ${lb('توليد تحليل الذكاء الاصطناعي الآن (Nova AI)||Generate AI Evidence Summary Now')}
       </button>
     </div>`;
   }
@@ -7542,7 +7542,7 @@ function woEvidenceModal(i){
         </div>
         <div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <span class="evidence-seal-badge">🛡️ ${lb('شهادة إثبات العمل والامتثال (UpKeep Evidence)||UpKeep Proof of Work & Audit Certificate')}</span>
+            <span class="evidence-seal-badge">🛡️ ${lb('شهادة إثبات العمل والامتثال||Proof of Work & Audit Certificate')}</span>
             ${isClosed?`<span class="badge b-done" style="font-size:11px;padding:3px 9px">✅ ${lb('خاضع للامتثال ومعتمد||Audit-Proof & Verified')}</span>`:
               `<span class="badge b-prog" style="font-size:11px;padding:3px 9px">⏳ ${lb('قيد المعاينة الميدانية||In Progress')}</span>`}
           </div>
@@ -7606,7 +7606,7 @@ function woEvidenceModal(i){
       </div>
     </div>
 
-    <!-- AI UpKeep Nova Evidence Card -->
+    <!-- AI Nova Evidence Card -->
     ${aiCardHtml}
 
     <!-- Inspection Checklist Evidence -->
@@ -7678,7 +7678,7 @@ function woEvidenceModal(i){
 
 async function generateAiEvidenceSummary(i){
   const w=db.wos[i];if(!w)return;
-  toast(lb('جاري تشغيل تحليل الذكاء الاصطناعي للأدلة (UpKeep Nova)...||Running AI evidence assessment...'));
+  toast(lb('جاري تشغيل تحليل الذكاء الاصطناعي للأدلة (Nova AI)...||Running AI evidence assessment...'));
   try{
     const payload={
       woNo:w.no,
@@ -9051,7 +9051,7 @@ function userForm(id){
     ${db.compounds.map(c=>`<option value="${c.id}" ${(u.cmpIds||[])[0]===c.id?'selected':''}>${esc(c.name)} — ${KINDL()[c.kind||'property']||''}</option>`).join('')}
   </select>
   <p class="muted">${lb('كل مستخدم أو فني مرتبط بأصل واحد فقط. لو الفني يعمل في أكثر من أصل، أنشئ له حساباً مستقلاً لكل أصل حتى لا تتداخل بياناته.||Each user or technician belongs to one asset only. If a technician works in several assets, create a separate account for each so their data never mixes.')}</p>
-  <label>${lb('فِرق العمل المنتمي إليها (UpKeep Team Membership)||Assigned Teams')}</label>
+  <label>${lb('فِرق العمل المنتمي إليها||Assigned Teams')}</label>
   <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;background:rgba(0,0,0,.03);padding:10px;border-radius:8px;border:1px solid var(--line)">
     ${(db.teams||[]).map(t=>{
       const isMem=(t.memberIds||[]).includes(u.id);
@@ -9109,7 +9109,7 @@ function delUser(id){if(!confirm(lb('حذف المستخدم؟||Delete user?')))
   SAVE.usersIntent=true;persist();paintTab();}
 
 /* ============================================================
-   فِرق العمل والهيكل التنظيمي الهرمي (Teams & Hierarchy — UpKeep CMMS Model)
+   فِرق العمل والهيكل التنظيمي الهرمي (Teams & Organizational Hierarchy)
    يدعم: الهيكل الهرمي، التوزيع التلقائي، استلام البلاغات، وإدارة الكوادر
    ============================================================ */
 const TEAM_SPEC_L = {
@@ -9297,7 +9297,7 @@ function vTeamsHierarchyTree(){
   return `<div class="card" style="margin-bottom:14px;background:linear-gradient(135deg,rgba(14,116,144,.04),rgba(59,130,246,.04))">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div>
-        <h3 style="margin:0 0 4px 0">🌳 ${lb('الهيكل الهرمي لفِرق الصيانة والتشغيل (UpKeep Organizational Hierarchy)||Maintenance & Operations Hierarchy Tree')}</h3>
+        <h3 style="margin:0 0 4px 0">🌳 ${lb('الهيكل الهرمي لفِرق الصيانة والتشغيل||Maintenance & Operations Hierarchy Tree')}</h3>
         <p class="muted" style="margin:0;font-size:12.5px">${lb('مخطط تفاعلي يوضّح التبعية الإدارية من القيادة الهندسية وحتى الفنيين المتخصصين في الميدان.||Interactive chart showing command hierarchy from engineering leadership down to field technicians.')}</p>
       </div>
       <div style="display:inline-flex;gap:6px">
@@ -9408,9 +9408,9 @@ function vTeamsDispatchRules(){
   ];
 
   return `<div class="card" style="margin-bottom:14px">
-    <h3>⚡ ${lb('مصفوفة التوزيع التلقائي للبلاغات وأوامر الشغل (UpKeep Auto-Dispatch Matrix)||Auto-Dispatch Matrix')}</h3>
+    <h3>⚡ ${lb('مصفوفة التوزيع التلقائي للبلاغات وأوامر الشغل||Auto-Dispatch Matrix')}</h3>
     <p class="muted" style="font-size:12.5px;line-height:1.5">
-      ${lb('مطابق لمنظومة UpKeep CMMS Workflow Automation: عند ورود أي بلاغ صيانة جديد (سواء عبر بوابة المستأجر العامة، مسح رمز QR، أو مجدول الصيانة الوقائية)، يقوم النظام فوراً بربط البلاغ بالفريق المسؤول المختص وإدراجه في قائمة انتظار الفريق (Team Queue) ليتولى الفنيون استلامه، أو تكليف قائد الفريق تلقائياً.||Matching UpKeep CMMS Workflow Automation: when a new request is submitted (via tenant portal, QR code scan, or PM scheduler), the system instantly routes it to the designated team queue for technicians to claim, or assigns it to the team lead.')}
+      ${lb('نظام التوزيع الذكي وسير العمل التلقائي: عند ورود أي بلاغ صيانة جديد (سواء عبر بوابة المستأجر العامة، مسح رمز QR، أو مجدول الصيانة الوقائية)، يقوم النظام فوراً بربط البلاغ بالفريق المسؤول المختص وإدراجه في قائمة انتظار الفريق (Team Queue) ليتولى الفنيون استلامه، أو تكليف قائد الفريق تلقائياً.||Intelligent Workflow Automation: when a new request is submitted (via tenant portal, QR code scan, or PM scheduler), the system instantly routes it to the designated team queue for technicians to claim, or assigns it to the team lead.')}
     </p>
 
     <div class="tbl-wrap" style="margin-top:14px">
@@ -9465,7 +9465,7 @@ function teamForm(id){
     { id: 'general', label: lb('مرافق وعمليات عامة||General Facilities') }
   ];
 
-  modal(`<h3>${id ? lb('تعديل فريق العمل||Edit Team') : lb('فريق عمل جديد (UpKeep Team)||New Team')}</h3>
+  modal(`<h3>${id ? lb('تعديل فريق العمل||Edit Team') : lb('فريق عمل جديد||New Team')}</h3>
   <div class="fg">
     <div>
       <label>${lb('رمز الفريق (كود فريد) *||Team Code *')}</label>

@@ -232,7 +232,7 @@ setInterval(() => {
   for (const [k, v] of sessions) if (now - v.at > SESSION_TTL) sessions.delete(k);
 }, 15 * 60 * 1000).unref();
 
-/* التهيئة الافتراضية لهيكل وفِرق الصيانة (UpKeep-style Teams Hierarchy) */
+/* التهيئة الافتراضية لهيكل وفِرق الصيانة (Teams & Organizational Hierarchy) */
 function initDefaultTeams(d){
   if(!d || !Array.isArray(d.users) || d.users.length < 2) return;
   const rid=p=>p+crypto.randomBytes(5).toString('hex');
@@ -922,7 +922,7 @@ app.post('/api/state', async (req,res)=>{
   } catch (e) { console.error('DB error on save:', e.message); return res.status(500).json({error:'DB'}); }
 });
 
-/* ---- محرك البحث الموحّد (UpKeep-style Unified Multi-Entity Search API) ---- */
+/* ---- محرك البحث الموحّد (Unified Multi-Entity Search API) ---- */
 app.get('/api/search', async (req, res) => {
   let cur;
   try { cur = await getState(); }
@@ -1195,7 +1195,7 @@ app.post('/api/public/requests', pubLimit, async (req, res) => {
       st.data.seq = (st.data.seq || 0) + 1;
       const y = new Date().getFullYear();
 
-      // التوجيه التلقائي للفريق المختص حسب تصنيف البلاغ (UpKeep-style Auto-Dispatch)
+      // التوجيه التلقائي للفريق المختص حسب تصنيف البلاغ (Smart Auto-Dispatch)
       let assignedTeam = null;
       if (cat && Array.isArray(st.data.teams)) {
         assignedTeam = st.data.teams.find(t => (t.autoCategories || []).includes(cat) || t.specialty === cat);
@@ -1655,13 +1655,13 @@ app.post('/api/ai/pm-suggest', async (req, res) => {
 });
 
 /* ============================================================
-   UpKeep-Style AI Evidence & Root Cause Assessment (Nova)
+   AI Evidence & Root Cause Assessment (Nova Engine)
    يحلل أدلة تنفيذ أمر الشغل: الصور، قطع الغيار، قائمة الفحص،
    وملاحظات الفني لتوليد تقرير امتثال، تشخيص السبب الجذري،
    وتوصيات استباقية لمنع تكرار العطل.
    ============================================================ */
 const AI_EVIDENCE_SYSTEM = [
-  'You are an expert facilities maintenance auditor and reliability engineer inspired by UpKeep Asset Operations Management.',
+  'You are an expert facilities maintenance auditor and reliability engineer specializing in Asset Operations Management.',
   'Analyze the work order execution evidence including checklist results, photos, replaced parts, labor duration, and closing notes.',
   'Generate an official Audit-Proof Evidence Summary & Root Cause Assessment.',
   'Return STRICT JSON only, no markdown, in this exact shape:',
