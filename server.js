@@ -520,11 +520,13 @@ function sanitizePasswords(data){
   });
   return data;
 }
-/* مقارنة ثابتة لمصفوفة المستخدمين (ترتيب المفاتيح لا يؤثر) */
+/* مقارنة ثابتة لمصفوفة المستخدمين (ترتيب المفاتيح لا يؤثر وتجاهل كلمة المرور) */
 function canonUsers(users) {
   return JSON.stringify((users || []).map(u => {
     const o = {};
-    Object.keys(u || {}).sort().forEach(k => { o[k] = u[k]; });
+    Object.keys(u || {}).sort().forEach(k => {
+      if (k !== 'p') o[k] = u[k];
+    });
     return o;
   }));
 }
@@ -885,7 +887,21 @@ app.get('/api/state', async (req,res)=>{
       ver: cur.ver, userId: actor.session.userId, role: actor.session.role, marketplace: true
     });
   }
-  res.json(cur.data ? { ...cur, userId: actor.session.userId, role: actor.session.role } : cur);
+  if(cur.data){
+    /* تجريد تجزئات كلمات المرور (u.p) لحماية بيانات الاعتماد من الوصول للعميل (P0 SEC-01) */
+    const safeUsers = (cur.data.users || []).map(u => {
+      const copy = { ...u };
+      delete copy.p;
+      return copy;
+    });
+    return res.json({
+      ...cur,
+      data: { ...cur.data, users: safeUsers },
+      userId: actor.session.userId,
+      role: actor.session.role
+    });
+  }
+  res.json(cur);
 });
 
 /* ---- حفظ الحالة (مع كشف تعارض التعديل المتزامن + RBAC على المستخدمين) ---- */
@@ -910,6 +926,19 @@ app.post('/api/state', async (req,res)=>{
     const nextU = canonUsers(normalizeUserList(JSON.parse(JSON.stringify(data.users || [])), data.compounds || []));
     const curU = canonUsers(normalizeUserList(JSON.parse(JSON.stringify(cur.data.users || [])), cur.data.compounds || []));
     if (nextU !== curU) return res.status(403).json({ error: 'USERS_FORBIDDEN' });
+  }
+  /* الحفاظ على كلمات المرور المشفّرة السابقة وتشفير الجديدة */
+  if (cur.data && Array.isArray(cur.data.users) && Array.isArray(data.users)) {
+    const existingMap = new Map(cur.data.users.map(u => [u.id, u]));
+    data.users.forEach(u => {
+      if (!u) return;
+      const existing = existingMap.get(u.id);
+      if (!u.p && existing && existing.p) {
+        u.p = existing.p;
+      } else if (u.p && !isHash(u.p)) {
+        u.p = hashPassword(u.p);
+      }
+    });
   }
   /* نطبّع نسخة التخزين أيضاً حتى تتفق نسخة العميل مع المخزّنة */
   normalizeUserList(data.users, data.compounds);

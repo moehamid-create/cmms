@@ -796,61 +796,6 @@ html[dir="ltr"] .feature-item:hover{transform:translateX(3px)}
    تصميم بصري متطور مستوحى من VisionOS و iOS 18 مع حركة سلسة وانعكاسات زجاجية
    ══════════════════════════════════════════════════════════════════ */
 
-/* ── 1. ألوان وحسابات الزجاج البصرية ────────────────────────────── */
-:root{
-  --ink:#0f1e29;--muted:#536b7b;
-  --brand:#0e7490;--brand-2:#0891b2;--dark:#155e75;
-  --brand-soft:rgba(14,116,144,.10);
-  --sand:#b4761a;
-  --line:rgba(255,255,255,.68);
-  --line-soft:rgba(255,255,255,.38);
-  --glass-hi:rgba(255,255,255,.78);
-  --glass-lo:rgba(255,255,255,.48);
-  --glass-border:rgba(255,255,255,.70);
-  --glass-border-subtle:rgba(255,255,255,.40);
-  --glass-specular:inset 0 1.5px .5px rgba(255,255,255,.95),inset 0 -1px .5px rgba(255,255,255,.30);
-  --glass-specular-soft:inset 0 1px 0 rgba(255,255,255,.80);
-  --glass-glow:rgba(14,116,144,.18);
-  --s2:rgba(255,255,255,.45);
-  --s3:rgba(255,255,255,.65);
-
-  --red:#dc2626;--redbg:rgba(254,226,226,.85);
-  --green:#059669;--greenbg:rgba(209,250,229,.85);
-  --amber:#d97706;--amberbg:rgba(254,243,199,.88);
-  --blue:#2563eb;--bluebg:rgba(219,234,254,.85);
-  --purple:#7c3aed;--purplebg:rgba(237,233,254,.85);
-
-  --shadow:0 12px 34px -14px rgba(2,44,66,.18),0 4px 12px -4px rgba(2,44,66,.08),inset 0 1px 1px 0 rgba(255,255,255,.88);
-  --shadow-lift:0 20px 48px -12px rgba(2,44,66,.24),0 6px 18px -4px rgba(2,44,66,.12),inset 0 1.5px 1.5px 0 rgba(255,255,255,.98);
-  --r:16px;--radius-liquid:20px;
-}
-:root.dark{
-  --ink:#f0f6fa;--muted:#95acc0;
-  --brand:#22d3ee;--brand-2:#38bdf8;--dark:#0e7490;
-  --brand-soft:rgba(34,211,238,.14);
-  --sand:#fbbf24;
-  --line:rgba(255,255,255,.12);
-  --line-soft:rgba(255,255,255,.06);
-  --glass-hi:rgba(20,34,48,.78);
-  --glass-lo:rgba(10,20,30,.56);
-  --glass-border:rgba(255,255,255,.13);
-  --glass-border-subtle:rgba(255,255,255,.07);
-  --glass-specular:inset 0 1.5px .5px rgba(255,255,255,.20),inset 0 -1px .5px rgba(0,0,0,.50);
-  --glass-specular-soft:inset 0 1px 0 rgba(255,255,255,.14);
-  --glass-glow:rgba(34,211,238,.22);
-  --s2:rgba(255,255,255,.05);
-  --s3:rgba(255,255,255,.09);
-
-  --red:#f87171;--redbg:rgba(127,29,29,.42);
-  --green:#34d399;--greenbg:rgba(6,78,59,.45);
-  --amber:#fbbf24;--amberbg:rgba(120,53,15,.45);
-  --blue:#60a5fa;--bluebg:rgba(30,58,138,.48);
-  --purple:#a78bfa;--purplebg:rgba(76,29,149,.48);
-
-  --shadow:0 16px 42px -12px rgba(0,0,0,.68),0 4px 14px -2px rgba(0,0,0,.45),inset 0 1px 1px 0 rgba(255,255,255,.14);
-  --shadow-lift:0 24px 56px -12px rgba(0,0,0,.82),0 8px 22px -4px rgba(0,0,0,.55),inset 0 1.5px 1.5px 0 rgba(255,255,255,.24);
-}
-
 /* ── 2. الغلاف الجوي والهندسي ─────────────────────────────────────── */
 body{background:var(--liquid-bg-base);font-size:14.5px;line-height:1.55;letter-spacing:normal}
 body::after{
@@ -2162,8 +2107,21 @@ function waSend(i){
 /* ===== PHOTOS & SIGNATURE ===== */
 const PH={};let _phSeq=0;
 function phReg(d){const k='K'+(++_phSeq);PH[k]=d;return k;}
-function lbShow(k){if(!PH[k])return;
-  modal(`<img src="${PH[k]}" style="width:100%;max-height:78vh;object-fit:contain;border-radius:12px;background:#fff">`);}
+
+/* Sanitize image/media URLs against XSS injection (P0 SEC-02) */
+function safeMediaUrl(u){
+  const s = String(u || '').trim();
+  if(/^\/uploads\/[a-zA-Z0-9._-]+$/.test(s)) return s;
+  if(/^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(s)) return s;
+  if(/^https?:\/\/[^\s"'<>]+$/i.test(s)) return s;
+  return '';
+}
+
+function lbShow(k){
+  const url = safeMediaUrl(PH[k]);
+  if(!url) return;
+  modal(`<img src="${esc(url)}" alt="${lb('صورة مرفقة||Attached photo')}" style="width:100%;max-height:78vh;object-fit:contain;border-radius:12px;background:#fff">`);
+}
 function compressImg(file){return new Promise(res=>{
   const r=new FileReader();
   r.onload=e=>{const img=new Image();
@@ -2214,10 +2172,13 @@ function sigHasInk(id='sigpad'){const cv=$(id);if(!cv)return false;
   try{const d=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;
     for(let i=3;i<d.length;i+=4)if(d[i]>0)return true;}catch(e){}
   return false;}
-function phTmpHTML(arr,key){return arr.map((p,i)=>
-  `<span class="phwrap"><img class="pthumb" loading="lazy" src="${p.d}" onclick="lbShow('${phReg(p.d)}')">
-  <button type="button" class="phdel" onclick="phTmpDel('${key}',${i})">${ic('x',12)}</button></span>`).join('')
-  ||`<span class="muted">${lb('لا صور بعد||No photos yet')}</span>`;}
+function phTmpHTML(arr,key){
+  return (arr||[]).map((p,i)=>{
+    const url = safeMediaUrl(p && p.d);
+    if(!url) return '';
+    return `<span class="phwrap"><img class="pthumb" loading="lazy" src="${esc(url)}" onclick="lbShow('${phReg(url)}')"><button type="button" class="phdel" aria-label="${lb('حذف الصورة||Delete photo')}" onclick="phTmpDel('${esc(key)}',${i})">${ic('x',12)}</button></span>`;
+  }).join('') || `<span class="muted">${lb('لا صور بعد||No photos yet')}</span>`;
+}
 function phTmpDel(key,i){const arr=key==='b'?window._woPhB:key==='a'?window._woPhA:window._faPh;
   if(arr){arr.splice(i,1);}
   if(key==='b'||key==='a')renderWoPhGrids();else renderFaPhotos();}
@@ -2270,12 +2231,16 @@ function initLangMaps(){
 const SAVE={state:'saved',dirt:false,inflight:null,retry:0,timer:0,usersIntent:false};
 const SAVE_RETRY_MS=[1000,3000,10000];
 const LS_MAX_CHARS=2*1024*1024;   /* حد نسخة المتصفح — الصور والتوقيعات لا تُنسخ محلياً */
-/* الصور والتوقيعات تُرفع إلى الخادم (POST /api/uploads) ويُخزَّن رابطها بدل base64 داخل الحالة.
-   عند تعذّر الرفع نُبقي النسخة المضمّنة كخطة بديلة. */
+/* Strip heavy base64 media AND sensitive password hashes from localStorage (P0 SEC-01 & SEC-02) */
 function stripHeavyForLocal(d){
-  const c=Object.assign({},d);
-  c.wos=(d.wos||[]).map(w=>{const x=Object.assign({},w);x.photos=[];x.sig='';return x;});
-  c.assets=(d.assets||[]).map(a=>{const x=Object.assign({},a);x.photos=[];return x;});
+  const c = Object.assign({}, d);
+  c.wos = (d.wos||[]).map(w => Object.assign({}, w, {photos:[], sig:''}));
+  c.assets = (d.assets||[]).map(a => Object.assign({}, a, {photos:[]}));
+  c.users = (d.users||[]).map(u => {
+    const x = Object.assign({}, u);
+    delete x.p; /* Never persist password hashes in browser localStorage */
+    return x;
+  });
   return c;
 }
 function saveLocalCopy(){
@@ -2362,17 +2327,51 @@ function scheduleSaveRetry(status){
     toast(lb(' تعذّر الوصول للخادم — سيُعاد المحاولة عند أول تغيير|| Server unreachable — will retry on your next change'),'err');
   }
 }
+/* Merge local mutations with server collection on 409 conflict (P1 SYNC-01) */
+function mergeCollectionById(serverArr, localArr, keyField){
+  const map = new Map();
+  (serverArr || []).forEach(item => { if(item && item[keyField]) map.set(item[keyField], item); });
+  (localArr || []).forEach(item => {
+    if(!item || !item[keyField]) return;
+    const srv = map.get(item[keyField]);
+    if(!srv) {
+      map.set(item[keyField], item); /* Newly created local record */
+    } else {
+      const locTs = item.updatedAt || item.createdAt || item.date || 0;
+      const srvTs = srv.updatedAt || srv.createdAt || srv.date || 0;
+      if(locTs >= srvTs) {
+        map.set(item[keyField], Object.assign({}, srv, item));
+      }
+    }
+  });
+  return Array.from(map.values());
+}
+
 async function resolveConflict(){
   try{
     const r=await api('/state');
     if(!r.ok){setSaveState('error');toast(lb(' تعارض في الحفظ وتعذّر تحميل النسخة الأحدث|| Save conflict and the latest copy could not be loaded'),'err');return;}
     const s=await r.json();
     if(!s||!s.data||typeof s.ver!=='number'){setSaveState('error');toast(lb(' تعارض في الحفظ — نسخة الخادم غير صالحة|| Save conflict — server copy invalid'),'err');return;}
-    AUTH.ver=s.ver;db=migrate(s.data);
+    const serverDb = migrate(s.data);
+    const localDb = db;
+    const collections = ['compounds','buildings','assets','wos','pms','inv','suppliers','prs','pos','contracts','units','tenants','projects','employees','shifts','teams','notifs','providers','rfqs'];
+    collections.forEach(col => {
+      const key = (col === 'wos') ? (serverDb[col] && serverDb[col][0] && serverDb[col][0].id ? 'id' : 'no') : 'id';
+      serverDb[col] = mergeCollectionById(serverDb[col], localDb[col], key);
+    });
+    ['woSeq','assetSeq','prSeq','poSeq','rnSeq','prjSeq','ctSeq','rfqSeq'].forEach(seq => {
+      serverDb[seq] = Math.max(serverDb[seq] || 0, localDb[seq] || 0);
+    });
+    AUTH.ver=s.ver;
+    db=serverDb;
     AUTH.usersRaw=JSON.parse(JSON.stringify(s.data.users||[]));
-    saveLocalCopy();setSaveState('saved');
-    toast(lb(' حدّث مستخدم آخر البيانات — حُمّلت النسخة الأحدث|| Data updated by another user — latest loaded'),'err');
+    saveLocalCopy();
+    setSaveState('saved');
+    toast(lb(' تم دمج التعديلات المحلية مع تحديثات الخادم بنجاح|| Local changes merged with server updates'),'ok');
     render();
+    SAVE.dirt=true;
+    queueSave();
   }catch(e){setSaveState('error');}
 }
 function sessionExpired(){
@@ -3470,6 +3469,7 @@ function render(){
   if(me&&!PICK)paintTab();
   renderSaveState();
   document.querySelectorAll('#app button[title]').forEach(b=>{if(!b.getAttribute('aria-label'))b.setAttribute('aria-label',b.title);});
+  ensureA11yRoles($('app'));
 }
 /* بطاقات اختيار نوع الأصل — تُستخدم في شاشة البداية وفي نافذة "أصل جديد" */
 function onbCard(kind,icon,ar,en,subAr,subEn){
@@ -3504,7 +3504,7 @@ function pickerHtml(){
     const stats=dom==='realestate'
       ?`${bl} ${lb('مبنى||bldgs')} · ${un} ${lb('وحدة||units')}`
       :`${as} ${lb('أصل||assets')}`;
-    return `<div class="cmpcard dom-${dm.k}" onclick="setCmp('${c.id}')">
+    return `<div class="cmpcard dom-${dm.k}" tabindex="0" role="button" onclick="setCmp('${c.id}')">
       <span class="cmpdom" style="background:${dm.col}">${ic(dm.ic,15)}</span>
       <div class="cc-t">${esc(c.name)}</div>
       <div class="muted">${dm.t}${c.ptype?' · '+(PTYPEL()[c.ptype]||c.ptype):''}</div>
@@ -3670,6 +3670,7 @@ function paintTab(){
   else if(TAB==='certs')v.innerHTML=vCerts();
   else if(TAB==='market')v.innerHTML=vMarket();
   v.classList.remove('vfade');void v.offsetWidth;v.classList.add('vfade');
+  ensureA11yRoles(v);
 }
 
 /* ===== COMPOUNDS MGMT ===== */
@@ -4215,11 +4216,11 @@ const PM_LIB={
       'تنظيف المبخر والمكثف||Clean evaporator and condenser',
       'فحص صرف التكثيف||Check condensate drainage',
       'قياس ضغط الغاز والحرارة||Measure gas pressure and temperature']},
-      {name:'تنظيف وتعقيم الدكت — سنوي||Duct cleaning and sanitising — yearly',fv:1,fu:'months',tasks:[
+      {name:'تنظيف وتعقيم الدكت — سنوي||Duct cleaning and sanitising — yearly',fv:12,fu:'months',tasks:[
       'تنظيف شبكات ومجاري الهواء||Clean air ducts and grilles',
       'تعقيم الدكت||Sanitise ducts']}]},
   water_heater:{label:'سخان مياه||Water heater',defQty:1,asset:{name:'سخان مياه||Water heater',cat:'سخان مياه'},
-    plans:[{name:'صيانة السخان — سنوي||Water heater service — yearly',fv:1,fu:'months',tasks:[
+    plans:[{name:'صيانة السخان — سنوي||Water heater service — yearly',fv:12,fu:'months',tasks:[
       'تفريغ الرواسب والكلس||Flush sediment and scale',
       'فحص صمام الأمان والترموستات||Check safety valve and thermostat',
       'فحص الوصلات والتسريب||Inspect connections for leaks']}]},
@@ -4236,7 +4237,7 @@ const PM_LIB={
       'تنظيف مصافي ومصارف المياه||Clean water strainers and drains',
       'فحص خزانات المياه والعوامات||Inspect tanks and float valves']}]},
   electrical:{label:'لوحة كهرباء||Electrical panel',defQty:1,asset:{name:'لوحة الكهرباء الرئيسية||Main electrical panel',cat:'لوحة كهرباء'},
-    plans:[{name:'فحص اللوحة الكهربائية — سنوي||Electrical panel inspection — yearly',fv:1,fu:'months',tasks:[
+    plans:[{name:'فحص اللوحة الكهربائية — سنوي||Electrical panel inspection — yearly',fv:12,fu:'months',tasks:[
       'ربط وشد التوصيلات||Tighten and secure connections',
       'فحص القواطع وفرق الحماية||Inspect breakers and RCDs',
       'تصوير حراري للنقاط الساخنة||Thermal imaging for hot spots',
@@ -4263,7 +4264,7 @@ const PM_LIB={
       'تنظيف الكاشف من الغبار||Clean dust from detector',
       'استبدال البطارية عند الحاجة||Replace battery as needed']}]},
   fire_ext:{label:'طفاية حريق||Fire extinguisher',defQty:1,asset:{name:'طفاية حريق||Fire extinguisher',cat:'طفاية حريق'},
-    plans:[{name:'فحص طفايات الحريق — سنوي||Fire extinguisher inspection — yearly',fv:1,fu:'months',tasks:[
+    plans:[{name:'فحص طفايات الحريق — سنوي||Fire extinguisher inspection — yearly',fv:12,fu:'months',tasks:[
       'فحص الضغط ومؤشر الصلاحية||Check pressure gauge',
       'فحص الخرطوم والمقبض||Inspect hose and handle',
       'التأكد من سهولة الوصول واللوحات الإرشادية||Verify access and signage']}]},
@@ -5071,8 +5072,10 @@ function hubFinance(){
       ${hubKpi((net<0?'-':'')+moneyK(Math.abs(net))+' <small>'+lb('ر.س||SAR')+'</small>',lb('الصافي||Net'),net<0?'warn':'ok')}
       ${hubKpi(invs.length,lb('فواتير معتمدة||Approved invoices'))}
     </div>
-    <div class="netline ${(isRE?net>=0:false)?'pos':'neg'}"><span>${isRE?lb('صافي الدخل المتوقع (سنوي)||Expected net income (year)'):lb('إجمالي تكلفة التشغيل (سنوي)||Total cost of ownership (year)')}</span>
-      <span class="nv">-${money(isRE?Math.abs(Math.min(net,0)):totalExp)}</span></div>
+    <div class="netline ${(isRE ? net >= 0 : false) ? 'pos' : 'neg'}">
+      <span>${isRE ? lb('صافي الدخل المتوقع (سنوي)||Expected net income (year)') : lb('إجمالي تكلفة التشغيل (سنوي)||Total cost of ownership (year)')}</span>
+      <span class="nv">${isRE ? ((net >= 0 ? '+' : '-') + money(Math.abs(net))) : ('-' + money(totalExp))}</span>
+    </div>
     ${empty?'':`<div class="psub">${isRE?lb('الإيراد الشهري مقابل المصروفات — 6 أشهر||Monthly income vs expenses — 6 months'):lb('المصروفات الشهرية — 6 أشهر||Monthly expenses — 6 months')}</div>
     <div class="fchart">${months.map(m=>`<div class="fcol" title="${mName(m)} — ${lb('إيراد||Income')}: ${money(incM[m])} · ${lb('مصروف||Expense')}: ${money(expM[m])}">
       <span class="fbars">${isRE?`<i class="inc" style="height:${Math.round(incM[m]/maxM*100)}%"></i>`:''}<i class="exp" style="height:${Math.round(expM[m]/maxM*100)}%"></i></span>
@@ -5444,7 +5447,7 @@ function vAssets(){
     <button class="btn ghost" onclick="window.print()"> ${lb('طباعة||Print')}</button></div>
 
   <div class="wo-facets-row" style="margin-bottom:12px">
-    <input class="searchbar" placeholder="${lb('🔍 ابحث باسم الأصل، التصنيف، المبنى، الموديل، السيريال، أو الباركود...||Search asset, category, building, model, serial, barcode...')}" value="${esc(FILT.assets)}" oninput="FILT.assets=this.value;drawAssetsTable()">
+    <input class="searchbar" placeholder="${lb('🔍 ابحث باسم الأصل، التصنيف، المبنى، الموديل، السيريال، أو الباركود...||Search asset, category, building, model, serial, barcode...')}" value="${esc(FILT.assets)}" oninput="FILT.assets=this.value;debouncedDrawAssetsTable()">
 
     <select class="wo-facet-select" onchange="FILT.assetCat=this.value;drawAssetsTable()" title="${lb('تصفية حسب التصنيف||Filter by category')}">
       <option value="all">${lb('كل التصنيفات||All Categories')}</option>
@@ -5471,6 +5474,12 @@ function vAssets(){
 
   <div class="card"><h2>${lb('سجل الأصول||Asset Registry')} (<span id="asset_count">${db.assets.filter(a=>a.compoundId===act).length}</span>)</h2>
   <div class="tbl-wrap"><table><thead id="atbl_head"></thead><tbody id="atbl"></tbody></table></div></div>`;
+}
+
+let _assetSearchTimer = 0;
+function debouncedDrawAssetsTable(){
+  clearTimeout(_assetSearchTimer);
+  _assetSearchTimer = setTimeout(drawAssetsTable, 120);
 }
 
 function drawAssetsTable(){
@@ -5504,13 +5513,17 @@ function drawAssetsTable(){
 
     list = list.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
 
+    const totalCount = list.length;
+    const maxRows = 100;
+    const paged = list.slice(0, maxRows);
+
     const cntEl = $('asset_count');
-    if(cntEl) cntEl.textContent = list.length;
+    if(cntEl) cntEl.textContent = totalCount > maxRows ? `${maxRows} / ${totalCount}` : totalCount;
 
     const head=`<tr><th>${lb('الأصل||Asset')}</th><th>${lb('التصنيف||Category')}</th><th>${lb('المبنى/المنطقة||Building')}</th><th>${lb('الطابق/الجزء||Floor')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الضمان||Warranty')}</th>${isEng()?`<th></th>`:''}</tr>`;
     let rows='';
-    if(!list.length)rows=`<tr><td colspan="7"><div class="empty">${db.assets.filter(a=>a.compoundId===act).length?lb('لا نتائج مطابقة للبحث||No search matches'):lb('لا أصول بعد — اضغط «إضافة أصل»||No assets yet — click Add Asset')}</div></td></tr>`;
-    list.forEach(a=>{
+    if(!totalCount)rows=`<tr><td colspan="7"><div class="empty">${db.assets.filter(a=>a.compoundId===act).length?lb('لا نتائج مطابقة للبحث||No search matches'):lb('لا أصول بعد — اضغط «إضافة أصل»||No assets yet — click Add Asset')}</div></td></tr>`;
+    paged.forEach(a=>{
       const st=ASTAT[a.status]||ASTAT.ok;
       const wInfo=assetWarrantyInfo(a);
       const wCell=wInfo.hasWarranty
@@ -5529,6 +5542,9 @@ function drawAssetsTable(){
         <button class="btn sm ghost" onclick="assetForm('${a.id}')">${ic('edit',13)}</button>
         <button class="btn sm danger" onclick="delAsset('${a.id}')">${ic('del',13)}</button></td>`:''}</tr>`;
     });
+    if(totalCount > maxRows){
+      rows += `<tr><td colspan="7" style="text-align:center;padding:10px" class="muted">${lb('يتم عرض أول 100 أصل — حدد كلمات البحث لعرض نتائج أدق||Showing first 100 assets — refine search for more')}</td></tr>`;
+    }
     const h=$('atbl_head'),b=$('atbl');
     if(h)h.innerHTML=head;if(b)b.innerHTML=rows;
   }catch(e){
@@ -5651,12 +5667,19 @@ function clearGlobalSearch(){
   onGlobalSearchInput('');
 }
 
+let _gsSearchTimer = 0;
 function onGlobalSearchInput(val){
   GS_STATE.query = val || '';
   GS_STATE.selIdx = 0;
   const clr = $('gsClearBtn');
   if(clr) clr.style.display = GS_STATE.query ? 'block' : 'none';
-  renderGlobalSearchResults();
+  if(!val){
+    clearTimeout(_gsSearchTimer);
+    renderGlobalSearchResults();
+  } else {
+    clearTimeout(_gsSearchTimer);
+    _gsSearchTimer = setTimeout(renderGlobalSearchResults, 120);
+  }
 }
 
 function setGlobalSearchType(t){
@@ -5956,7 +5979,7 @@ function renderGlobalSearchResults(){
     }
 
     out += `
-      <div class="gs-item ${isAct?'active':''}" onclick="executeGlobalSearchResult(GS_STATE.items[${idx}])" onmouseenter="GS_STATE.selIdx=${idx};updateGlobalSearchActiveItem()">
+      <div class="gs-item ${isAct?'active':''}" tabindex="0" role="button" onclick="executeGlobalSearchResult(GS_STATE.items[${idx}])" onmouseenter="GS_STATE.selIdx=${idx};updateGlobalSearchActiveItem()">
         <span class="gs-item-ic" style="background:${iconBg}">${ic(iconName, 16)}</span>
         <div class="gs-item-text">
           <div class="gs-item-title">${highlightSearchText(item.title, q)}</div>
@@ -5968,6 +5991,7 @@ function renderGlobalSearchResults(){
   });
 
   body.innerHTML = out;
+  ensureA11yRoles(body);
 }
 
 function executeGlobalSearchResult(item){
@@ -6030,13 +6054,44 @@ function modal(html, cls){
   d.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;
   d.addEventListener('click',ev=>{if(ev.target===d)d.remove();});
   document.body.appendChild(d);d.style.display='block';
+  ensureA11yRoles(d);
 }
 function closeModal(){const m=$('mbg');if(!m)return;
   m.style.animation='fade .15s ease reverse forwards';
   const bx=m.querySelector('.modal');
   if(bx)bx.style.animation='pop .15s ease reverse forwards';
   setTimeout(()=>m.remove(),150);}
+
+/* Auto-apply tabindex="0" and role="button" to interactive non-button divs (P2 A11Y-01) */
+function ensureA11yRoles(root){
+  try {
+    const target = root || document;
+    const sel = '.kpi, .cmpcard, .alrow, .gs-item, [onclick]';
+    (target.querySelectorAll ? target.querySelectorAll(sel) : document.querySelectorAll(sel)).forEach(el => {
+      const tag = (el.tagName || '').toUpperCase();
+      if(!['BUTTON','A','INPUT','SELECT','TEXTAREA'].includes(tag)){
+        if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+        if(!el.hasAttribute('role')) el.setAttribute('role', 'button');
+      }
+    });
+  } catch(e){}
+}
+
 document.addEventListener('keydown',e=>{
+  /* Delegated Enter / Space trigger for interactive divs (P2 A11Y-01) */
+  if(e.key === 'Enter' || e.key === ' '){
+    const el = document.activeElement;
+    if(el && el !== document.body){
+      const tag = (el.tagName||'').toUpperCase();
+      if(!['INPUT','TEXTAREA','BUTTON','SELECT','A'].includes(tag)){
+        if(el.classList.contains('kpi') || el.classList.contains('cmpcard') || el.classList.contains('alrow') || el.classList.contains('gs-item') || el.getAttribute('role') === 'button'){
+          e.preventDefault();
+          el.click();
+          return;
+        }
+      }
+    }
+  }
   if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){
     e.preventDefault();
     openGlobalSearch();
@@ -6321,9 +6376,12 @@ function assetPhotos(id){
   const a=db.assets.find(x=>x.id===id);if(!a)return;
   if(!a.photos)a.photos=[];
   modal(`<h3> ${lb('صور ومستندات||Photos & Documents')} — ${esc(a.name)}</h3>
-  <div class="pgrid">${a.photos.length?a.photos.map((p,j)=>
-    `<span class="phwrap"><img class="pthumb" loading="lazy" src="${p.d}" onclick="lbShow('${phReg(p.d)}')">
-    ${isEng()?`<button class="phdel" onclick="assetPhotoDel('${id}',${j})">${ic('x',12)}</button>`:''}</span>`).join('')
+  <div class="pgrid">${a.photos.length?a.photos.map((p,j)=>{
+    const url = safeMediaUrl(p && p.d);
+    if(!url) return '';
+    return `<span class="phwrap"><img class="pthumb" loading="lazy" src="${esc(url)}" onclick="lbShow('${phReg(url)}')">
+    ${isEng()?`<button class="phdel" onclick="assetPhotoDel('${id}',${j})">${ic('x',12)}</button>`:''}</span>`;
+  }).join('')
     :`<span class="muted">${lb('لا صور بعد||No photos yet')}</span>`}</div>
   ${isEng()?`<button class="btn ghost sm" onclick="assetPhotoAdd('${id}')"> ${lb('إضافة صور||Add Photos')}</button>`:''}
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button></div>`);
@@ -6425,8 +6483,12 @@ function unitState(u){
   return 'vac';
 }
 function uBadge(st){return st==='occ'?['b-ok',lb('مؤجرة||Rented')]:st==='maint'?['b-maint',lb('تحت الصيانة||Under Maintenance')]:st==='rsv'?['b-wait',lb('محجوزة||Reserved')]:['b-normal',lb('شاغرة||Vacant')];}
-function cmpUnits(){const act=activeCmp();
-  return db.units.filter(u=>{const b=db.buildings.find(x=>x.id===u.buildingId);return b&&b.compoundId===act;});}
+function cmpUnits(){
+  const act=activeCmp();
+  const buildings=db.buildings||[];
+  const bMap=new Set(buildings.filter(b=>b&&b.compoundId===act).map(b=>b.id));
+  return (db.units||[]).filter(u=>u&&bMap.has(u.buildingId));
+}
 function vUnits(){
   const q=FILT.units.toLowerCase();
   const list=cmpUnits();
@@ -6481,8 +6543,11 @@ function vUnits(){
     <button class="btn sm danger" onclick="delTenant('${t.id}')">${ic('del',13)}</button></td>`:''}</tr>`}).join('')||
     `<tr><td colspan="8"><div class="empty">${lb('لا مستأجرين بعد||No tenants yet')}</div></td></tr>`}</table></div></div>`;
 }
-function cmpTenants(){const ids=new Set(cmpUnits().map(u=>u.id));
-  return db.tenants.filter(t=>ids.has(t.unitId)||!t.unitId);}
+function cmpTenants(){
+  const ids=new Set(cmpUnits().map(u=>u.id));
+  const act=activeCmp();
+  return (db.tenants||[]).filter(t=>t&&(ids.has(t.unitId)||(!t.unitId&&(!t.compoundId||t.compoundId===act))));
+}
 function unitForm(id){
   if(!isEng())return;
   const u=id?db.units.find(x=>x.id===id):{};
@@ -7213,8 +7278,12 @@ function woView(i){
   <td>${w.teamName?`<span class="badge" style="background:#e0e7ff;color:#3730a3;font-weight:700">👥 ${esc(w.teamName)}</span>`:`<span class="muted">—</span>`}</td>
   <td>${w.assigneeName?esc(w.assigneeName):`<span class="badge" style="background:#fef3c7;color:#92400e">${lb('غير مخصص (في قائمة الفريق)||Unassigned (Team Queue)')}</span>`}</td>
   <td>${money(w.cost)}</td></tr></table>
-  ${(w.photos&&w.photos.length)?`<label> ${lb('صور التوثيق||Documentation Photos')}</label><div class="pgrid">${w.photos.map(p=>`<span class="phwrap"><img class="pthumb" loading="lazy" src="${p.d}" onclick="lbShow('${phReg(p.d)}')"><span class="phtag">${p.tag==='before'?lb('قبل||BEFORE'):lb('بعد||AFTER')}</span></span>`).join('')}</div>`:''}
-  ${w.sig?`<label> ${lb('توقيع المنفّذ||Technician Signature')}</label><br><img class="sigimg" src="${w.sig}">`:''}
+  ${(w.photos&&w.photos.length)?`<label> ${lb('صور التوثيق||Documentation Photos')}</label><div class="pgrid">${w.photos.map(p=>{
+    const url = safeMediaUrl(p && p.d);
+    if(!url) return '';
+    return `<span class="phwrap"><img class="pthumb" loading="lazy" src="${esc(url)}" onclick="lbShow('${phReg(url)}')"><span class="phtag">${p.tag==='before'?lb('قبل||BEFORE'):lb('بعد||AFTER')}</span></span>`;
+  }).join('')}</div>`:''}
+  ${w.sig?`<label> ${lb('توقيع المنفّذ||Technician Signature')}</label><br><img class="sigimg" src="${esc(safeMediaUrl(w.sig))}">`:''}
   ${(w.parts&&w.parts.length)?`<label>${lb('قطع الغيار المستخدمة||Parts Used')}</label><ul style="padding-inline-start:18px">${w.parts.map(p=>`<li>${esc(p.name)} × ${p.qty}</li>`).join('')}</ul>`:''}
   ${(w.checklist&&w.checklist.length)?`<label>${lb('قائمة الفحص||Checklist')}</label><ul class="tl">${w.checklist.map(c=>`<li>${c.done?ic('check',12):'<span class="muted">–</span>'} ${esc(c.t)}${c.v?' — <b>'+esc(c.v)+'</b>':''}</li>`).join('')}</ul>`:''}
   ${w.closeNotes?`<label>${lb('ملاحظات الإغلاق||Closing Notes')}</label><p>${esc(w.closeNotes)}</p>`:''}
@@ -7479,23 +7548,25 @@ function woEvidenceModal(i){
   }
 
   /* صور قبل/بعد */
-  const phBHtml=beforePhs.length?beforePhs.map(p=>`
-    <div class="evidence-thumb-wrap" onclick="lbShow('${phReg(p.d)}')">
-      <img src="${p.d}" loading="lazy">
+  const phBHtml=beforePhs.length?beforePhs.map(p=>{
+    const url = safeMediaUrl(p && p.d);
+    return `<div class="evidence-thumb-wrap" onclick="lbShow('${phReg(url)}')">
+      <img src="${esc(url)}" loading="lazy">
       <span class="evidence-thumb-tag">${lb('قبل||BEFORE')}</span>
-    </div>
-  `).join(''):`<div class="empty" style="grid-column:1/-1;padding:16px">${lb('لم تُرفق صور قبل البدء||No BEFORE photos attached')}</div>`;
+    </div>`;
+  }).join(''):`<div class="empty" style="grid-column:1/-1;padding:16px">${lb('لم تُرفق صور قبل البدء||No BEFORE photos attached')}</div>`;
 
-  const phAHtml=afterPhs.length?afterPhs.map(p=>`
-    <div class="evidence-thumb-wrap" onclick="lbShow('${phReg(p.d)}')">
-      <img src="${p.d}" loading="lazy">
+  const phAHtml=afterPhs.length?afterPhs.map(p=>{
+    const url = safeMediaUrl(p && p.d);
+    return `<div class="evidence-thumb-wrap" onclick="lbShow('${phReg(url)}')">
+      <img src="${esc(url)}" loading="lazy">
       <span class="evidence-thumb-tag">${lb('بعد||AFTER')}</span>
-    </div>
-  `).join(''):`<div class="empty" style="grid-column:1/-1;padding:16px">${lb('لم تُرفق صور بعد الإصلاح||No AFTER photos attached')}</div>`;
+    </div>`;
+  }).join(''):`<div class="empty" style="grid-column:1/-1;padding:16px">${lb('لم تُرفق صور بعد الإصلاح||No AFTER photos attached')}</div>`;
 
   /* كرت التوقيع الثنائي */
   const sigTechHtml=w.sig?`
-    <img src="${w.sig}" class="evidence-sig-img">
+    <img src="${esc(safeMediaUrl(w.sig))}" class="evidence-sig-img">
     <div style="font-weight:800;font-size:13px">${esc(w.assigneeName||'—')}</div>
     <div class="muted" style="font-size:11px">${lb('فني الصيانة المعتمد||Certified Technician')} · ${fmtDT(w.closedAt||w.createdAt)}</div>
   `:`<div class="empty" style="padding:16px">${lb('لم يُسجل توقيع فني||No technician signature')}</div>`;
@@ -7747,12 +7818,12 @@ function printEvidenceCert(i){
 
 /* ===== INVENTORY ===== */
 /* ===== دوال العزل: كل قراءة تمرّ من هنا فلا تختلط بيانات الأصول ===== */
-function invQ(){return db.inv.filter(it=>it.compoundId===activeCmp());}
-function movesQ(){return db.moves.filter(m=>m.compoundId===activeCmp());}
-function supQ(){return db.suppliers.filter(s=>s.compoundId===activeCmp());}
-function prsQ(){return db.prs.filter(p=>p.compoundId===activeCmp());}
-function posQ(){return db.pos.filter(p=>p.compoundId===activeCmp());}
-function notifsQ(){return db.notifs.filter(n=>n.compoundId===activeCmp());}
+function invQ(){const act=activeCmp();return (db.inv||[]).filter(it=>it&&it.compoundId===act);}
+function movesQ(){const act=activeCmp();return (db.moves||[]).filter(m=>m&&m.compoundId===act);}
+function supQ(){const act=activeCmp();return (db.suppliers||[]).filter(s=>s&&s.compoundId===act);}
+function prsQ(){const act=activeCmp();return (db.prs||[]).filter(p=>p&&p.compoundId===act);}
+function posQ(){const act=activeCmp();return (db.pos||[]).filter(p=>p&&p.compoundId===act);}
+function notifsQ(){const act=activeCmp();return (db.notifs||[]).filter(n=>n&&n.compoundId===act);}
 function vInv(){
   const tokens = tokenizeSearch(FILT.inv);
   const mine = invQ(), mv = movesQ();
@@ -8755,7 +8826,7 @@ function repMonthCsv(){
 }
 
 /* ===== سجل الوقود (الأسطول) ===== */
-function fuelLogsQ(){return (db.fuelLogs||[]).filter(f=>f.compoundId===activeCmp());}
+function fuelLogsQ(){const act=activeCmp();return (db.fuelLogs||[]).filter(f=>f&&f.compoundId===act);}
 function assetLabel(id){const a=db.assets.find(x=>x.id===id);return a?a.name:lb('غير محدد||Unspecified');}
 /* استهلاك تقديري لكل مركبة: (أقصى عدّاد − أدنى عدّاد) ÷ اللترات المسجّلة */
 function fuelEff(list){
@@ -8845,7 +8916,7 @@ function fuelCsv(){
     lb('العدّاد||Odometer'),lb('المحطة||Station'),lb('ملاحظات||Notes')],rows);
 }
 /* ===== استهلاك المرافق ===== */
-function utilLogsQ(){return (db.utilityLogs||[]).filter(u=>u.compoundId===activeCmp());}
+function utilLogsQ(){const act=activeCmp();return (db.utilityLogs||[]).filter(u=>u&&u.compoundId===act);}
 function UTILTL(){return {elec:lb('كهرباء||Electricity'),water:lb('مياه||Water'),gas:lb('غاز||Gas'),
   diesel:lb('ديزل||Diesel'),other:lb('أخرى||Other')};}
 function UTILUL(){return {elec:lb('kWh||kWh'),water:lb('م³||m³'),gas:lb('م³||m³'),diesel:lb('لتر||L'),
@@ -8921,7 +8992,7 @@ function utilCsv(){
     lb('التكلفة||Cost'),lb('العدّاد||Meter'),lb('المزوّد||Provider')],rows);
 }
 /* ===== الامتثال والشهادات (منشآت صناعية / عامة) ===== */
-function certsQ(){return (db.certs||[]).filter(c=>c.compoundId===activeCmp());}
+function certsQ(){const act=activeCmp();return (db.certs||[]).filter(c=>c&&c.compoundId===act);}
 function CERTTL(){return {safety:lb('سلامة وصحة مهنية||Occupational safety'),civil:lb('دفاع مدني||Civil defence'),
   env:lb('بيئة||Environmental'),iso:lb('ISO / جودة||ISO / quality'),
   operator:lb('رخصة تشغيل||Operating licence'),other:lb('أخرى||Other')};}
