@@ -777,18 +777,109 @@ app.get('/api/files/:id', async (req,res)=>{
 /* ---- استخراج بيانات الإيصالات من ملفات PDF (مكتبة pdfjs-dist على الخادم) ----
    ملاحظة: يعمل مع ملفات PDF النصية. الملفات الممسوحة ضوئياً (صور) تحتاج OCR — غير مُدمج حالياً،
    ويُرجع الخادم scanned=true ليُكمل المستخدم الحقول يدوياً. */
-async function pdfText(buf, maxPages){
+const RCPT_MAX_PAGES = Number(process.env.RECEIPT_MAX_PAGES || 60);
+/* نص كل صفحة على حدة، مع إعادة بناء الأسطر من إحداثيات العناصر (العربية من اليمين لليسار) */
+async function pdfPages(buf, maxPages){
   const pdfjs = require('pdfjs-dist/legacy/build/pdf.js');
   const data = new Uint8Array(buf.length); data.set(buf);   /* نسخة دقيقة الحجم */
   const doc = await pdfjs.getDocument({ data, useWorkerFetch:false, isEvalSupported:false, useSystemFonts:true, disableFontFace:true, verbosity:0 }).promise;
-  const n = Math.min(doc.numPages || 1, maxPages || 6);
-  let out = '';
+  const n = Math.min(doc.numPages || 1, maxPages || RCPT_MAX_PAGES);
+  const pages = [];
   for (let i = 1; i <= n; i++) {
     const page = await doc.getPage(i);
     const c = await page.getTextContent();
-    out += (c.items || []).map(x => x.str || '').join('\n') + '\n';
+    const rows = [];
+    (c.items || []).forEach(it => {
+      const s = it.str || ''; if (!s.trim()) return;
+      const x = it.transform ? it.transform[4] : 0, y = it.transform ? it.transform[5] : 0;
+      const h = Math.max(2, Math.abs(it.height || (it.transform ? it.transform[3] : 0) || 8));
+      let row = rows.find(r => Math.abs(r.y - y) <= h * 0.5);
+      if (!row) { row = { y, items: [] }; rows.push(row); }
+      row.items.push({ x, s });
+    });
+    rows.sort((a, b) => b.y - a.y);
+    pages.push(rows.map(r => {
+      const rtl = r.items.some(t => /[؀-ۿ]/.test(t.s));
+      r.items.sort((a, b) => rtl ? b.x - a.x : a.x - b.x);
+      return r.items.map(t => t.s.trim()).join(' ');
+    }).join('\n'));
   }
-  return out.trim();
+  return { pages, total: doc.numPages || n };
+}
+async function pdfText(buf, maxPages){
+  return (await pdfPages(buf, maxPages)).pages.join('\n').trim();
+}
+/* ---- تقسيم ملف يحوي عدة إيصالات إلى مقاطع: صفحة لكل إيصال افتراضياً،
+   وتُقسَم الصفحة إن احتوت أكثر من رأس إيصال يفصل بينهما سطر إجمالي،
+   وتُدمج صفحة التتمة (بلا رأس) مع ما قبلها إن لم يكن له إجمالي بعد. ---- */
+const RCPT_HEAD = /(tax\s+invoice|invoice\s*(no|number|#)|receipt\s*(no|number|#)|^\s*(invoice|receipt)\b|فاتورة\s+ضريبية|رقم\s+الفاتورة|رقم\s+(الإيصال|الايصال)|سند\s+قبض|^\s*(فاتورة|إيصال|ايصال)\b)/im;
+const RCPT_FOOTER = /(thank\s*you|شكرا|شكراً|page\s*\d|صفحة\s*\d|www\.|https?:)/i;
+const RCPT_TOTAL = /(grand\s+total|total|amount\s+due|الإجمالي|الاجمالي|المجموع|المبلغ\s+المستحق)/i;
+function splitReceiptText(pages){
+  const segs = [];
+  pages.forEach((txt, pi) => {
+    const lines = String(txt || '').split('\n');
+    if (!lines.some(l => l.trim())) return;
+    const heads = [];
+    lines.forEach((l, k) => { if (RCPT_HEAD.test(l) && (!heads.length || k - heads[heads.length - 1] > 3)) heads.push(k); });
+    const cuts = [0];
+    for (let h = 1; h < heads.length; h++) {
+      const from = cuts[cuts.length - 1];
+      let lastTot = -1;
+      for (let k = from; k < heads[h]; k++) if (RCPT_TOTAL.test(lines[k])) lastTot = k;
+      if (lastTot < 0) continue;
+      let cut = Math.max(lastTot + 1, heads[h] - 3);
+      while (cut < heads[h] && (RCPT_FOOTER.test(lines[cut]) || !lines[cut].trim())) cut++;   /* تذييل الإيصال السابق يبقى معه */
+      cuts.push(cut);
+    }
+    cuts.forEach((c, ci) => {
+      const text = lines.slice(c, ci + 1 < cuts.length ? cuts[ci + 1] : lines.length).join('\n').trim();
+      if (!text) return;
+      const prev = segs[segs.length - 1];
+      if (ci === 0 && prev && !RCPT_HEAD.test(text) && !RCPT_TOTAL.test(prev.text)) {
+        prev.text += '\n' + text; prev.pageTo = pi + 1;
+      } else segs.push({ pageFrom: pi + 1, pageTo: pi + 1, text });
+    });
+  });
+  return segs;
+}
+/* تقسيم واستخراج بالذكاء الاصطناعي (اختياري، عند ضبط مزوّد) — يعود null عند الفشل */
+const AI_RCPT_SYSTEM = [
+  'You extract receipts/invoices from the text of a multi-page PDF. One PDF may contain many receipts; a page may hold several receipts, or one receipt may span pages.',
+  'Return STRICT JSON only: {"receipts":[{"pageFrom":<int>,"pageTo":<int>,"vendor":"","date":"YYYY-MM-DD","receiptNo":"","amount":<number|null>,"vat":<number|null>,"currency":"SAR|USD|EUR|AED|EGP","supplierNo":""}]}',
+  'amount is the grand total including VAT. Use null or "" when a value is not present. Do not invent values. Keep vendor names as written.',
+].join(' ');
+async function aiSplitReceipts(pages){
+  const c = aiConfig(); if (!c) return null;
+  let userMsg = '', budget = 40000;
+  for (let i = 0; i < pages.length && budget > 0; i++) {
+    const chunk = '=== PAGE ' + (i + 1) + ' ===\n' + String(pages[i] || '').slice(0, Math.min(4000, budget)) + '\n';
+    userMsg += chunk; budget -= chunk.length;
+  }
+  try {
+    const body = { model: c.model, temperature: 0, messages: [{ role: 'system', content: AI_RCPT_SYSTEM }, { role: 'user', content: userMsg }] };
+    let r = await aiFetch(c, Object.assign({}, body, { response_format: { type: 'json_object' } }));
+    if (!r.ok && (r.status === 400 || r.status === 422)) r = await aiFetch(c, body);
+    if (!r.ok) { console.error('[receipts] ai HTTP', r.status); return null; }
+    const j = await r.json();
+    const parsed = safeJson((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+    if (!parsed || !Array.isArray(parsed.receipts) || !parsed.receipts.length) return null;
+    const N = pages.length, numOr = v => (v === '' || v == null || !isFinite(+v)) ? null : +v;
+    const CUR = ['SAR', 'USD', 'EUR', 'AED', 'EGP'];
+    return parsed.receipts.slice(0, 200).map(x => {
+      const pf = Math.min(N, Math.max(1, parseInt(x && x.pageFrom, 10) || 1));
+      const pt = Math.min(N, Math.max(pf, parseInt(x && x.pageTo, 10) || pf));
+      const cur = String((x && x.currency) || '').toUpperCase();
+      return { pageFrom: pf, pageTo: pt, fields: {
+        vendor: String((x && x.vendor) || '').slice(0, 120),
+        date: /^\d{4}-\d{2}-\d{2}$/.test(String(x && x.date)) ? x.date : normDateStr(x && x.date),
+        no: String((x && x.receiptNo) || '').slice(0, 40),
+        amount: numOr(x && x.amount), vat: numOr(x && x.vat),
+        currency: CUR.includes(cur) ? cur : undefined,
+        supplierNo: String((x && x.supplierNo) || '').slice(0, 20),
+      }, text: pages.slice(pf - 1, pt).join('\n').slice(0, 4000) };
+    });
+  } catch (e) { console.error('[receipts] ai error:', e.message); return null; }
 }
 function normDateStr(s){
   const a=String(s||'').split(/[-/.]/).map(x=>x.trim());
@@ -815,9 +906,13 @@ function extractReceiptFields(text){
   const f={};
   const dm=flat.match(/\b(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})\b/)||flat.match(/\b(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\b/);
   if(dm){f.dateRaw=dm[1];f.date=normDateStr(dm[1]);}
-  const nm=flat.match(/(?:invoice|receipt|inv|bill|فاتورة|إيصال|ايصال|سند)[^\n:#]*[:#]?\s*([A-Za-z0-9\-\/]{3,})/i);
+  /* رقم الإيصال: نفضّل السطر الصريح (No/Number/#/رقم) ولا نتجاوز السطر */
+  const nm=flat.match(/(?:invoice|receipt|inv|bill)[ \t]*(?:no\.?|number|#)[ \t]*[:#]?[ \t]*([A-Za-z0-9\-\/]*\d[A-Za-z0-9\-\/]*)/i)
+        ||flat.match(/رقم[ \t]*(?:الفاتورة|الإيصال|الايصال|السند)[ \t]*[:#]?[ \t]*([A-Za-z0-9\-\/]*\d[A-Za-z0-9\-\/]*)/)
+        ||flat.match(/(?:invoice|receipt|inv|bill|فاتورة|إيصال|ايصال|سند)[^\n:#]*[:#][ \t]*([A-Za-z0-9\-\/]*\d[A-Za-z0-9\-\/]*)/i);
   if(nm)f.no=String(nm[1]).slice(0,40);
-  const vm=flat.match(/(?:vat|tax|ضريبة|الضريبة|ضريبه)[^\n:]*[:#]?\s*([\d.,]+)/i)||flat.match(/([\d.,]+)\s*%?\s*(?:vat|ضريبة)/i);
+  /* مبلغ الضريبة — مع استبعاد سطر الرقم الضريبي للمورّد */
+  const vm=flat.match(/(?:vat|tax|ضريبة|الضريبة|ضريبه)(?![ \t]*(?:no|number|reg|id|#|invoice)|[ \t]*ال?رقم)(?!.*(?:الرقم الضريبي|الرقم الضريبى))[^\n:]*[:#]?[ \t]*([\d.,]+)(?!\d)/i)||flat.match(/([\d.,]+)[ \t]*%?[ \t]*(?:vat|ضريبة)/i);
   if(vm)f.vat=num(vm[1]);
   const lastMatch=(src)=>{ const re=new RegExp(src,'gi'); let m,last=null; while((m=re.exec(flat))) last=m; return last; };
   const am=lastMatch('(?:grand\\s+total|الإجمالي|الاجمالي|المجموع)[^\\n:#]*[:#]?\\s*([\\d.,]+)')
@@ -838,7 +933,7 @@ function extractReceiptFields(text){
   else if(/€|EUR|يورو/i.test(flat))f.currency='EUR';
   else if(/AED|درهم/i.test(flat))f.currency='AED';
   else if(/EGP|جنيه/i.test(flat))f.currency='EGP';
-  const lines=t.split('\n').map(s=>s.trim()).filter(s=>s.length>2&&/[A-Za-z\u0600-\u06FF]/.test(s)&&!/^(tax|vat|total|date|invoice|receipt)$/i.test(s));
+  const lines=t.split('\n').map(s=>s.trim()).filter(s=>s.length>2&&/[A-Za-z\u0600-\u06FF]/.test(s)&&!/^(tax|vat|total|date|invoice|receipt)$/i.test(s)&&!RCPT_FOOTER.test(s));
   if(lines.length)f.vendor=lines[0].slice(0,120);
   return f;
 }
@@ -854,14 +949,21 @@ app.post('/api/receipts', async (req,res)=>{
     if (f.buf.length > MAX_UPLOAD) return res.status(413).json({error:'TOO_LARGE', max:MAX_UPLOAD});
     const id = 'F' + crypto.randomBytes(9).toString('hex');
     await putFile({ id, compound_id: String(f.compoundId || '').slice(0,60), name: String(f.name || '').slice(0,120), mime: isPdf ? 'application/pdf' : f.mime, size: f.buf.length, data: f.buf, created: Date.now() });
-    let text = '', scanned = false;
+    let text = '', scanned = false, pages = [], pageCount = 0;
     if (isPdf) {
-      try { text = await pdfText(f.buf, 6); }
+      try { const p = await pdfPages(f.buf); pages = p.pages; pageCount = p.total; text = pages.join('\n').trim(); }
       catch (e) { console.error('[receipts] pdf parse failed:', e.message, 'len=' + f.buf.length, 'head=' + f.buf.slice(0,5).toString('latin1')); text = ''; }
       if (!text.trim()) scanned = true;   /* ملف صورة/ممسوح: لا نص قابل للاستخراج */
     } else { scanned = true; }
+    /* عدة إيصالات في ملف واحد: الذكاء الاصطناعي إن توفّر، وإلا القواعد المحلية */
+    let receipts = [], source = 'rules';
+    if (!scanned) {
+      const ai = String(req.query.ai || '') === '0' ? null : await aiSplitReceipts(pages);
+      if (ai) { receipts = ai; source = 'ai'; }
+      else receipts = splitReceiptText(pages).slice(0, 200).map(s => ({ pageFrom:s.pageFrom, pageTo:s.pageTo, text:s.text.slice(0,4000), fields:extractReceiptFields(s.text) }));
+    }
     res.json({ ok:true, fileId:id, url:'/api/files/'+id, mime:isPdf?'application/pdf':f.mime, size:f.buf.length,
-      scanned, text:text.slice(0,6000), fields:extractReceiptFields(text) });
+      scanned, pageCount, source, receipts, text:text.slice(0,6000), fields:extractReceiptFields(text) });
   }catch(e){ console.error('DB error on POST /api/receipts:', e.message); return res.status(500).json({error:'DB'}); }
 });
 

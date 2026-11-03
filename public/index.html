@@ -7986,13 +7986,92 @@ function rcptUpload(){
       const j=await r.json().catch(()=>null);
       if(r.status===413||(j&&j.error==='TOO_LARGE')){toast(lb('الملف أكبر من الحد: ||File exceeds the limit: ')+f.name,'err');continue;}
       if(r.status!==200||!j||!j.ok){toast(lb('تعذّر تحليل الملف: ||Could not read the file: ')+f.name,'err');continue;}
-      results.push({fileId:j.fileId,url:j.url,name:f.name,mime:j.mime,size:j.size,scanned:j.scanned,text:j.text,fields:j.fields||{}});
+      const file={fileId:j.fileId,url:j.url,name:f.name,mime:j.mime,size:j.size,scanned:j.scanned};
+      /* الملف قد يحوي عدة إيصالات: كل مقطع يصبح مسودة مستقلة */
+      const segs=Array.isArray(j.receipts)&&j.receipts.length?j.receipts:[{text:j.text,fields:j.fields||{}}];
+      segs.forEach(s=>results.push(Object.assign({},file,{text:s.text||'',fields:s.fields||{},pageFrom:s.pageFrom||null,pageTo:s.pageTo||null})));
     }
     if(!results.length)return toast(lb('لم يُرفع أي ملف||No file was uploaded'),'err');
-    window._rcptQueue=results.slice(1);   /* الملفات المتبقية تُراجع بالتتابع */
-    rcptReview(results[0]);
+    if(results.length===1)return rcptReview(results[0]);
+    rcptBatch(results);
   };
   inp.click();
+}
+/* ===== مراجعة جماعية: جدول قابل للتعديل لكل الإيصالات المستخرجة قبل الحفظ ===== */
+function rcptPageUrl(r){return r.url?(r.url+(r.pageFrom?'#page='+r.pageFrom:'')):'';}
+function rcptPagesLbl(r){return r.pageFrom?(r.pageTo&&r.pageTo!==r.pageFrom?r.pageFrom+'–'+r.pageTo:String(r.pageFrom)):'';}
+function rcptBatch(results){
+  window._rcptBatch=results.map(x=>{const f=x.fields||{};
+    return {keep:true,fileId:x.fileId,url:x.url,name:x.name,mime:x.mime,size:x.size,scanned:!!x.scanned,text:x.text||'',
+      pageFrom:x.pageFrom,pageTo:x.pageTo,vendor:f.vendor||'',date:f.date||'',receiptNo:f.no||'',
+      amount:f.amount!=null?f.amount:null,vat:f.vat!=null?f.vat:null,currency:f.currency||'SAR',projectId:'',notes:''};});
+  rcptBatchPaint();
+}
+function rcptBatchSet(i,k,v){const r=(window._rcptBatch||[])[i];if(!r)return;
+  if(k==='amount'||k==='vat')v=v===''?null:+v;
+  r[k]=v;if(k==='amount'||k==='keep')rcptBatchTotals();}
+function rcptBatchTotals(){const el=$('rb_tot');if(!el)return;
+  const rows=(window._rcptBatch||[]).filter(r=>r.keep);
+  el.textContent=rows.length+' '+lb('إيصال · الإجمالي ||receipts · total ')+money(rows.reduce((s,r)=>s+(Number(r.amount)||0),0));}
+function rcptBatchDel(i){window._rcptBatch.splice(i,1);rcptBatchPaint();}
+function rcptBatchAdd(){const b=window._rcptBatch||[],last=b[b.length-1]||{};
+  b.push({keep:true,fileId:last.fileId||'',url:last.url||'',name:last.name||'',mime:last.mime||'',size:last.size||0,scanned:false,text:'',
+    pageFrom:null,pageTo:null,vendor:'',date:'',receiptNo:'',amount:null,vat:null,currency:last.currency||'SAR',projectId:'',notes:''});
+  rcptBatchPaint();}
+function rcptBatchDetail(i){const r=(window._rcptBatch||[])[i];if(!r)return;
+  const el=$('rb_det');if(!el)return;
+  el.innerHTML=`<div class="fsec">${lb('الإيصال ||Receipt ')}${i+1}${rcptPagesLbl(r)?' · '+lb('صفحة ||page ')+rcptPagesLbl(r):''}</div>
+    <label>${lb('ملاحظات||Notes')}</label><textarea rows="2" oninput="rcptBatchSet(${i},'notes',this.value)">${esc(r.notes||'')}</textarea>
+    ${r.text?`<pre style="white-space:pre-wrap;max-height:24vh;overflow:auto;font-size:11px">${esc(String(r.text).slice(0,3000))}</pre>`:''}`;}
+function rcptBatchPaint(){
+  const b=window._rcptBatch||[];
+  const ex=rcptQ();
+  const dup=r=>r.receiptNo&&ex.some(x=>x.receiptNo===r.receiptNo&&(x.vendor||'')===(r.vendor||''));
+  const projs=db.projects.filter(p=>p.compoundId===activeCmp());
+  const rows=b.map((r,i)=>`<tr${r.keep?'':' style="opacity:.45"'}>
+    <td><input type="checkbox" ${r.keep?'checked':''} onchange="rcptBatchSet(${i},'keep',this.checked);this.closest('tr').style.opacity=this.checked?1:.45" aria-label="${lb('تضمين||Include')}"></td>
+    <td nowrap>${r.url?`<a href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener" dir="ltr">${esc(rcptPagesLbl(r)||lb('ملف||file'))}</a>`:'—'}</td>
+    <td><input value="${esc(r.vendor)}" oninput="rcptBatchSet(${i},'vendor',this.value)" style="min-width:140px"></td>
+    <td><input type="date" value="${esc(r.date)}" onchange="rcptBatchSet(${i},'date',this.value)"></td>
+    <td><input value="${esc(r.receiptNo)}" oninput="rcptBatchSet(${i},'receiptNo',this.value)" style="min-width:90px">${dup(r)?`<span class="badge b-wait" title="${lb('يوجد إيصال بنفس الرقم والمورّد||A receipt with this number and vendor exists')}">${lb('مكرر؟||dup?')}</span>`:''}</td>
+    <td><input type="number" step="any" min="0" value="${r.amount!=null?esc(r.amount):''}" oninput="rcptBatchSet(${i},'amount',this.value)" style="width:100px;${r.amount==null?'border-color:#f59e0b':''}"></td>
+    <td><input type="number" step="any" min="0" value="${r.vat!=null?esc(r.vat):''}" oninput="rcptBatchSet(${i},'vat',this.value)" style="width:80px"></td>
+    <td><select onchange="rcptBatchSet(${i},'currency',this.value)" style="min-width:84px">${['SAR','USD','EUR','AED','EGP'].map(c=>`<option ${r.currency===c?'selected':''}>${c}</option>`).join('')}</select></td>
+    ${projs.length?`<td><select onchange="rcptBatchSet(${i},'projectId',this.value)" style="min-width:90px"><option value="">—</option>${projs.map(p=>`<option value="${p.id}" ${r.projectId===p.id?'selected':''}>${esc(p.no)}</option>`).join('')}</select></td>`:''}
+    <td nowrap><button class="btn sm ghost" onclick="rcptBatchDetail(${i})" title="${lb('النص والملاحظات||Text & notes')}">${ic('view',13)}</button>
+    <button class="btn sm danger" onclick="rcptBatchDel(${i})" title="${lb('حذف الصف||Remove row')}">${ic('del',13)}</button></td></tr>`).join('');
+  modal(`<h3>${lb('مراجعة الإيصالات المستخرجة||Review extracted receipts')} (${b.length})</h3>
+  <p class="muted">${lb('عدّل أي حقل خاطئ، أزل علامة الصف لتجاهله، ثم احفظ الكل. الحقول المميّزة بلون برتقالي لم تُستخرج.||Fix anything that is wrong, untick a row to skip it, then save all. Fields outlined in orange were not found.')}</p>
+  <div class="tbl-wrap"><table>
+  <tr><th></th><th>${lb('صفحة||Page')}</th><th>${lb('المورّد||Vendor')}</th><th>${lb('التاريخ||Date')}</th><th>${lb('الرقم||No.')}</th><th>${lb('المبلغ||Amount')}</th><th>${lb('الضريبة||VAT')}</th><th>${lb('العملة||Cur.')}</th>${projs.length?`<th>${lb('المشروع||Project')}</th>`:''}<th></th></tr>
+  ${rows||`<tr><td colspan="10"><div class="empty">${lb('لا صفوف||No rows')}</div></td></tr>`}</table></div>
+  <button class="btn ghost sm" style="margin-top:8px" onclick="rcptBatchAdd()">＋ ${lb('إضافة صف||Add row')}</button>
+  <div id="rb_det"></div>
+  <div class="ma"><span class="muted" id="rb_tot" style="margin-inline-end:auto"></span>
+  <button class="btn ghost" onclick="rcptBatchCancel()">${lb('إلغاء||Cancel')}</button>
+  <button class="btn" onclick="rcptBatchSave()">${lb('حفظ الكل||Save all')}</button></div>`,'modal-evidence');
+  rcptBatchTotals();
+}
+function rcptBatchCancel(){
+  if((window._rcptBatch||[]).length&&!confirm(lb('تجاهل كل الإيصالات المستخرجة؟||Discard all extracted receipts?')))return;
+  window._rcptBatch=null;closeModal();
+}
+function rcptBatchSave(){
+  const rows=(window._rcptBatch||[]).filter(r=>r.keep);
+  if(!rows.length)return toast(lb('لا توجد صفوف محددة للحفظ||No rows selected to save'),'err');
+  const bad=rows.findIndex(r=>!String(r.vendor||'').trim()&&r.amount==null);
+  if(bad>=0)return toast(lb('أدخل المورّد أو المبلغ في كل صف محدد||Each selected row needs a vendor or an amount'),'err');
+  const now=Date.now();
+  rows.slice().reverse().forEach(r=>{
+    const o={id:uid('R'),compoundId:activeCmp(),by:me?me.name:'',createdAt:now,
+      vendor:String(r.vendor||'').trim(),date:r.date||'',receiptNo:String(r.receiptNo||'').trim(),amount:r.amount,vat:r.vat,
+      currency:r.currency||'SAR',projectId:r.projectId||'',notes:String(r.notes||'').trim(),
+      fileId:r.fileId||'',url:r.url||'',name:r.name||'',mime:r.mime||'',size:r.size||0,scanned:!!r.scanned,
+      pageFrom:r.pageFrom||null,pageTo:r.pageTo||null,text:String(r.text||'').slice(0,4000)};
+    db.receipts.unshift(o);auditLog('create','receipt',o.receiptNo||o.vendor);
+  });
+  window._rcptBatch=null;persist();closeModal();paintTab();
+  toast(lb('حُفظت ||Saved ')+rows.length+lb(' إيصالات|| receipts'),'ok');
 }
 function rcptNextInQueue(){
   const q=window._rcptQueue||[];
@@ -8004,9 +8083,9 @@ function rcptReview(rec,idx){
   const ex=(idx!=null&&idx!=='')?rcptQ()[idx]:null;
   const base=rec?Object.assign({},rec.fields||{},rec):{};   /* يقبل الحقول مسطّحة أو تحت fields */
   const r=ex?Object.assign({},ex,base):base;
-  window._rcptFile={fileId:r.fileId,url:r.url,name:r.name,mime:r.mime,size:r.size,scanned:!!r.scanned,text:r.text||''};
+  window._rcptFile={fileId:r.fileId,url:r.url,name:r.name,mime:r.mime,size:r.size,scanned:!!r.scanned,text:r.text||'',pageFrom:r.pageFrom||null,pageTo:r.pageTo||null};
   const isImg=/^image\//.test(r.mime||'');
-  const preview=r.url?(isImg?`<img src="${esc(r.url)}" style="width:100%;max-height:40vh;object-fit:contain;border-radius:10px;background:#fff">`:`<a class="btn ghost sm" href="${esc(r.url)}" target="_blank" rel="noopener">${lb('فتح ملف PDF||Open the PDF')}</a>`):'';
+  const preview=r.url?(isImg?`<img src="${esc(r.url)}" style="width:100%;max-height:40vh;object-fit:contain;border-radius:10px;background:#fff">`:`<a class="btn ghost sm" href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener">${lb('فتح ملف PDF||Open the PDF')}${rcptPagesLbl(r)?' · '+lb('صفحة ||page ')+rcptPagesLbl(r):''}</a>`):'';
   modal(`<h3>${lb('مراجعة الإيصال||Review receipt')} ${r.scanned?`<span class="badge b-wait">${lb('لا نص — أكمله يدوياً||no text — fill manually')}</span>`:''}</h3>
   ${preview}
   <div class="fg">
@@ -8031,7 +8110,7 @@ function rcptSave(idx){
   if(!vendor&&amount==null)return toast(lb('أدخل المورّد أو المبلغ على الأقل||Enter at least a vendor or an amount'),'err');
   const o={vendor,date:$('fr_d').value||'',receiptNo:$('fr_n').value.trim(),amount,vat,
     currency:$('fr_c').value,projectId:$('fr_p')?$('fr_p').value:'',notes:$('fr_no').value.trim(),
-    fileId:f.fileId||'',url:f.url||'',name:f.name||'',mime:f.mime||'',size:f.size||0,scanned:!!f.scanned,
+    fileId:f.fileId||'',url:f.url||'',name:f.name||'',mime:f.mime||'',size:f.size||0,scanned:!!f.scanned,pageFrom:f.pageFrom||null,pageTo:f.pageTo||null,
     text:String(f.text||'').slice(0,4000)};
   if(idx!=null&&idx!==''){const ex=rcptQ()[idx];if(!ex)return toast(lb('الإيصال غير موجود||Receipt not found'),'err');Object.assign(ex,o);auditLog('update','receipt',o.receiptNo||vendor);}
   else{db.receipts.unshift(Object.assign({id:uid('R'),compoundId:activeCmp(),by:me?me.name:'',createdAt:Date.now()},o));auditLog('create','receipt',o.receiptNo||vendor);}
@@ -8042,7 +8121,7 @@ function rcptView(idx){
   const r=rcptQ()[idx];if(!r)return;
   const isImg=/^image\//.test(r.mime||'');
   const prev=r.url?(isImg?`<img src="${esc(r.url)}" style="width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#fff">`
-    :`<embed src="${esc(r.url)}" type="application/pdf" style="width:100%;height:65vh;border-radius:10px">`):`<p class="muted">${lb('لا ملف مرفق||No file attached')}</p>`;
+    :`<embed src="${esc(rcptPageUrl(r))}" type="application/pdf" style="width:100%;height:65vh;border-radius:10px">`):`<p class="muted">${lb('لا ملف مرفق||No file attached')}</p>`;
   modal(`<h3>${lb('الإيصال||Receipt')} — ${esc(r.vendor||r.receiptNo||'')}</h3>
   <table><tr><th>${lb('التاريخ||Date')}</th><th>${lb('رقم الإيصال||No.')}</th><th>${lb('المبلغ||Amount')}</th><th>${lb('الضريبة||VAT')}</th><th>${lb('المشروع||Project')}</th></tr>
   <tr><td>${fmtD(r.date)}</td><td>${esc(r.receiptNo||'—')}</td><td><b>${esc(rcptMoney(r))}</b></td><td>${r.vat!=null?(r.vat+' '+esc(r.currency||'SAR')):'—'}</td>
@@ -8050,7 +8129,7 @@ function rcptView(idx){
   ${r.notes?`<p class="muted">${esc(r.notes)}</p>`:''}
   <div style="margin-top:8px">${prev}</div>
   <div class="ma">
-    ${r.url?`<a class="btn ghost" href="${esc(r.url)}" target="_blank" rel="noopener">${lb('فتح الملف||Open file')}</a>`:''}
+    ${r.url?`<a class="btn ghost" href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener">${lb('فتح الملف||Open file')}${rcptPagesLbl(r)?' · '+lb('صفحة ||p. ')+rcptPagesLbl(r):''}</a>`:''}
     ${canRcpt()?`<button class="btn ghost" onclick="closeModal();rcptReview(null,${idx})">${lb('تعديل||Edit')}</button>`:''}
     <button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button></div>`);
 }
