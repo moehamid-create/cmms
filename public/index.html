@@ -7987,6 +7987,16 @@ function rcptUpload(){
       if(r.status===413||(j&&j.error==='TOO_LARGE')){toast(lb('الملف أكبر من الحد: ||File exceeds the limit: ')+f.name,'err');continue;}
       if(r.status!==200||!j||!j.ok){toast(lb('تعذّر تحليل الملف: ||Could not read the file: ')+f.name,'err');continue;}
       const file={fileId:j.fileId,url:j.url,name:f.name,mime:j.mime,size:j.size,scanned:j.scanned};
+      /* ملف ممسوح/صورة: التعرّف الضوئي داخل المتصفح ثم التقسيم على الخادم */
+      if(j.scanned){
+        try{
+          const pages=await rcptOcr(f);
+          const pr=await api('/receipts/parse',{method:'POST',body:JSON.stringify({pages})});
+          const pj=await pr.json().catch(()=>null);
+          if(pr.ok&&pj&&pj.ok&&pj.receipts.length){j.receipts=pj.receipts;file.ocr=true;}
+          else toast(lb('لم يُتعرّف على نص في: ||No text recognised in: ')+f.name,'err');
+        }catch(e){console.error('[ocr]',e);toast(lb('تعذّر التعرّف الضوئي: ||OCR failed: ')+f.name,'err');}
+      }
       /* الملف قد يحوي عدة إيصالات: كل مقطع يصبح مسودة مستقلة */
       const segs=Array.isArray(j.receipts)&&j.receipts.length?j.receipts:[{text:j.text,fields:j.fields||{}}];
       segs.forEach(s=>results.push(Object.assign({},file,{text:s.text||'',fields:s.fields||{},pageFrom:s.pageFrom||null,pageTo:s.pageTo||null})));
@@ -7997,12 +8007,56 @@ function rcptUpload(){
   };
   inp.click();
 }
+/* ===== التعرّف الضوئي (OCR) داخل المتصفح: pdf.js يرسم الصفحات و Tesseract يقرأها (عربي+إنجليزي) =====
+   المكتبات وبيانات اللغة تُخدَم من /vendor على نفس الخادم، ولا يخرج الملف من جهاز المستخدم. */
+const OCR_MAX_PAGES=30;
+const _scriptP={};
+function loadScript(src){return _scriptP[src]||(_scriptP[src]=new Promise((res,rej)=>{
+  const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>{delete _scriptP[src];rej(new Error('load '+src));};document.head.appendChild(s);}));}
+let _ocrWorker=null;
+async function ocrWorker(){
+  if(_ocrWorker)return _ocrWorker;
+  await loadScript('/vendor/tesseract/tesseract.min.js');
+  _ocrWorker=Tesseract.createWorker('ara+eng',1,{workerPath:'/vendor/tesseract/worker.min.js',corePath:'/vendor/tesseract-core',
+    langPath:'/vendor/tessdata',workerBlobURL:false}).catch(e=>{_ocrWorker=null;throw e;});
+  return _ocrWorker;
+}
+async function pdfToCanvases(file,max){
+  await loadScript('/vendor/pdfjs/pdf.min.js');
+  const pdfjs=window.pdfjsLib;pdfjs.GlobalWorkerOptions.workerSrc='/vendor/pdfjs/pdf.worker.min.js';
+  const doc=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+  const n=Math.min(doc.numPages,max),out=[];
+  for(let i=1;i<=n;i++){
+    const page=await doc.getPage(i);
+    const vp0=page.getViewport({scale:1});
+    const vp=page.getViewport({scale:Math.min(3,Math.max(1.5,2000/Math.max(vp0.width,vp0.height)))});   /* ~2000px للدقة */
+    const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+    await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+    out.push(c);
+  }
+  return {canvases:out,total:doc.numPages};
+}
+async function rcptOcr(file){
+  toast(lb('جارٍ تجهيز التعرّف الضوئي (أول مرة قد تأخذ وقتاً)…||Preparing OCR (first run may take a while)…'));
+  const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name||'');
+  let imgs=[file],total=1;
+  if(isPdf){const r=await pdfToCanvases(file,OCR_MAX_PAGES);imgs=r.canvases;total=r.total;}
+  if(total>imgs.length)toast(lb('سيُقرأ أول ||Only the first ')+imgs.length+lb(' صفحة فقط|| pages will be read'));
+  const w=await ocrWorker();
+  const pages=[];
+  for(let i=0;i<imgs.length;i++){
+    toast(lb('التعرّف الضوئي: صفحة ||OCR: page ')+(i+1)+' / '+imgs.length);
+    const {data}=await w.recognize(imgs[i]);
+    pages.push(String(data&&data.text||''));
+  }
+  return pages;
+}
 /* ===== مراجعة جماعية: جدول قابل للتعديل لكل الإيصالات المستخرجة قبل الحفظ ===== */
 function rcptPageUrl(r){return r.url?(r.url+(r.pageFrom?'#page='+r.pageFrom:'')):'';}
 function rcptPagesLbl(r){return r.pageFrom?(r.pageTo&&r.pageTo!==r.pageFrom?r.pageFrom+'–'+r.pageTo:String(r.pageFrom)):'';}
 function rcptBatch(results){
   window._rcptBatch=results.map(x=>{const f=x.fields||{};
-    return {keep:true,fileId:x.fileId,url:x.url,name:x.name,mime:x.mime,size:x.size,scanned:!!x.scanned,text:x.text||'',
+    return {keep:true,fileId:x.fileId,url:x.url,name:x.name,mime:x.mime,size:x.size,scanned:!!x.scanned,ocr:!!x.ocr,text:x.text||'',
       pageFrom:x.pageFrom,pageTo:x.pageTo,vendor:f.vendor||'',date:f.date||'',receiptNo:f.no||'',
       amount:f.amount!=null?f.amount:null,vat:f.vat!=null?f.vat:null,currency:f.currency||'SAR',projectId:'',notes:''};});
   rcptBatchPaint();
@@ -8030,7 +8084,7 @@ function rcptBatchPaint(){
   const projs=db.projects.filter(p=>p.compoundId===activeCmp());
   const rows=b.map((r,i)=>`<tr${r.keep?'':' style="opacity:.45"'}>
     <td><input type="checkbox" ${r.keep?'checked':''} onchange="rcptBatchSet(${i},'keep',this.checked);this.closest('tr').style.opacity=this.checked?1:.45" aria-label="${lb('تضمين||Include')}"></td>
-    <td nowrap>${r.url?`<a href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener" dir="ltr">${esc(rcptPagesLbl(r)||lb('ملف||file'))}</a>`:'—'}</td>
+    <td nowrap>${r.url?`<a href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener" dir="ltr">${esc(rcptPagesLbl(r)||lb('ملف||file'))}</a>`:'—'}${r.ocr?` <span class="badge b-wait" title="${lb('قُرئ بالتعرّف الضوئي — راجع الحقول||Read by OCR — check the fields')}">OCR</span>`:''}</td>
     <td><input value="${esc(r.vendor)}" oninput="rcptBatchSet(${i},'vendor',this.value)" style="min-width:140px"></td>
     <td><input type="date" value="${esc(r.date)}" onchange="rcptBatchSet(${i},'date',this.value)"></td>
     <td><input value="${esc(r.receiptNo)}" oninput="rcptBatchSet(${i},'receiptNo',this.value)" style="min-width:90px">${dup(r)?`<span class="badge b-wait" title="${lb('يوجد إيصال بنفس الرقم والمورّد||A receipt with this number and vendor exists')}">${lb('مكرر؟||dup?')}</span>`:''}</td>
@@ -8083,10 +8137,10 @@ function rcptReview(rec,idx){
   const ex=(idx!=null&&idx!=='')?rcptQ()[idx]:null;
   const base=rec?Object.assign({},rec.fields||{},rec):{};   /* يقبل الحقول مسطّحة أو تحت fields */
   const r=ex?Object.assign({},ex,base):base;
-  window._rcptFile={fileId:r.fileId,url:r.url,name:r.name,mime:r.mime,size:r.size,scanned:!!r.scanned,text:r.text||'',pageFrom:r.pageFrom||null,pageTo:r.pageTo||null};
+  window._rcptFile={fileId:r.fileId,url:r.url,name:r.name,mime:r.mime,size:r.size,scanned:!!r.scanned,ocr:!!r.ocr,text:r.text||'',pageFrom:r.pageFrom||null,pageTo:r.pageTo||null};
   const isImg=/^image\//.test(r.mime||'');
   const preview=r.url?(isImg?`<img src="${esc(r.url)}" style="width:100%;max-height:40vh;object-fit:contain;border-radius:10px;background:#fff">`:`<a class="btn ghost sm" href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener">${lb('فتح ملف PDF||Open the PDF')}${rcptPagesLbl(r)?' · '+lb('صفحة ||page ')+rcptPagesLbl(r):''}</a>`):'';
-  modal(`<h3>${lb('مراجعة الإيصال||Review receipt')} ${r.scanned?`<span class="badge b-wait">${lb('لا نص — أكمله يدوياً||no text — fill manually')}</span>`:''}</h3>
+  modal(`<h3>${lb('مراجعة الإيصال||Review receipt')} ${r.ocr?`<span class="badge b-wait">${lb('تعرّف ضوئي — راجع الحقول||OCR — check the fields')}</span>`:r.scanned?`<span class="badge b-wait">${lb('لا نص — أكمله يدوياً||no text — fill manually')}</span>`:''}</h3>
   ${preview}
   <div class="fg">
     <div><label>${lb('المورّد||Vendor')}</label><input id="fr_v" value="${esc(r.vendor||'')}"></div>

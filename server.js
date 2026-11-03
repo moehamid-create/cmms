@@ -124,7 +124,7 @@ app.use((req, res, next) => {
     'X-Frame-Options': 'SAMEORIGIN',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-    'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https://api.qrserver.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'self'",
+    'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https://api.qrserver.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; connect-src 'self' data:; frame-ancestors 'self'",
   });
   if (isProduction && req.secure) res.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
   next();
@@ -160,6 +160,19 @@ app.use(express.static(path.join(__dirname, 'public'), {
   /* الصور والملفات تُحفَظ مؤقتاً، لكن صفحة HTML دائماً طازجة (عشان التحديثات تظهر فوراً) */
   setHeaders: (res, fp) => { if (String(fp).endsWith('index.html')) res.setHeader('Cache-Control', 'no-store'); },
 }));
+
+/* ---- مكتبات OCR داخل المتصفح (Tesseract.js + pdf.js) تُخدَم من نفس الأصل — بدون CDN ---- */
+const NM = path.join(__dirname, 'node_modules');
+const vendorOpts = { maxAge: '30d', immutable: true, index: false };
+app.use('/vendor/tesseract', express.static(path.join(NM, 'tesseract.js', 'dist'), vendorOpts));
+app.use('/vendor/tesseract-core', express.static(path.join(NM, 'tesseract.js-core'), vendorOpts));
+app.use('/vendor/pdfjs', express.static(path.join(NM, 'pdfjs-dist', 'build'), vendorOpts));
+app.get('/vendor/tessdata/:lang.traineddata.gz', (req, res) => {
+  const lang = String(req.params.lang);
+  if (!['ara', 'eng'].includes(lang)) return res.status(404).end();
+  res.set('Cache-Control', 'public, max-age=2592000, immutable');
+  res.type('application/gzip').sendFile(path.join(NM, '@tesseract.js-data', lang, '4.0.0_best_int', lang + '.traineddata.gz'));
+});
 
 /* ---- Health check (no auth — for Render/Fly/UpTimeRobot) ---- */
 app.get('/healthz', (req, res) => res.status(200).send('ok'));
@@ -965,6 +978,20 @@ app.post('/api/receipts', async (req,res)=>{
     res.json({ ok:true, fileId:id, url:'/api/files/'+id, mime:isPdf?'application/pdf':f.mime, size:f.buf.length,
       scanned, pageCount, source, receipts, text:text.slice(0,6000), fields:extractReceiptFields(text) });
   }catch(e){ console.error('DB error on POST /api/receipts:', e.message); return res.status(500).json({error:'DB'}); }
+});
+
+/* نص صفحات مستخرج بالـ OCR في المتصفح (للملفات الممسوحة) → تقسيم واستخراج الحقول بنفس المنطق */
+app.post('/api/receipts/parse', async (req,res)=>{
+  const a = auth(req,res); if(!a) return;
+  const ip = req.ip || req.socket.remoteAddress || 'x';
+  if (!boundedHit(pubHits, 'rcpt:' + ip, 60 * 60 * 1000, 200)) return res.status(429).json({error:'TOO_MANY'});
+  const pages = (Array.isArray(req.body && req.body.pages) ? req.body.pages : []).slice(0, RCPT_MAX_PAGES).map(x => String(x || '').slice(0, 20000));
+  if (!pages.some(x => x.trim())) return res.json({ ok:true, source:'rules', receipts:[] });
+  try{
+    const ai = String(req.query.ai || '') === '0' ? null : await aiSplitReceipts(pages);
+    const receipts = ai || splitReceiptText(pages).slice(0, 200).map(s => ({ pageFrom:s.pageFrom, pageTo:s.pageTo, text:s.text.slice(0,4000), fields:extractReceiptFields(s.text) }));
+    res.json({ ok:true, source: ai ? 'ai' : 'rules', receipts });
+  }catch(e){ console.error('[receipts/parse] error:', e.message); return res.status(500).json({error:'PARSE'}); }
 });
 
 app.post('/api/logout',(req,res)=>{
