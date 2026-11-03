@@ -7987,19 +7987,25 @@ function rcptUpload(){
       if(r.status===413||(j&&j.error==='TOO_LARGE')){toast(lb('الملف أكبر من الحد: ||File exceeds the limit: ')+f.name,'err');continue;}
       if(r.status!==200||!j||!j.ok){toast(lb('تعذّر تحليل الملف: ||Could not read the file: ')+f.name,'err');continue;}
       const file={fileId:j.fileId,url:j.url,name:f.name,mime:j.mime,size:j.size,scanned:j.scanned};
-      /* ملف ممسوح/صورة: التعرّف الضوئي داخل المتصفح ثم التقسيم على الخادم */
-      if(j.scanned){
+      let segs=Array.isArray(j.receipts)?j.receipts:[];
+      /* رسم الصفحات في المتصفح: لقراءة رمز QR (فواتير هيئة الزكاة) ولـ OCR عند الملف الممسوح */
+      let imgs=null;
+      try{ imgs=(await fileCanvases(f)).canvases; }catch(e){console.error('[render]',e);}
+      if(j.scanned&&imgs){
         try{
-          const pages=await rcptOcr(f);
+          const pages=await rcptOcr(imgs);
           const pr=await api('/receipts/parse',{method:'POST',body:JSON.stringify({pages})});
           const pj=await pr.json().catch(()=>null);
-          if(pr.ok&&pj&&pj.ok&&pj.receipts.length){j.receipts=pj.receipts;file.ocr=true;}
-          else toast(lb('لم يُتعرّف على نص في: ||No text recognised in: ')+f.name,'err');
+          if(pr.ok&&pj&&pj.ok&&pj.receipts.length){segs=pj.receipts;file.ocr=true;}
         }catch(e){console.error('[ocr]',e);toast(lb('تعذّر التعرّف الضوئي: ||OCR failed: ')+f.name,'err');}
       }
+      let qrPages=[];
+      if(imgs){ try{ qrPages=await rcptQrPages(imgs); }catch(e){console.error('[qr]',e);} }
+      segs=rcptMergeQr(segs,qrPages);
+      if(!segs.length){ if(j.scanned)toast(lb('لم يُتعرّف على نص — أكمل الحقول يدوياً: ||No text recognised — fill in manually: ')+f.name,'err');
+        segs=[{text:j.text,fields:j.fields||{}}]; }
       /* الملف قد يحوي عدة إيصالات: كل مقطع يصبح مسودة مستقلة */
-      const segs=Array.isArray(j.receipts)&&j.receipts.length?j.receipts:[{text:j.text,fields:j.fields||{}}];
-      segs.forEach(s=>results.push(Object.assign({},file,{text:s.text||'',fields:s.fields||{},pageFrom:s.pageFrom||null,pageTo:s.pageTo||null})));
+      segs.forEach(s=>results.push(Object.assign({},file,{text:s.text||'',fields:s.fields||{},pageFrom:s.pageFrom||null,pageTo:s.pageTo||null,qr:!!s.qr})));
     }
     if(!results.length)return toast(lb('لم يُرفع أي ملف||No file was uploaded'),'err');
     if(results.length===1)return rcptReview(results[0]);
@@ -8024,7 +8030,7 @@ async function ocrWorker(){
 async function pdfToCanvases(file,max){
   await loadScript('/vendor/pdfjs/pdf.min.js');
   const pdfjs=window.pdfjsLib;pdfjs.GlobalWorkerOptions.workerSrc='/vendor/pdfjs/pdf.worker.min.js';
-  const doc=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+  const doc=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false,disableFontFace:true}).promise;
   const n=Math.min(doc.numPages,max),out=[];
   for(let i=1;i<=n;i++){
     const page=await doc.getPage(i);
@@ -8036,12 +8042,80 @@ async function pdfToCanvases(file,max){
   }
   return {canvases:out,total:doc.numPages};
 }
-async function rcptOcr(file){
-  toast(lb('جارٍ تجهيز التعرّف الضوئي (أول مرة قد تأخذ وقتاً)…||Preparing OCR (first run may take a while)…'));
+/* صفحات الملف كلوحات canvas: PDF عبر pdf.js، والصورة مع تصحيح اتجاه الجوال وتكبير الصغيرة */
+async function fileCanvases(file){
   const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name||'');
-  let imgs=[file],total=1;
-  if(isPdf){const r=await pdfToCanvases(file,OCR_MAX_PAGES);imgs=r.canvases;total=r.total;}
-  if(total>imgs.length)toast(lb('سيُقرأ أول ||Only the first ')+imgs.length+lb(' صفحة فقط|| pages will be read'));
+  if(isPdf){const r=await pdfToCanvases(file,OCR_MAX_PAGES);
+    if(r.total>r.canvases.length)toast(lb('سيُقرأ أول ||Only the first ')+r.canvases.length+lb(' صفحة فقط|| pages will be read'));
+    return r;}
+  const bmp=await createImageBitmap(file,{imageOrientation:'from-image'});
+  const big=Math.max(bmp.width,bmp.height),k=big<1400?2:Math.min(1,3000/big);
+  const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+  const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(bmp,0,0,c.width,c.height);
+  return {canvases:[c],total:1};
+}
+/* ===== رمز QR لفواتير هيئة الزكاة (ZATCA): TLV بترميز base64 — 1 البائع، 2 الرقم الضريبي، 3 الوقت، 4 الإجمالي، 5 الضريبة ===== */
+function zatcaQr(str){
+  try{
+    const s=String(str||'').trim();if(!/^[A-Za-z0-9+/=\s]{20,}$/.test(s))return null;
+    const bin=atob(s.replace(/\s/g,'')),b=Uint8Array.from(bin,c=>c.charCodeAt(0)),tags={},dec=new TextDecoder('utf-8');
+    for(let i=0;i+2<=b.length;){const t=b[i],l=b[i+1];if(i+2+l>b.length)break;if(t>=1&&t<=5)tags[t]=dec.decode(b.slice(i+2,i+2+l));i+=2+l;}
+    if(!tags[1]||!tags[4])return null;
+    const amount=parseFloat(tags[4]),vat=parseFloat(tags[5]);
+    let date='';const ts=String(tags[3]||'');
+    if(/^\d{4}-\d{2}-\d{2}/.test(ts)){ date=ts.slice(0,10);
+      if(/Z$|[+-]00:?00$/.test(ts)){const d=new Date(ts);if(!isNaN(d))date=new Date(d.getTime()+3*3600e3).toISOString().slice(0,10);} }   /* UTC → توقيت السعودية */
+    return {vendor:tags[1].trim().slice(0,120),supplierNo:String(tags[2]||'').replace(/\D/g,'').slice(0,20),date,
+      amount:isFinite(amount)?amount:null,vat:isFinite(vat)?vat:null,currency:'SAR'};
+  }catch(e){return null;}
+}
+/* كل رموز QR في كل صفحة بمحرك ZXing (WebAssembly، يُخدَم من /vendor): يقرأ عدة رموز في مسح واحد
+   ويتحمّل الصور المائلة والباهتة. القارئ المدمج في المتصفح يُجرَّب أولاً حين يتوفر (أندرويد/ماك). */
+let _zxing=null;
+async function zxingReady(){
+  if(_zxing)return _zxing;
+  _zxing=(async()=>{await loadScript('/vendor/zxing/zxing-reader.js');
+    ZXingWASM.prepareZXingModule({overrides:{locateFile:(f,pre)=>f.endsWith('.wasm')?'/vendor/zxing/zxing_reader.wasm':pre+f},fireImmediately:true});
+    return ZXingWASM;})().catch(e=>{_zxing=null;throw e;});
+  return _zxing;
+}
+async function rcptQrPages(imgs){
+  let bd=null;
+  try{ if('BarcodeDetector' in window&&(await BarcodeDetector.getSupportedFormats()).includes('qr_code'))bd=new BarcodeDetector({formats:['qr_code']}); }catch(e){}
+  const zx=await zxingReady().catch(e=>{console.error('[zxing]',e);return null;});
+  const out=[];
+  for(const src of imgs){
+    const found=[],seen={};
+    const add=(raw,y)=>{ if(!raw||seen[raw])return;seen[raw]=1;const z=zatcaQr(raw);if(z)found.push(Object.assign(z,{y})); };
+    if(bd){ try{ (await bd.detect(src)).forEach(c=>add(c.rawValue,c.boundingBox.y)); }catch(e){} }
+    if(!found.length&&zx){
+      const k=Math.min(1,2400/Math.max(src.width,src.height));
+      const c=document.createElement('canvas');c.width=Math.round(src.width*k);c.height=Math.round(src.height*k);
+      const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(src,0,0,c.width,c.height);
+      try{ (await zx.readBarcodes(g.getImageData(0,0,c.width,c.height),{formats:['QRCode'],tryHarder:true,maxNumberOfSymbols:12}))
+        .forEach(r=>{ if(r.isValid)add(r.text,r.position.topLeft.y/k); }); }catch(e){console.error('[zxing]',e);}
+    }
+    out.push(found.sort((a,b)=>a.y-b.y));
+  }
+  return out;
+}
+/* بيانات QR موثوقة: تُكمّل/تصحّح مقاطع الصفحة بالترتيب من الأعلى، وتُضاف إيصالات لم يجدها النص */
+function rcptMergeQr(segs,qrPages){
+  const out=(segs||[]).map(s=>Object.assign({},s,{fields:Object.assign({},s.fields||{})}));
+  qrPages.forEach((q,pi)=>{
+    if(!q||!q.length)return;const p=pi+1;
+    const cands=out.filter(s=>!s.qr&&(s.pageFrom||1)<=p&&p<=(s.pageTo||s.pageFrom||1));
+    q.forEach((z,k)=>{
+      let s=cands[k];
+      if(!s){s={pageFrom:p,pageTo:p,text:'',fields:{}};out.push(s);}
+      Object.keys(z).forEach(key=>{if(key!=='y'&&z[key]!==''&&z[key]!=null)s.fields[key]=z[key];});
+      s.qr=true;
+    });
+  });
+  return out.sort((a,b)=>(a.pageFrom||1)-(b.pageFrom||1));
+}
+async function rcptOcr(imgs){
+  toast(lb('جارٍ تجهيز التعرّف الضوئي (أول مرة قد تأخذ وقتاً)…||Preparing OCR (first run may take a while)…'));
   const w=await ocrWorker();
   const pages=[];
   for(let i=0;i<imgs.length;i++){
@@ -8056,7 +8130,7 @@ function rcptPageUrl(r){return r.url?(r.url+(r.pageFrom?'#page='+r.pageFrom:''))
 function rcptPagesLbl(r){return r.pageFrom?(r.pageTo&&r.pageTo!==r.pageFrom?r.pageFrom+'–'+r.pageTo:String(r.pageFrom)):'';}
 function rcptBatch(results){
   window._rcptBatch=results.map(x=>{const f=x.fields||{};
-    return {keep:true,fileId:x.fileId,url:x.url,name:x.name,mime:x.mime,size:x.size,scanned:!!x.scanned,ocr:!!x.ocr,text:x.text||'',
+    return {keep:true,fileId:x.fileId,url:x.url,name:x.name,mime:x.mime,size:x.size,scanned:!!x.scanned,ocr:!!x.ocr,qr:!!x.qr,text:x.text||'',
       pageFrom:x.pageFrom,pageTo:x.pageTo,vendor:f.vendor||'',date:f.date||'',receiptNo:f.no||'',
       amount:f.amount!=null?f.amount:null,vat:f.vat!=null?f.vat:null,currency:f.currency||'SAR',projectId:'',notes:''};});
   rcptBatchPaint();
@@ -8084,7 +8158,7 @@ function rcptBatchPaint(){
   const projs=db.projects.filter(p=>p.compoundId===activeCmp());
   const rows=b.map((r,i)=>`<tr${r.keep?'':' style="opacity:.45"'}>
     <td><input type="checkbox" ${r.keep?'checked':''} onchange="rcptBatchSet(${i},'keep',this.checked);this.closest('tr').style.opacity=this.checked?1:.45" aria-label="${lb('تضمين||Include')}"></td>
-    <td nowrap>${r.url?`<a href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener" dir="ltr">${esc(rcptPagesLbl(r)||lb('ملف||file'))}</a>`:'—'}${r.ocr?` <span class="badge b-wait" title="${lb('قُرئ بالتعرّف الضوئي — راجع الحقول||Read by OCR — check the fields')}">OCR</span>`:''}</td>
+    <td nowrap>${r.url?`<a href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener" dir="ltr">${esc(rcptPagesLbl(r)||lb('ملف||file'))}</a>`:'—'}${r.qr?` <span class="badge b-ok" title="${lb('من رمز QR لهيئة الزكاة — المورّد والتاريخ والمبالغ موثوقة||From the ZATCA QR code — vendor, date and amounts are reliable')}">QR</span>`:r.ocr?` <span class="badge b-wait" title="${lb('قُرئ بالتعرّف الضوئي — راجع الحقول||Read by OCR — check the fields')}">OCR</span>`:''}</td>
     <td><input value="${esc(r.vendor)}" oninput="rcptBatchSet(${i},'vendor',this.value)" style="min-width:140px"></td>
     <td><input type="date" value="${esc(r.date)}" onchange="rcptBatchSet(${i},'date',this.value)"></td>
     <td><input value="${esc(r.receiptNo)}" oninput="rcptBatchSet(${i},'receiptNo',this.value)" style="min-width:90px">${dup(r)?`<span class="badge b-wait" title="${lb('يوجد إيصال بنفس الرقم والمورّد||A receipt with this number and vendor exists')}">${lb('مكرر؟||dup?')}</span>`:''}</td>
@@ -8140,7 +8214,7 @@ function rcptReview(rec,idx){
   window._rcptFile={fileId:r.fileId,url:r.url,name:r.name,mime:r.mime,size:r.size,scanned:!!r.scanned,ocr:!!r.ocr,text:r.text||'',pageFrom:r.pageFrom||null,pageTo:r.pageTo||null};
   const isImg=/^image\//.test(r.mime||'');
   const preview=r.url?(isImg?`<img src="${esc(r.url)}" style="width:100%;max-height:40vh;object-fit:contain;border-radius:10px;background:#fff">`:`<a class="btn ghost sm" href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener">${lb('فتح ملف PDF||Open the PDF')}${rcptPagesLbl(r)?' · '+lb('صفحة ||page ')+rcptPagesLbl(r):''}</a>`):'';
-  modal(`<h3>${lb('مراجعة الإيصال||Review receipt')} ${r.ocr?`<span class="badge b-wait">${lb('تعرّف ضوئي — راجع الحقول||OCR — check the fields')}</span>`:r.scanned?`<span class="badge b-wait">${lb('لا نص — أكمله يدوياً||no text — fill manually')}</span>`:''}</h3>
+  modal(`<h3>${lb('مراجعة الإيصال||Review receipt')} ${r.qr?`<span class="badge b-ok">${lb('من رمز QR — موثوق||From QR code — reliable')}</span>`:r.ocr?`<span class="badge b-wait">${lb('تعرّف ضوئي — راجع الحقول||OCR — check the fields')}</span>`:r.scanned?`<span class="badge b-wait">${lb('لا نص — أكمله يدوياً||no text — fill manually')}</span>`:''}</h3>
   ${preview}
   <div class="fg">
     <div><label>${lb('المورّد||Vendor')}</label><input id="fr_v" value="${esc(r.vendor||'')}"></div>

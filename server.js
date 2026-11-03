@@ -167,6 +167,11 @@ const vendorOpts = { maxAge: '30d', immutable: true, index: false };
 app.use('/vendor/tesseract', express.static(path.join(NM, 'tesseract.js', 'dist'), vendorOpts));
 app.use('/vendor/tesseract-core', express.static(path.join(NM, 'tesseract.js-core'), vendorOpts));
 app.use('/vendor/pdfjs', express.static(path.join(NM, 'pdfjs-dist', 'build'), vendorOpts));
+/* قراءة رموز QR لفواتير هيئة الزكاة (ZXing — WebAssembly) */
+app.get('/vendor/zxing/zxing-reader.js', (req, res) => { res.set('Cache-Control', 'public, max-age=2592000, immutable');
+  res.sendFile(path.join(NM, 'zxing-wasm', 'dist', 'iife', 'reader', 'index.js')); });
+app.get('/vendor/zxing/zxing_reader.wasm', (req, res) => { res.set('Cache-Control', 'public, max-age=2592000, immutable');
+  res.type('application/wasm').sendFile(path.join(NM, 'zxing-wasm', 'dist', 'reader', 'zxing_reader.wasm')); });
 app.get('/vendor/tessdata/:lang.traineddata.gz', (req, res) => {
   const lang = String(req.params.lang);
   if (!['ara', 'eng'].includes(lang)) return res.status(404).end();
@@ -900,15 +905,23 @@ function normDateStr(s){
   let y,m,d;
   if(a[0].length===4){y=a[0];m=a[1];d=a[2];} else { d=a[0];m=a[1];y=a[2]; if(y.length===2)y='20'+y; }
   m=String(+m).padStart(2,'0');d=String(+d).padStart(2,'0');
+  if(+m>12&&+d<=12){const x=m;m=d;d=x;}   /* صيغة أمريكية mm/dd */
   if(+m<1||+m>12||+d<1||+d>31)return '';
   return y+'-'+m+'-'+d;
 }
+/* ---- استخراج الحقول من نص إيصال (نصي أو من OCR) — يعتمد على الأسطر لا على ترتيب الكلمات ---- */
+const RCPT_BIZ = /(مؤسس[ةه]|شرك[ةه]|محل|محلات|مطعم|مطاعم|صيدلي[ةه]|صيدليات|سوق|أسواق|اسواق|سوبر|هايبر|مركز|متجر|مخبز|مخابز|كافيه|مقهى|معرض|ورش[ةه]|مصنع|بقال[ةه]|تموينات|\btrading\b|\best\b|\bcompany\b|\bco\.|\bltd\b|\bllc\b|\bstore\b|\bmarket\b|\bmart\b|pharmacy|restaurant|\bcafe\b|coffee|bakery|\bcent(?:er|re)\b|hypermarket|supermarket)/i;
+const RCPT_NOTVENDOR = /(فاتور[ةه]|invoice|receipt|إيصال|ايصال|ضريب|\btax\b|\bvat\b|رقم|\bno\b|date|تاريخ|التاريخ|الوقت|time|\btel\b|phone|هاتف|جوال|سجل|\bc\.?r\b|simplified|مبسط|cashier|كاشير|branch|فرع|عميل|customer|qty|الكمية|السعر|price|total|الإجمالي|الاجمالي|المجموع|www|http|@)/i;
+const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
 function extractReceiptFields(text){
   const arD='٠١٢٣٤٥٦٧٨٩', faD='۰۱۲۳۴۵۶۷۸۹';
   const t=String(text||'').replace(/\r/g,'\n')
     .replace(/[٠-٩]/g, c => String(arD.indexOf(c)))
-    .replace(/[۰-۹]/g, c => String(faD.indexOf(c)));
+    .replace(/[۰-۹]/g, c => String(faD.indexOf(c)))
+    .replace(/٫/g,'.').replace(/٬/g,',').replace(/ـ/g,'')
+    .replace(/(\d)[ \t]*([-/])[ \t]*(?=\d)/g,'$1$2');   /* "2026 / 10 / 12" → "2026/10/12" */
   const flat=t.replace(/[ \t]+/g,' ');
+  const lines=t.split('\n').map(x=>x.replace(/[ \t]+/g,' ').trim()).filter(Boolean);
   const num=s=>{
     let x=String(s==null?'':s).replace(/[^\d.,-]/g,'');
     if(!x)return null;
@@ -916,38 +929,64 @@ function extractReceiptFields(text){
     else if(x.indexOf(',')>=0){ const p=x.split(','); x = (p.length===2&&p[1].length<=2) ? p[0]+'.'+p[1] : x.replace(/,/g,''); }
     const n=parseFloat(x); return isFinite(n)?n:null;
   };
+  /* أرقام مالية في سطر: تُستبعد النسب المئوية والأرقام الطويلة (رقم ضريبي/هاتف) والتواريخ والأوقات */
+  const money=l=>[...String(l).replace(/\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}/g,' ').replace(/\d{1,2}:\d{2}(:\d{2})?/g,' ').matchAll(/\d+(?:[.,]\d+)*(?![\d.,]*\s*[%٪])/g)]
+    .map(m=>m[0]).filter(x=>x.replace(/\D/g,'').length<=9).map(num).filter(n=>n!=null);
   const f={};
-  const dm=flat.match(/\b(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})\b/)||flat.match(/\b(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\b/);
-  if(dm){f.dateRaw=dm[1];f.date=normDateStr(dm[1]);}
+  /* التاريخ: الموسوم أولاً، ثم أول تاريخ صالح (يُتجاهل الهجري) */
+  const validDate=raw=>{ const d=normDateStr(raw); return d&&+d.slice(0,4)>=2000&&+d.slice(0,4)<=2100?d:''; };
+  const DRE=/(\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})/;
+  const labelled=flat.match(new RegExp('(?:date|التاريخ|تاريخ)[^\\d\\n]{0,25}'+DRE.source,'i'));
+  const cands=(labelled?[labelled[1]]:[]).concat([...flat.matchAll(new RegExp(DRE.source,'g'))].map(m=>m[1]));
+  for(const c of cands){ const d=validDate(c); if(d){f.dateRaw=c;f.date=d;break;} }
+  if(!f.date){
+    const mm=flat.match(/\b(\d{1,2})[ -]?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[ ,-]*(\d{4})\b/i)
+          ||flat.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[ .-]*(\d{1,2}),?[ ]*(\d{4})\b/i);
+    if(mm){ const named=isNaN(+mm[1]); const d=named?mm[2]:mm[1], m=MONTHS[(named?mm[1]:mm[2]).toLowerCase().slice(0,3)];
+      const dt=validDate(mm[3]+'-'+m+'-'+d); if(dt){f.dateRaw=mm[0];f.date=dt;} }
+  }
   /* رقم الإيصال: نفضّل السطر الصريح (No/Number/#/رقم) ولا نتجاوز السطر */
-  const nm=flat.match(/(?:invoice|receipt|inv|bill)[ \t]*(?:no\.?|number|#)[ \t]*[:#]?[ \t]*([A-Za-z0-9\-\/]*\d[A-Za-z0-9\-\/]*)/i)
-        ||flat.match(/رقم[ \t]*(?:الفاتورة|الإيصال|الايصال|السند)[ \t]*[:#]?[ \t]*([A-Za-z0-9\-\/]*\d[A-Za-z0-9\-\/]*)/)
+  const nm=flat.match(/(?:invoice|receipt|inv|bill|order)[ \t]*(?:no\.?|number|#)[ \t]*[:#.]?[ \t]*([A-Za-z0-9\-\/]*\d[A-Za-z0-9\-\/]*)/i)
+        ||flat.match(/(?:رقم[ \t]*(?:الفاتورة|الإيصال|الايصال|السند|الطلب)|(?:فاتورة|إيصال|ايصال)[ \t]*رقم)[ \t]*[:#.]?[ \t]*([A-Za-z0-9\-\/]*\d[A-Za-z0-9\-\/]*)/)
         ||flat.match(/(?:invoice|receipt|inv|bill|فاتورة|إيصال|ايصال|سند)[^\n:#]*[:#][ \t]*([A-Za-z0-9\-\/]*\d[A-Za-z0-9\-\/]*)/i);
-  if(nm)f.no=String(nm[1]).slice(0,40);
-  /* مبلغ الضريبة — مع استبعاد سطر الرقم الضريبي للمورّد */
-  const vm=flat.match(/(?:vat|tax|ضريبة|الضريبة|ضريبه)(?![ \t]*(?:no|number|reg|id|#|invoice)|[ \t]*ال?رقم)(?!.*(?:الرقم الضريبي|الرقم الضريبى))[^\n:]*[:#]?[ \t]*([\d.,]+)(?!\d)/i)||flat.match(/([\d.,]+)[ \t]*%?[ \t]*(?:vat|ضريبة)/i);
-  if(vm)f.vat=num(vm[1]);
-  const lastMatch=(src)=>{ const re=new RegExp(src,'gi'); let m,last=null; while((m=re.exec(flat))) last=m; return last; };
-  const am=lastMatch('(?:grand\\s+total|الإجمالي|الاجمالي|المجموع)[^\\n:#]*[:#]?\\s*([\\d.,]+)')
-        || lastMatch('(?:^|[^A-Za-z])total[^\\n:#]*[:#]?\\s*([\\d.,]+)')
-        || lastMatch('(?:^|[^A-Za-z])(?:amount|net)[^\\n:#]*[:#]?\\s*([\\d.,]+)');
-  if(am)f.amount=num(am[1]);
+  if(nm&&nm[1].replace(/\D/g,'').length<15)f.no=String(nm[1]).slice(0,40);
+  /* الإجمالي: سطر "شامل الضريبة/المستحق" أولاً ثم آخر سطر إجمالي، وأكبر رقم مالي فيه — يعمل مع ترتيب RTL */
+  const TOT=/(grand\s*total|total|net\s*amount|amount\s*due|الإجمالي|الاجمالي|اجمالي|إجمالي|المجموع|الصافي|صافي|المستحق|المبلغ)/i;
+  const NOT_TOT=/(sub\s*-?\s*total|قبل|excl|excluding|before|خصم|discount|ضريب[ةه]\s*القيم[ةه]|vat\s*amount|الكمية|qty|items|عدد)/i;
+  const PREF=/(شامل|incl|including|grand|المستحق|due|net)/i;
+  const totLines=lines.map((l,i)=>({l,next:lines[i+1]||''})).filter(x=>TOT.test(x.l)&&!NOT_TOT.test(x.l));
+  const pick=x=>{ const v=money(x.l), w=money(x.next); return v.length?Math.max(...v):(w.length?Math.max(...w):null); };
+  const ordered=totLines.filter(x=>PREF.test(x.l)).concat(totLines.filter(x=>!PREF.test(x.l)).reverse());
+  for(const x of ordered){ const v=pick(x); if(v!=null&&v>0){f.amount=v;break;} }
   if(f.amount==null){
-    const all=[...flat.matchAll(/\b\d{1,3}(?:[,\s]\d{3})*(?:[.,]\d{2})\b/g)].map(x=>num(x[0])).filter(x=>x!=null);
+    const all=[...flat.matchAll(/\b\d{1,3}(?:,\d{3})*[.,]\d{2}\b/g)].map(x=>num(x[0])).filter(x=>x!=null);
     if(all.length)f.amount=Math.max.apply(null,all);
   }
-  /* الرقم الضريبي للمورّد (15 رقماً شائع في السعودية) */
-  const vn=flat.match(/(?:vat\s*(?:no|number|reg)|الرقم الضريبي|الرقم الضريبى)[^\n:]*[:#]?\s*(\d{10,20})/i);
+  /* الضريبة: سطر ضريبة ليس سطر الرقم الضريبي ولا "فاتورة ضريبية" ولا الإجمالي الشامل */
+  const VATL=/(vat|\btax\b|ضريب[ةه]|القيم[ةه]\s*المضاف[ةه])/i;
+  const NOT_VAT=/(رقم|number|\bno\b|reg|الرقم\s*الضريبي|tax\s*invoice|فاتور[ةه]\s*ضريبي[ةه]|registration|شامل|incl|excl|قبل|before|total|الإجمالي|الاجمالي|اجمالي)/i;
+  for(const l of lines){ if(!VATL.test(l)||NOT_VAT.test(l))continue;
+    const v=money(l); if(v.length){f.vat=v[v.length-1];break;} }
+  if(f.vat!=null&&f.amount!=null&&f.vat>=f.amount)delete f.vat;
+  /* الرقم الضريبي للمورّد (15 رقماً في السعودية تبدأ وتنتهي بـ 3) */
+  const vn=flat.match(/(?:vat\s*(?:no|number|reg|#)|tax\s*(?:no|number|id|reg)|trn|الرقم الضريبي|الرقم الضريبى|رقم التسجيل الضريبي)[^\n\d]{0,20}(\d{10,20})/i)||flat.match(/\b(3\d{13}3)\b/);
   if(vn)f.supplierNo=vn[1];
   const ph=flat.match(/(?:tel|phone|هاتف|جوال)[^\n:]*[:#]?\s*([+\d][\d\s\-()]{6,})/i);
   if(ph)f.phone=String(ph[1]).trim().slice(0,25);
-  if(/ر\.?\s?س|ريال|SAR/i.test(flat))f.currency='SAR';
+  if(/ر\.?\s?س|ريال|SAR|\bSR\b/i.test(flat))f.currency='SAR';
   else if(/\$|USD|دولار/i.test(flat))f.currency='USD';
   else if(/€|EUR|يورو/i.test(flat))f.currency='EUR';
   else if(/AED|درهم/i.test(flat))f.currency='AED';
   else if(/EGP|جنيه/i.test(flat))f.currency='EGP';
-  const lines=t.split('\n').map(s=>s.trim()).filter(s=>s.length>2&&/[A-Za-z\u0600-\u06FF]/.test(s)&&!/^(tax|vat|total|date|invoice|receipt)$/i.test(s)&&!RCPT_FOOTER.test(s));
-  if(lines.length)f.vendor=lines[0].slice(0,120);
+  /* المورّد: سطر موسوم، ثم سطر فيه كلمة تجارية في أعلى الإيصال، ثم أول سطر نصي "نظيف" */
+  const clean=x=>String(x||'').replace(/^[^A-Za-z\u0621-\u064A\u0671-\u06D3]+|[^A-Za-z\u0621-\u064A\u0671-\u06D3.)]+$/g,'')
+    .replace(/\s*[-\u2010\u2013]\s*(?:\u0641\u0631\u0639|branch\b).*$/i,'').trim().slice(0,120);   /* \u0628\u0644\u0627 \u0639\u0644\u0627\u0645\u0627\u062A \u062A\u0631\u0642\u064A\u0645 \u0648\u0644\u0627 \u0627\u0633\u0645 \u0627\u0644\u0641\u0631\u0639 */
+  const letters=x=>(String(x).match(/[A-Za-z\u0621-\u064A\u0671-\u06D3]/g)||[]).length;
+  const good=x=>{ const c=clean(x); return c.length>=3&&c.length<=70&&letters(c)/Math.max(1,c.replace(/\s/g,'').length)>=0.7&&!RCPT_NOTVENDOR.test(c)&&!RCPT_FOOTER.test(c); };
+  const lv=flat.match(/(?:seller(?:\s*name)?|vendor|supplier|merchant|اسم\s*البائع|اسم\s*المورد|اسم\s*المنشأ[ةه]|اسم\s*المتجر|البائع|المورد)[ \t]*[:：][ \t]*([^\n]{3,})/i);
+  const top=lines.slice(0,10);
+  const vendor=(lv&&clean(lv[1]))||clean(top.find(l=>RCPT_BIZ.test(l)&&letters(l)>=4&&!/(فاتور|invoice)/i.test(l)))||clean(lines.find(good));
+  if(vendor)f.vendor=vendor;
   return f;
 }
 app.post('/api/receipts', async (req,res)=>{

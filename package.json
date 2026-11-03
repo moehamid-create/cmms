@@ -14,7 +14,8 @@
     "express": "^4.19.2",
     "pdfjs-dist": "^3.11.174",
     "pg": "^8.13.0",
-    "tesseract.js": "^5.1.1"
+    "tesseract.js": "^5.1.1",
+    "zxing-wasm": "^2.2.4"
   },
   "engines": {
     "node": ">=22.5.0"
