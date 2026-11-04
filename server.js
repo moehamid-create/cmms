@@ -167,6 +167,9 @@ const vendorOpts = { maxAge: '30d', immutable: true, index: false };
 app.use('/vendor/tesseract', express.static(path.join(NM, 'tesseract.js', 'dist'), vendorOpts));
 app.use('/vendor/tesseract-core', express.static(path.join(NM, 'tesseract.js-core'), vendorOpts));
 app.use('/vendor/pdfjs', express.static(path.join(NM, 'pdfjs-dist', 'build'), vendorOpts));
+/* خطوط PDF القياسية (Helvetica/Times… غير المضمّنة) وخرائط CMap للخطوط CID — بدونها تُرسم الصفحة بلا نص */
+app.use('/vendor/pdfjs-fonts', express.static(path.join(NM, 'pdfjs-dist', 'standard_fonts'), vendorOpts));
+app.use('/vendor/pdfjs-cmaps', express.static(path.join(NM, 'pdfjs-dist', 'cmaps'), vendorOpts));
 /* قراءة رموز QR لفواتير هيئة الزكاة (ZXing — WebAssembly) */
 app.get('/vendor/zxing/zxing-reader.js', (req, res) => { res.set('Cache-Control', 'public, max-age=2592000, immutable');
   res.sendFile(path.join(NM, 'zxing-wasm', 'dist', 'iife', 'reader', 'index.js')); });
@@ -774,6 +777,7 @@ app.post('/api/uploads', async (req,res)=>{
   try{
     const f = incomingFile(req);
     if (!f.buf || !f.buf.length) return res.status(400).json({error:'NO_DATA'});
+    { const sn = sniffMime(f.buf); if (sn && (f.mime === 'application/octet-stream' || !/^(image\/|application\/pdf)/.test(f.mime))) f.mime = sn; }
     if (!/^image\//.test(f.mime) && f.mime !== 'application/pdf') return res.status(400).json({error:'BAD_TYPE'});
     if (f.buf.length > MAX_UPLOAD) return res.status(413).json({error:'TOO_LARGE', max:MAX_UPLOAD});
     const id = 'F' + crypto.randomBytes(9).toString('hex');
@@ -793,9 +797,10 @@ app.get('/api/files/:id', async (req,res)=>{
 });
 
 /* ---- استخراج بيانات الإيصالات من ملفات PDF (مكتبة pdfjs-dist على الخادم) ----
-   ملاحظة: يعمل مع ملفات PDF النصية. الملفات الممسوحة ضوئياً (صور) تحتاج OCR — غير مُدمج حالياً،
-   ويُرجع الخادم scanned=true ليُكمل المستخدم الحقول يدوياً. */
+   الصفحات النصية تُحلَّل هنا؛ الصفحات الممسوحة (أو ذات طبقة نص رديئة) تُعلَّم needOcr
+   فيقرؤها المتصفح بـ OCR ثم يرسل نصها إلى /api/receipts/parse. منطق الاستخراج في receipts.js */
 const RCPT_MAX_PAGES = Number(process.env.RECEIPT_MAX_PAGES || 60);
+const { splitReceiptText, extractReceiptFields, normDateStr, pageTextQuality, sniffMime } = require('./receipts');
 /* نص كل صفحة على حدة، مع إعادة بناء الأسطر من إحداثيات العناصر (العربية من اليمين لليسار) */
 async function pdfPages(buf, maxPages){
   const pdfjs = require('pdfjs-dist/legacy/build/pdf.js');
@@ -826,40 +831,6 @@ async function pdfPages(buf, maxPages){
 }
 async function pdfText(buf, maxPages){
   return (await pdfPages(buf, maxPages)).pages.join('\n').trim();
-}
-/* ---- تقسيم ملف يحوي عدة إيصالات إلى مقاطع: صفحة لكل إيصال افتراضياً،
-   وتُقسَم الصفحة إن احتوت أكثر من رأس إيصال يفصل بينهما سطر إجمالي،
-   وتُدمج صفحة التتمة (بلا رأس) مع ما قبلها إن لم يكن له إجمالي بعد. ---- */
-const RCPT_HEAD = /(tax\s+invoice|invoice\s*(no|number|#)|receipt\s*(no|number|#)|^\s*(invoice|receipt)\b|فاتورة\s+ضريبية|رقم\s+الفاتورة|رقم\s+(الإيصال|الايصال)|سند\s+قبض|^\s*(فاتورة|إيصال|ايصال)\b)/im;
-const RCPT_FOOTER = /(thank\s*you|شكرا|شكراً|page\s*\d|صفحة\s*\d|www\.|https?:)/i;
-const RCPT_TOTAL = /(grand\s+total|total|amount\s+due|الإجمالي|الاجمالي|المجموع|المبلغ\s+المستحق)/i;
-function splitReceiptText(pages){
-  const segs = [];
-  pages.forEach((txt, pi) => {
-    const lines = String(txt || '').split('\n');
-    if (!lines.some(l => l.trim())) return;
-    const heads = [];
-    lines.forEach((l, k) => { if (RCPT_HEAD.test(l) && (!heads.length || k - heads[heads.length - 1] > 3)) heads.push(k); });
-    const cuts = [0];
-    for (let h = 1; h < heads.length; h++) {
-      const from = cuts[cuts.length - 1];
-      let lastTot = -1;
-      for (let k = from; k < heads[h]; k++) if (RCPT_TOTAL.test(lines[k])) lastTot = k;
-      if (lastTot < 0) continue;
-      let cut = Math.max(lastTot + 1, heads[h] - 3);
-      while (cut < heads[h] && (RCPT_FOOTER.test(lines[cut]) || !lines[cut].trim())) cut++;   /* تذييل الإيصال السابق يبقى معه */
-      cuts.push(cut);
-    }
-    cuts.forEach((c, ci) => {
-      const text = lines.slice(c, ci + 1 < cuts.length ? cuts[ci + 1] : lines.length).join('\n').trim();
-      if (!text) return;
-      const prev = segs[segs.length - 1];
-      if (ci === 0 && prev && !RCPT_HEAD.test(text) && !RCPT_TOTAL.test(prev.text)) {
-        prev.text += '\n' + text; prev.pageTo = pi + 1;
-      } else segs.push({ pageFrom: pi + 1, pageTo: pi + 1, text });
-    });
-  });
-  return segs;
 }
 /* تقسيم واستخراج بالذكاء الاصطناعي (اختياري، عند ضبط مزوّد) — يعود null عند الفشل */
 const AI_RCPT_SYSTEM = [
@@ -899,140 +870,83 @@ async function aiSplitReceipts(pages){
     });
   } catch (e) { console.error('[receipts] ai error:', e.message); return null; }
 }
-function normDateStr(s){
-  const a=String(s||'').split(/[-/.]/).map(x=>x.trim());
-  if(a.length!==3)return '';
-  let y,m,d;
-  if(a[0].length===4){y=a[0];m=a[1];d=a[2];} else { d=a[0];m=a[1];y=a[2]; if(y.length===2)y='20'+y; }
-  m=String(+m).padStart(2,'0');d=String(+d).padStart(2,'0');
-  if(+m>12&&+d<=12){const x=m;m=d;d=x;}   /* صيغة أمريكية mm/dd */
-  if(+m<1||+m>12||+d<1||+d>31)return '';
-  return y+'-'+m+'-'+d;
+/* إيصالات ملف واحد: الذكاء الاصطناعي إن توفّر (وتُكمَّل حقوله الفارغة بالقواعد)، وإلا القواعد المحلية */
+async function receiptsFromPages(pages, useAi){
+  const ai = useAi ? await aiSplitReceipts(pages) : null;
+  if (ai) {
+    ai.forEach(r => { const rf = extractReceiptFields(r.text);
+      Object.keys(rf).forEach(k => { if (r.fields[k] == null || r.fields[k] === '') r.fields[k] = rf[k]; }); });
+    return { source:'ai', receipts: ai };
+  }
+  return { source:'rules', receipts: splitReceiptText(pages).slice(0, 200).map(s => ({ pageFrom:s.pageFrom, pageTo:s.pageTo, text:s.text.slice(0,4000), fields:extractReceiptFields(s.text) })) };
 }
-/* ---- استخراج الحقول من نص إيصال (نصي أو من OCR) — يعتمد على الأسطر لا على ترتيب الكلمات ---- */
-const RCPT_BIZ = /(مؤسس[ةه]|شرك[ةه]|محل|محلات|مطعم|مطاعم|صيدلي[ةه]|صيدليات|سوق|أسواق|اسواق|سوبر|هايبر|مركز|متجر|مخبز|مخابز|كافيه|مقهى|معرض|ورش[ةه]|مصنع|بقال[ةه]|تموينات|\btrading\b|\best\b|\bcompany\b|\bco\.|\bltd\b|\bllc\b|\bstore\b|\bmarket\b|\bmart\b|pharmacy|restaurant|\bcafe\b|coffee|bakery|\bcent(?:er|re)\b|hypermarket|supermarket)/i;
-const RCPT_NOTVENDOR = /(فاتور[ةه]|invoice|receipt|إيصال|ايصال|ضريب|\btax\b|\bvat\b|رقم|\bno\b|date|تاريخ|التاريخ|الوقت|time|\btel\b|phone|هاتف|جوال|سجل|\bc\.?r\b|simplified|مبسط|cashier|كاشير|branch|فرع|عميل|customer|qty|الكمية|السعر|price|total|الإجمالي|الاجمالي|المجموع|www|http|@)/i;
-const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
-function extractReceiptFields(text){
-  const arD='٠١٢٣٤٥٦٧٨٩', faD='۰۱۲۳۴۵۶۷۸۹';
-  const t=String(text||'').replace(/\r/g,'\n')
-    .replace(/[٠-٩]/g, c => String(arD.indexOf(c)))
-    .replace(/[۰-۹]/g, c => String(faD.indexOf(c)))
-    .replace(/٫/g,'.').replace(/٬/g,',').replace(/ـ/g,'')
-    .replace(/(\d)[ \t]*([-/])[ \t]*(?=\d)/g,'$1$2');   /* "2026 / 10 / 12" → "2026/10/12" */
-  const flat=t.replace(/[ \t]+/g,' ');
-  const lines=t.split('\n').map(x=>x.replace(/[ \t]+/g,' ').trim()).filter(Boolean);
-  const num=s=>{
-    let x=String(s==null?'':s).replace(/[^\d.,-]/g,'');
-    if(!x)return null;
-    if(x.indexOf('.')>=0&&x.indexOf(',')>=0){ x = x.lastIndexOf('.')>x.lastIndexOf(',') ? x.replace(/,/g,'') : x.replace(/\./g,'').replace(/,/g,'.'); }
-    else if(x.indexOf(',')>=0){ const p=x.split(','); x = (p.length===2&&p[1].length<=2) ? p[0]+'.'+p[1] : x.replace(/,/g,''); }
-    const n=parseFloat(x); return isFinite(n)?n:null;
-  };
-  /* أرقام مالية في سطر: تُستبعد النسب المئوية والأرقام الطويلة (رقم ضريبي/هاتف) والتواريخ والأوقات */
-  const money=l=>[...String(l).replace(/\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}/g,' ').replace(/\d{1,2}:\d{2}(:\d{2})?/g,' ').matchAll(/\d+(?:[.,]\d+)*(?![\d.,]*\s*[%٪])/g)]
-    .map(m=>m[0]).filter(x=>x.replace(/\D/g,'').length<=9).map(num).filter(n=>n!=null);
-  const f={};
-  /* التاريخ: الموسوم أولاً، ثم أول تاريخ صالح (يُتجاهل الهجري) */
-  const validDate=raw=>{ const d=normDateStr(raw); return d&&+d.slice(0,4)>=2000&&+d.slice(0,4)<=2100?d:''; };
-  const DRE=/(\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})/;
-  const labelled=flat.match(new RegExp('(?:date|التاريخ|تاريخ)[^\\d\\n]{0,25}'+DRE.source,'i'));
-  const cands=(labelled?[labelled[1]]:[]).concat([...flat.matchAll(new RegExp(DRE.source,'g'))].map(m=>m[1]));
-  for(const c of cands){ const d=validDate(c); if(d){f.dateRaw=c;f.date=d;break;} }
-  if(!f.date){
-    const mm=flat.match(/\b(\d{1,2})[ -]?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[ ,-]*(\d{4})\b/i)
-          ||flat.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[ .-]*(\d{1,2}),?[ ]*(\d{4})\b/i);
-    if(mm){ const named=isNaN(+mm[1]); const d=named?mm[2]:mm[1], m=MONTHS[(named?mm[1]:mm[2]).toLowerCase().slice(0,3)];
-      const dt=validDate(mm[3]+'-'+m+'-'+d); if(dt){f.dateRaw=mm[0];f.date=dt;} }
-  }
-  /* رقم الإيصال: نفضّل السطر الصريح (No/Number/#/رقم) ولا نتجاوز السطر */
-  const nm=flat.match(/(?:invoice|receipt|inv|bill|order)[ \t]*(?:no\.?|number|#)[ \t]*[:#.]?[ \t]*([A-Za-z0-9\-\/]*\d[A-Za-z0-9\-\/]*)/i)
-        ||flat.match(/(?:رقم[ \t]*(?:الفاتورة|الإيصال|الايصال|السند|الطلب)|(?:فاتورة|إيصال|ايصال)[ \t]*رقم)[ \t]*[:#.]?[ \t]*([A-Za-z0-9\-\/]*\d[A-Za-z0-9\-\/]*)/)
-        ||flat.match(/(?:invoice|receipt|inv|bill|فاتورة|إيصال|ايصال|سند)[^\n:#]*[:#][ \t]*([A-Za-z0-9\-\/]*\d[A-Za-z0-9\-\/]*)/i);
-  if(nm&&nm[1].replace(/\D/g,'').length<15)f.no=String(nm[1]).slice(0,40);
-  /* الإجمالي: سطر "شامل الضريبة/المستحق" أولاً ثم آخر سطر إجمالي، وأكبر رقم مالي فيه — يعمل مع ترتيب RTL */
-  const TOT=/(grand\s*total|total|net\s*amount|amount\s*due|الإجمالي|الاجمالي|اجمالي|إجمالي|المجموع|الصافي|صافي|المستحق|المبلغ)/i;
-  const NOT_TOT=/(sub\s*-?\s*total|قبل|excl|excluding|before|خصم|discount|ضريب[ةه]\s*القيم[ةه]|vat\s*amount|الكمية|qty|items|عدد)/i;
-  const PREF=/(شامل|incl|including|grand|المستحق|due|net)/i;
-  const totLines=lines.map((l,i)=>({l,next:lines[i+1]||''})).filter(x=>TOT.test(x.l)&&!NOT_TOT.test(x.l));
-  const pick=x=>{ const v=money(x.l), w=money(x.next); return v.length?Math.max(...v):(w.length?Math.max(...w):null); };
-  const ordered=totLines.filter(x=>PREF.test(x.l)).concat(totLines.filter(x=>!PREF.test(x.l)).reverse());
-  for(const x of ordered){ const v=pick(x); if(v!=null&&v>0){f.amount=v;break;} }
-  if(f.amount==null){
-    const all=[...flat.matchAll(/\b\d{1,3}(?:,\d{3})*[.,]\d{2}\b/g)].map(x=>num(x[0])).filter(x=>x!=null);
-    if(all.length)f.amount=Math.max.apply(null,all);
-  }
-  /* الضريبة: سطر ضريبة ليس سطر الرقم الضريبي ولا "فاتورة ضريبية" ولا الإجمالي الشامل */
-  const VATL=/(vat|\btax\b|ضريب[ةه]|القيم[ةه]\s*المضاف[ةه])/i;
-  const NOT_VAT=/(رقم|number|\bno\b|reg|الرقم\s*الضريبي|tax\s*invoice|فاتور[ةه]\s*ضريبي[ةه]|registration|شامل|incl|excl|قبل|before|total|الإجمالي|الاجمالي|اجمالي)/i;
-  for(const l of lines){ if(!VATL.test(l)||NOT_VAT.test(l))continue;
-    const v=money(l); if(v.length){f.vat=v[v.length-1];break;} }
-  if(f.vat!=null&&f.amount!=null&&f.vat>=f.amount)delete f.vat;
-  /* الرقم الضريبي للمورّد (15 رقماً في السعودية تبدأ وتنتهي بـ 3) */
-  const vn=flat.match(/(?:vat\s*(?:no|number|reg|#)|tax\s*(?:no|number|id|reg)|trn|الرقم الضريبي|الرقم الضريبى|رقم التسجيل الضريبي)[^\n\d]{0,20}(\d{10,20})/i)||flat.match(/\b(3\d{13}3)\b/);
-  if(vn)f.supplierNo=vn[1];
-  const ph=flat.match(/(?:tel|phone|هاتف|جوال)[^\n:]*[:#]?\s*([+\d][\d\s\-()]{6,})/i);
-  if(ph)f.phone=String(ph[1]).trim().slice(0,25);
-  if(/ر\.?\s?س|ريال|SAR|\bSR\b/i.test(flat))f.currency='SAR';
-  else if(/\$|USD|دولار/i.test(flat))f.currency='USD';
-  else if(/€|EUR|يورو/i.test(flat))f.currency='EUR';
-  else if(/AED|درهم/i.test(flat))f.currency='AED';
-  else if(/EGP|جنيه/i.test(flat))f.currency='EGP';
-  /* المورّد: سطر موسوم، ثم سطر فيه كلمة تجارية في أعلى الإيصال، ثم أول سطر نصي "نظيف" */
-  const clean=x=>String(x||'').replace(/^[^A-Za-z\u0621-\u064A\u0671-\u06D3]+|[^A-Za-z\u0621-\u064A\u0671-\u06D3.)]+$/g,'')
-    .replace(/\s*[-\u2010\u2013]\s*(?:\u0641\u0631\u0639|branch\b).*$/i,'').trim().slice(0,120);   /* \u0628\u0644\u0627 \u0639\u0644\u0627\u0645\u0627\u062A \u062A\u0631\u0642\u064A\u0645 \u0648\u0644\u0627 \u0627\u0633\u0645 \u0627\u0644\u0641\u0631\u0639 */
-  const letters=x=>(String(x).match(/[A-Za-z\u0621-\u064A\u0671-\u06D3]/g)||[]).length;
-  const good=x=>{ const c=clean(x); return c.length>=3&&c.length<=70&&letters(c)/Math.max(1,c.replace(/\s/g,'').length)>=0.7&&!RCPT_NOTVENDOR.test(c)&&!RCPT_FOOTER.test(c); };
-  const lv=flat.match(/(?:seller(?:\s*name)?|vendor|supplier|merchant|اسم\s*البائع|اسم\s*المورد|اسم\s*المنشأ[ةه]|اسم\s*المتجر|البائع|المورد)[ \t]*[:：][ \t]*([^\n]{3,})/i);
-  const top=lines.slice(0,10);
-  const vendor=(lv&&clean(lv[1]))||clean(top.find(l=>RCPT_BIZ.test(l)&&letters(l)>=4&&!/(فاتور|invoice)/i.test(l)))||clean(lines.find(good));
-  if(vendor)f.vendor=vendor;
-  return f;
+/* درجة اكتمال نص صفحة — للمفاضلة بين نص PDF المضمّن ونص OCR للصفحة نفسها */
+function receiptTextScore(txt){
+  const q = pageTextQuality(txt), f = extractReceiptFields(txt);
+  return q.hits * 2 + (f.vendor ? 2 : 0) + (f.date ? 2 : 0) + (f.amount != null ? 3 : 0) + (f.checked ? 4 : 0) + (f.no ? 1 : 0) + (f.vat != null ? 1 : 0) + (f.supplierNo ? 1 : 0) - (q.needOcr ? 6 : 0);
 }
 app.post('/api/receipts', async (req,res)=>{
   const a = auth(req,res); if(!a) return;
   const ip = req.ip || req.socket.remoteAddress || 'x';
-  if (!boundedHit(pubHits, 'rcpt:' + ip, 60 * 60 * 1000, 200)) return res.status(429).json({error:'TOO_MANY'});
+  if (!boundedHit(pubHits, 'rcpt:' + ip, 60 * 60 * 1000, 600)) return res.status(429).json({error:'TOO_MANY'});
   try{
     const f = incomingFile(req);
-    const isPdf = f.mime === 'application/pdf' || (f.buf && f.buf.slice(0,4).toString('latin1') === '%PDF');
     if (!f.buf || !f.buf.length) return res.status(400).json({error:'NO_DATA'});
-    if (!isPdf && !/^image\//.test(f.mime)) return res.status(400).json({error:'BAD_TYPE'});
+    /* النوع من بايتات الملف (بعض المتصفحات/الماسحات ترسل نوعاً فارغاً أو خاطئاً) */
+    const mime = sniffMime(f.buf) || f.mime;
+    const isPdf = mime === 'application/pdf';
+    if (!isPdf && !/^image\//.test(mime)) return res.status(400).json({error:'BAD_TYPE'});
     if (f.buf.length > MAX_UPLOAD) return res.status(413).json({error:'TOO_LARGE', max:MAX_UPLOAD});
+    const hash = crypto.createHash('sha256').update(f.buf).digest('hex');
     const id = 'F' + crypto.randomBytes(9).toString('hex');
-    await putFile({ id, compound_id: String(f.compoundId || '').slice(0,60), name: String(f.name || '').slice(0,120), mime: isPdf ? 'application/pdf' : f.mime, size: f.buf.length, data: f.buf, created: Date.now() });
-    let text = '', scanned = false, pages = [], pageCount = 0;
+    await putFile({ id, compound_id: String(f.compoundId || '').slice(0,60), name: String(f.name || '').slice(0,120), mime, size: f.buf.length, data: f.buf, created: Date.now() });
+    let pages = [], pageCount = isPdf ? 0 : 1, pdfError = '';
     if (isPdf) {
-      try { const p = await pdfPages(f.buf); pages = p.pages; pageCount = p.total; text = pages.join('\n').trim(); }
-      catch (e) { console.error('[receipts] pdf parse failed:', e.message, 'len=' + f.buf.length, 'head=' + f.buf.slice(0,5).toString('latin1')); text = ''; }
-      if (!text.trim()) scanned = true;   /* ملف صورة/ممسوح: لا نص قابل للاستخراج */
-    } else { scanned = true; }
-    /* عدة إيصالات في ملف واحد: الذكاء الاصطناعي إن توفّر، وإلا القواعد المحلية */
-    let receipts = [], source = 'rules';
-    if (!scanned) {
-      const ai = String(req.query.ai || '') === '0' ? null : await aiSplitReceipts(pages);
-      if (ai) { receipts = ai; source = 'ai'; }
-      else receipts = splitReceiptText(pages).slice(0, 200).map(s => ({ pageFrom:s.pageFrom, pageTo:s.pageTo, text:s.text.slice(0,4000), fields:extractReceiptFields(s.text) }));
+      try { const p = await pdfPages(f.buf); pages = p.pages; pageCount = p.total; }
+      catch (e) { pdfError = String(e && e.name || 'PDF'); console.error('[receipts] pdf parse failed:', e.message, 'len=' + f.buf.length); }
     }
-    res.json({ ok:true, fileId:id, url:'/api/files/'+id, mime:isPdf?'application/pdf':f.mime, size:f.buf.length,
-      scanned, pageCount, source, receipts, text:text.slice(0,6000), fields:extractReceiptFields(text) });
+    /* لكل صفحة: هل نصها المضمّن صالح أم تحتاج OCR في المتصفح؟ (طبقات OCR الرديئة من الماسحات تُعامل كممسوحة) */
+    const quality = pages.map(pageTextQuality);
+    const needOcr = isPdf && pages.length ? quality.map(q => q.needOcr) : [true];
+    const scanned = needOcr.every(Boolean);
+    let receipts = [], source = 'rules';
+    if (!needOcr.some(Boolean)) ({ receipts, source } = await receiptsFromPages(pages, String(req.query.ai || '') !== '0'));
+    const text = pages.join('\n').trim();
+    res.json({ ok:true, fileId:id, url:'/api/files/'+id, mime, size:f.buf.length, hash, pdfError,
+      scanned, needOcr, pageCount, source, receipts, pages: pages.map(p => p.slice(0, 8000)),
+      text:text.slice(0,6000), fields:extractReceiptFields(text) });
   }catch(e){ console.error('DB error on POST /api/receipts:', e.message); return res.status(500).json({error:'DB'}); }
 });
 
-/* نص صفحات مستخرج بالـ OCR في المتصفح (للملفات الممسوحة) → تقسيم واستخراج الحقول بنفس المنطق */
+/* نص الصفحات بعد OCR في المتصفح → تقسيم واستخراج الحقول بنفس المنطق.
+   pages[i]: نص OCR للصفحة (أو فارغ)، alt[i]: نص PDF المضمّن — يُختار الأكمل لكل صفحة. */
 app.post('/api/receipts/parse', async (req,res)=>{
   const a = auth(req,res); if(!a) return;
   const ip = req.ip || req.socket.remoteAddress || 'x';
-  if (!boundedHit(pubHits, 'rcpt:' + ip, 60 * 60 * 1000, 200)) return res.status(429).json({error:'TOO_MANY'});
-  const pages = (Array.isArray(req.body && req.body.pages) ? req.body.pages : []).slice(0, RCPT_MAX_PAGES).map(x => String(x || '').slice(0, 20000));
-  if (!pages.some(x => x.trim())) return res.json({ ok:true, source:'rules', receipts:[] });
+  if (!boundedHit(pubHits, 'rcptp:' + ip, 60 * 60 * 1000, 1200)) return res.status(429).json({error:'TOO_MANY'});
+  const arr = k => (Array.isArray(req.body && req.body[k]) ? req.body[k] : []).slice(0, RCPT_MAX_PAGES).map(x => String(x || '').slice(0, 20000));
+  const ocr = arr('pages'), alt = arr('alt');
+  const n = Math.max(ocr.length, alt.length);
+  const chosen = [], pages = [];
+  for (let i = 0; i < n; i++) {
+    const o = ocr[i] || '', t = alt[i] || '';
+    if (o.trim() && t.trim()) { const useOcr = receiptTextScore(o) > receiptTextScore(t); pages.push(useOcr ? o : t); chosen.push(useOcr ? 'ocr' : 'text'); }
+    else if (o.trim()) { pages.push(o); chosen.push('ocr'); }
+    else { pages.push(t); chosen.push(t.trim() ? 'text' : ''); }
+  }
+  if (!pages.some(x => x.trim())) return res.json({ ok:true, source:'rules', receipts:[], chosen });
   try{
-    const ai = String(req.query.ai || '') === '0' ? null : await aiSplitReceipts(pages);
-    const receipts = ai || splitReceiptText(pages).slice(0, 200).map(s => ({ pageFrom:s.pageFrom, pageTo:s.pageTo, text:s.text.slice(0,4000), fields:extractReceiptFields(s.text) }));
-    res.json({ ok:true, source: ai ? 'ai' : 'rules', receipts });
+    const r = await receiptsFromPages(pages, String(req.query.ai || '') !== '0');
+    res.json({ ok:true, source:r.source, receipts:r.receipts, chosen });
   }catch(e){ console.error('[receipts/parse] error:', e.message); return res.status(500).json({error:'PARSE'}); }
 });
 
+/* رمز CSRF للجلسة الحالية (لاستعادته دون إعادة تحميل الحالة كاملة) */
+app.get('/api/csrf',(req,res)=>{
+  const a = auth(req,res); if(!a) return;
+  res.set('Cache-Control','no-store');
+  res.json({ csrf: csrfToken(a.token) });
+});
 app.post('/api/logout',(req,res)=>{
   const a = auth(req,res); if(!a) return;
   sessions.delete(a.token);
@@ -1052,7 +966,7 @@ app.get('/api/state', async (req,res)=>{
     const meU = (cur.data.users||[]).find(u=>u.id===actor.session.userId) || {id:actor.session.userId, name:'', role:actor.session.role, email:'', phone:'', u:''};
     return res.json({
       data: { lang: cur.data.lang, ver: cur.ver, users: [{id:meU.id, u:meU.u, name:meU.name, role:meU.role, email:meU.email, phone:meU.phone}] },
-      ver: cur.ver, userId: actor.session.userId, role: actor.session.role, marketplace: true
+      ver: cur.ver, userId: actor.session.userId, role: actor.session.role, marketplace: true, csrf: csrfToken(actor.token)
     });
   }
   if(cur.data){
@@ -1066,7 +980,8 @@ app.get('/api/state', async (req,res)=>{
       ...cur,
       data: { ...cur.data, users: safeUsers },
       userId: actor.session.userId,
-      role: actor.session.role
+      role: actor.session.role,
+      csrf: csrfToken(actor.token)   /* بعد تحديث الصفحة: الجلسة (كوكي) باقية ونحتاج رمز CSRF لأي طلب كتابة */
     });
   }
   res.json(cur);

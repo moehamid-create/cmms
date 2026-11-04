@@ -1494,6 +1494,37 @@ mark.gs-hl{background:#fef08a;color:#713f12;font-weight:800;padding:0 3px;border
 
 /* ===== Evidence & Proof of Work Platform ===== */
 .modal.modal-evidence{max-width:960px;width:95vw;padding:26px}
+/* ===== الإيصالات: رفع وقراءة ومراجعة ===== */
+.rc-bar{height:8px;border-radius:99px;background:var(--brand-soft);overflow:hidden;margin:6px 0 12px}
+.rc-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--purple));border-radius:99px;transition:width .3s ease}
+.rc-fn{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rc-drop{display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center;padding:18px 14px;margin:0 0 12px;
+  border:2px dashed color-mix(in srgb,var(--brand) 45%,transparent);border-radius:16px;background:var(--brand-soft);cursor:pointer;transition:background .15s,border-color .15s}
+.rc-drop:hover,.rc-drop:focus-visible,.rc-drop.drag{background:color-mix(in srgb,var(--brand) 18%,transparent);border-color:var(--brand);outline:none}
+.rc-drop .muted{font-size:12.5px}
+.rc-th{width:42px;height:54px;object-fit:cover;object-position:top;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:zoom-in;display:block}
+.rc-prev{width:100%;max-height:62vh;object-fit:contain;object-position:top;border-radius:10px;background:#fff;border:1px solid var(--line);cursor:zoom-in;display:block}
+.rc-review{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:18px;align-items:start}
+.rc-review.rc-nopv{grid-template-columns:1fr}
+.rc-pv{position:sticky;top:0;display:flex;flex-direction:column;gap:6px}
+.rc-detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.rc-text{white-space:pre-wrap;max-height:24vh;overflow:auto;font-size:11px;direction:auto}
+.rc-checks{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.rc-checks span{font-size:12px;padding:3px 9px;border-radius:99px;font-weight:600}
+.rc-checks .ok{background:var(--greenbg);color:var(--green)}.rc-checks .warn{background:var(--amberbg);color:var(--amber)}
+.rc-st{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:99px;font-size:12px;font-weight:800;cursor:help}
+.rc-st.ok{background:var(--greenbg);color:var(--green)}.rc-st.warn{background:var(--amberbg);color:var(--amber)}
+.rc-miss{border-color:#f59e0b!important;box-shadow:0 0 0 1px rgba(245,158,11,.35)}
+.rc-off{opacity:.45}
+.rc-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 8px}
+.rc-tools select{width:auto;min-width:160px}
+.rc-tbl{max-height:52vh;overflow:auto}
+.rc-tbl td{vertical-align:middle}
+.rc-failed{background:var(--amberbg);color:#92400e;border-radius:12px;padding:8px 12px;margin:0 0 10px;font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.rc-zoom{position:fixed;inset:0;z-index:200;background:rgba(5,15,25,.86);display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+.rc-zoom img{max-width:100%;max-height:100%;object-fit:contain;background:#fff;border-radius:8px}
+.rc-zoom button{position:absolute;top:12px;inset-inline-end:12px;background:#fff}
+@media (max-width:760px){.rc-review,.rc-detail{grid-template-columns:1fr}.rc-pv{position:static}.rc-prev{max-height:38vh}}
 .evidence-cert{display:flex;flex-direction:column;gap:18px}
 .evidence-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;
   padding-bottom:16px;border-bottom:2px solid rgba(14,116,144,.25)}
@@ -1735,8 +1766,21 @@ function demoPass(){ return IS_FILE_DEMO ? '1234' : ('!'+Math.random().toString(
    (DEFAULT_PW_MAX_AGE_DAYS)، وتغيير كلمة مرور المستخدم لنفسه عبر POST /api/password. */
 function mustChangeNow(){ return !!(me&&(AUTH.mustChange||me.defaultPw)); }
 async function api(pathname,opts={}){
-  const headers=Object.assign({'Content-Type':'application/json'},AUTH.csrf?{'X-CSRF-Token':AUTH.csrf}: {}, opts.headers||{});
-  return fetch(API_BASE+pathname,Object.assign({credentials:'same-origin',headers},opts));
+  const go=()=>{const headers=Object.assign({'Content-Type':'application/json'},AUTH.csrf?{'X-CSRF-Token':AUTH.csrf}: {}, opts.headers||{});
+    return fetch(API_BASE+pathname,Object.assign({},opts,{credentials:'same-origin',headers}));};
+  const r=await go();
+  return (await csrfRejected(r,opts.method))?go():r;
+}
+/* رمز CSRF مفقود/قديم (بعد تحديث الصفحة أو إعادة تشغيل الخادم): نجلبه مرة ونعيد الطلب نفسه */
+async function csrfRejected(r,method){
+  if(r.status!==403||!method||/^(GET|HEAD)$/i.test(method))return false;
+  const j=await r.clone().json().catch(()=>null);
+  return !!(j&&j.error==='CSRF'&&await refreshCsrf());
+}
+async function refreshCsrf(){
+  try{const r=await fetch(API_BASE+'/csrf',{credentials:'same-origin',cache:'no-store'});
+    if(!r.ok)return false;const j=await r.json();if(j&&j.csrf){AUTH.csrf=j.csrf;return true;}}catch(e){}
+  return false;
 }
 
 let db=null,me=null,TAB='dash',PICK=false;
@@ -2783,7 +2827,7 @@ async function boot(){
     if(r.status===401){AUTH.csrf='';AUTH.mustChange=false;db=freshDb();db=migrate(db);return;}
     const j=await r.json();
     if(j.data){
-      db=j.data;AUTH.ver=j.ver;
+      db=j.data;AUTH.ver=j.ver;if(j.csrf)AUTH.csrf=j.csrf;
       AUTH.usersRaw=JSON.parse(JSON.stringify(j.data.users||[]));
       if(j.marketplace){ me = { id:j.userId, role:j.role, name:(j.data.users[0]||{}).name||'' }; await marketBootstrap(); return; }
       db=migrate(db);
@@ -6052,7 +6096,8 @@ function modal(html, cls){
   const old=$('mbg');if(old)old.remove();
   const d=document.createElement('div');d.className='modal-bg';d.id='mbg';
   d.innerHTML=`<div class="modal ${cls||''}">${html}</div>`;
-  d.addEventListener('click',ev=>{if(ev.target===d)d.remove();});
+  /* نوافذ "sticky" (مراجعة/تقدّم) لا تُغلق بالنقر خارجها — حتى لا تضيع التعديلات بنقرة عابرة */
+  d.addEventListener('click',ev=>{if(ev.target===d&&!/\bsticky\b/.test(cls||''))d.remove();});
   document.body.appendChild(d);d.style.display='block';
   ensureA11yRoles(d);
 }
@@ -6099,6 +6144,7 @@ document.addEventListener('keydown',e=>{
   }
   if(e.key==='Escape'){
     if($('gsOverlay')){ closeGlobalSearch(); return; }
+    if(document.querySelector('#mbg .modal.sticky'))return;
     closeModal();
     return;
   }
@@ -7945,7 +7991,8 @@ function vProc(){
   return `<div class="toolbar">
     ${canProc()&&tab==='pr'?`<button class="btn" onclick="prForm()">＋ ${lb('طلب شراء جديد||New Request')}</button>`:''}
     ${canProc()&&tab==='sup'?`<button class="btn" onclick="supForm()">＋ ${lb('مورد جديد||New Supplier')}</button>`:''}
-    ${canRcpt()&&tab==='rcpt'?`<button class="btn" style="background:linear-gradient(135deg,#7c3aed,#2563eb)" onclick="rcptUpload()">＋ ${lb('رفع إيصال (PDF)||Upload receipt (PDF)')}</button>
+    ${canRcpt()&&tab==='rcpt'?`<button class="btn" style="background:linear-gradient(135deg,#7c3aed,#2563eb)" onclick="rcptUpload()">＋ ${lb('رفع إيصالات (PDF / صور)||Upload receipts (PDF / photos)')}</button>
+    ${matchMedia('(pointer:coarse)').matches?`<button class="btn ghost" onclick="rcptCamera()">${ic('cam',14)} ${lb('تصوير إيصال||Photograph receipt')}</button>`:''}
     <button class="btn ghost" onclick="rcptCsv()"> ${lb('Excel||Excel')}</button>`:''}
   </div>
   <div class="chips">${chip('pr')}${chip('po')}${chip('sup')}${chip('rcpt')}</div><div id="procbody"></div>`;
@@ -7958,119 +8005,356 @@ function paintProc(){
   else b.innerHTML=vSup();
 }
 
-/* ===== الإيصالات: رفع PDF → تحليل على الخادم → مراجعة → حفظ ===== */
+/* ===== الإيصالات: رفع (ملف/عدة ملفات/سحب وإفلات/لصق/كاميرا) → نص PDF أو قراءة ضوئية + رمز QR → مراجعة → حفظ =====
+   - الخادم يستخرج نص صفحات PDF ويحدد الصفحات الممسوحة (أو ذات طبقة نص رديئة).
+   - المتصفح يرسم كل صفحة، يحسّن الصورة (توحيد الإضاءة والتباين)، ويقرؤها بـ Tesseract (عربي+إنجليزي)
+     ويقرأ رمز QR لفواتير هيئة الزكاة — كل ذلك على جهاز المستخدم.
+   - الصفحة تُعالج ثم تُحرَّر من الذاكرة، فتُقرأ ملفات من عشرات الصفحات دون استهلاك كبير. */
 function rcptQ(){return (db.receipts||[]).filter(r=>r.compoundId===activeCmp());}
 function rcptMoney(r){const c=r.currency||'SAR';return (Number(r.amount)||0).toLocaleString(undefined,{maximumFractionDigits:2})+' '+c;}
-function readFileDataUrl(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result||''));r.onerror=()=>rej(new Error('read'));r.readAsDataURL(f);});}
 const MAX_UPLOAD_MB=25;
+const RCPT_MAX_PAGES=60;
+const RCPT_EXT=/\.(pdf|jpe?g|jfif|pjpeg|png|webp|gif|bmp|heic|heif|tiff?|avif)$/i;
 /* رفع الملف كما هو (بدون base64) — يتجنّب التضخيم ويسمح بملفات أكبر */
 async function rawUpload(path,file,q){
   const params=Object.assign({},q||{});
   const qs=Object.keys(params).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(params[k])).join('&');
-  const headers={'Content-Type':file.type||'application/octet-stream','X-File-Name':encodeURIComponent(file.name||'')};
-  if(AUTH.csrf)headers['X-CSRF-Token']=AUTH.csrf;
-  return fetch(API_BASE+path+(qs?'?'+qs:''),{method:'POST',credentials:'same-origin',headers,body:file});
+  const go=()=>{const headers={'Content-Type':file.type||'application/octet-stream','X-File-Name':encodeURIComponent(file.name||'')};
+    if(AUTH.csrf)headers['X-CSRF-Token']=AUTH.csrf;
+    return fetch(API_BASE+path+(qs?'?'+qs:''),{method:'POST',credentials:'same-origin',headers,body:file});};
+  const r=await go();
+  return (await csrfRejected(r,'POST'))?go():r;
 }
-function rcptUpload(){
+function rcptPick(capture){
   if(!canRcpt())return;
-  const inp=document.createElement('input');inp.type='file';inp.accept='application/pdf,image/*';inp.multiple=true;
-  inp.onchange=async()=>{
-    const files=[...(inp.files||[])];if(!files.length)return;
-    const results=[];
-    for(const f of files){
-      if(f.size>MAX_UPLOAD_MB*1024*1024){toast(lb('تجاوز الحد ('+MAX_UPLOAD_MB+' م.ب): '||'Exceeds the limit ('+MAX_UPLOAD_MB+' MB): ')+f.name,'err');continue;}
-      toast(lb('جارٍ رفع وتحليل: ||Uploading and reading: ')+f.name);
-      let r=null;
-      try{ r=await rawUpload('/receipts',f,{compoundId:activeCmp()||''}); }
-      catch(e){ toast(lb('تعذّر الاتصال بالخادم: ||Could not reach the server: ')+f.name,'err'); continue; }
-      const j=await r.json().catch(()=>null);
-      if(r.status===413||(j&&j.error==='TOO_LARGE')){toast(lb('الملف أكبر من الحد: ||File exceeds the limit: ')+f.name,'err');continue;}
-      if(r.status!==200||!j||!j.ok){toast(lb('تعذّر تحليل الملف: ||Could not read the file: ')+f.name,'err');continue;}
-      const file={fileId:j.fileId,url:j.url,name:f.name,mime:j.mime,size:j.size,scanned:j.scanned};
-      let segs=Array.isArray(j.receipts)?j.receipts:[];
-      /* رسم الصفحات في المتصفح: لقراءة رمز QR (فواتير هيئة الزكاة) ولـ OCR عند الملف الممسوح */
-      let imgs=null;
-      try{ imgs=(await fileCanvases(f)).canvases; }catch(e){console.error('[render]',e);}
-      if(j.scanned&&imgs){
-        try{
-          const pages=await rcptOcr(imgs);
-          const pr=await api('/receipts/parse',{method:'POST',body:JSON.stringify({pages})});
-          const pj=await pr.json().catch(()=>null);
-          if(pr.ok&&pj&&pj.ok&&pj.receipts.length){segs=pj.receipts;file.ocr=true;}
-        }catch(e){console.error('[ocr]',e);toast(lb('تعذّر التعرّف الضوئي: ||OCR failed: ')+f.name,'err');}
-      }
-      let qrPages=[];
-      if(imgs){ try{ qrPages=await rcptQrPages(imgs); }catch(e){console.error('[qr]',e);} }
-      segs=rcptMergeQr(segs,qrPages);
-      if(!segs.length){ if(j.scanned)toast(lb('لم يُتعرّف على نص — أكمل الحقول يدوياً: ||No text recognised — fill in manually: ')+f.name,'err');
-        segs=[{text:j.text,fields:j.fields||{}}]; }
-      /* الملف قد يحوي عدة إيصالات: كل مقطع يصبح مسودة مستقلة */
-      segs.forEach(s=>results.push(Object.assign({},file,{text:s.text||'',fields:s.fields||{},pageFrom:s.pageFrom||null,pageTo:s.pageTo||null,qr:!!s.qr})));
-    }
-    if(!results.length)return toast(lb('لم يُرفع أي ملف||No file was uploaded'),'err');
-    if(results.length===1)return rcptReview(results[0]);
-    rcptBatch(results);
-  };
+  const inp=document.createElement('input');inp.type='file';
+  inp.accept='application/pdf,image/*,.pdf,.jpg,.jpeg,.jfif,.png,.webp,.heic,.heif,.tif,.tiff';
+  inp.multiple=!capture;if(capture)inp.setAttribute('capture','environment');
+  inp.onchange=()=>rcptProcess([...(inp.files||[])]);
   inp.click();
 }
-/* ===== التعرّف الضوئي (OCR) داخل المتصفح: pdf.js يرسم الصفحات و Tesseract يقرأها (عربي+إنجليزي) =====
-   المكتبات وبيانات اللغة تُخدَم من /vendor على نفس الخادم، ولا يخرج الملف من جهاز المستخدم. */
-const OCR_MAX_PAGES=30;
+function rcptUpload(){rcptPick(false);}
+function rcptCamera(){rcptPick(true);}
+function rcptDrop(ev){ev.preventDefault();const z=ev.currentTarget;if(z&&z.classList)z.classList.remove('drag');
+  if(canRcpt())rcptProcess([...((ev.dataTransfer&&ev.dataTransfer.files)||[])]);}
+/* لصق صورة إيصال (Ctrl+V) في تبويب الإيصالات */
+document.addEventListener('paste',ev=>{
+  if(typeof TAB==='undefined'||TAB!=='proc'||FILT.procTab!=='rcpt'||$('mbg')||!canRcpt())return;
+  const fs=[...((ev.clipboardData&&ev.clipboardData.files)||[])];if(!fs.length)return;
+  ev.preventDefault();
+  rcptProcess(fs.map((f,i)=>new File([f],(f.name&&!/^image\.\w+$/.test(f.name))?f.name:('paste-'+new Date().toISOString().slice(0,19).replace(/\D/g,'')+'-'+(i+1)+'.'+((f.type||'image/png').split('/')[1]||'png')),{type:f.type})));
+});
+
+/* ---------- لوحة التقدّم (لا تُغلق بالنقر خارجها) ---------- */
+function rcptProgPaint(){
+  const job=window._rcptJob;if(!job)return;
+  const n=job.items.length,fin=x=>x.status==='ok'||x.status==='err';
+  const done=job.items.filter(fin).length;
+  const pct=Math.round(job.items.reduce((s,x)=>s+(fin(x)?1:Math.min(.95,x.pct||0)),0)/n*100);
+  const ico={wait:'⏳',up:'⬆️',read:'📄',ocr:'🔎',qr:'▦',ok:'✅',err:'⚠️'};
+  const html=`<h3>${lb('قراءة الإيصالات||Reading receipts')} <span class="muted" style="font-size:13px;font-weight:500">${done} / ${n}</span></h3>
+    <div class="rc-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>
+    <div class="tbl-wrap" style="max-height:46vh"><table>${job.items.map(x=>`<tr${x.status==='err'?' style="color:#b45309"':''}>
+      <td class="rc-fn" title="${esc(x.name)}">${esc(x.name)}</td>
+      <td nowrap>${ico[x.status]||''} <span class="muted">${esc(x.msg||'')}</span></td></tr>`).join('')}</table></div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">${lb('القراءة الضوئية تتم على جهازك، ولا يُرسل الملف لأي جهة خارجية. أول تشغيل يحمّل بيانات اللغة (~5 م.ب) مرة واحدة.||OCR runs on your device; files are not sent to any third party. The first run downloads language data (~5 MB) once.')}</p>
+    <div class="ma"><button class="btn ghost" ${job.cancel?'disabled':''} onclick="rcptAbort()">${job.cancel?lb('جارٍ الإيقاف…||Stopping…'):lb('إيقاف||Stop')}</button></div>`;
+  const box=$('rc_prog');
+  if(box)box.innerHTML=html;else modal(`<div id="rc_prog">${html}</div>`,'sticky');
+}
+function rcptAbort(){const j=window._rcptJob;if(j){j.cancel=true;rcptProgPaint();}}
+function rcptErr(msg){const e=new Error(msg);e.userMsg=msg;return e;}
+
+/* ---------- المعالجة: ملف بعد ملف، ورفع الملف التالي أثناء قراءة الحالي ---------- */
+async function rcptProcess(files){
+  files=(files||[]).filter(Boolean);if(!files.length)return;
+  if(window._rcptJob)return toast(lb('توجد قراءة جارية — انتظر انتهاءها||A reading job is running — wait for it to finish'),'err');
+  const items=[],failed=[];
+  files.forEach(f=>{
+    if(!(/^(application\/pdf|image\/)/i.test(f.type||'')||RCPT_EXT.test(f.name||'')))failed.push({name:f.name,msg:lb('نوع غير مدعوم (PDF أو صورة فقط)||Unsupported type (PDF or image only)')});
+    else if(f.size>MAX_UPLOAD_MB*1048576)failed.push({name:f.name,msg:lb('أكبر من الحد ||Larger than ')+MAX_UPLOAD_MB+' MB'});
+    else if(!f.size)failed.push({name:f.name,msg:lb('ملف فارغ||Empty file')});
+    else items.push({f,name:f.name||'file',status:'wait',msg:'',pct:0});
+  });
+  if(!items.length){failed.forEach(x=>toast(x.msg+': '+x.name,'err'));return;}
+  const job=window._rcptJob={cancel:false,items};
+  const results=[];
+  const send=it=>it.upP||(it.upP=rawUpload('/receipts',it.f,{compoundId:activeCmp()||''}).catch(e=>({_netErr:e})));
+  rcptProgPaint();
+  try{
+    for(let i=0;i<items.length;i++){
+      const it=items[i];
+      if(job.cancel){it.status='err';it.msg=lb('أُوقف||Stopped');continue;}
+      if(items[i+1])send(items[i+1]);
+      try{
+        const segs=await rcptReadFile(it,send(it),job);
+        results.push(...segs);it.status='ok';
+        it.msg=segs[0].warn?segs[0].warn+lb(' — أكمل يدوياً|| — fill in manually'):
+          (segs.length>1?segs.length+lb(' إيصالات · || receipts · '):'')+(segs.some(s=>s.qr)?'QR':segs.some(s=>s.ocr)?lb('قراءة ضوئية||OCR'):lb('نص||text'));      }catch(e){
+        console.error('[rcpt]',it.name,e);it.status='err';it.msg=(e&&e.userMsg)||lb('تعذّرت القراءة||Could not read');
+        failed.push({name:it.name,msg:it.msg});
+      }
+      it.pct=1;rcptProgPaint();
+    }
+  }finally{window._rcptJob=null;}
+  if(!results.length){closeModal();rcptFailedNote(failed);return;}
+  rcptMarkDups(results);
+  if(results.length===1&&!failed.length&&!job.cancel)return rcptReview(results[0]);
+  rcptBatch(results,failed);
+  if(job.cancel)toast(lb('أُوقفت القراءة — راجع ما قُرئ حتى الآن||Stopped — review what was read so far'));
+}
+function rcptFailedNote(failed){
+  if(!failed.length)return;
+  if(failed.length===1)return toast(failed[0].msg+': '+failed[0].name,'err');
+  modal(`<h3>${lb('تعذّرت قراءة الملفات||Files could not be read')}</h3><div class="tbl-wrap"><table>${failed.map(x=>`<tr><td class="rc-fn">${esc(x.name)}</td><td>${esc(x.msg)}</td></tr>`).join('')}</table></div>
+    <div class="ma"><button class="btn" onclick="closeModal()">${lb('حسناً||OK')}</button></div>`);
+}
+
+async function rcptReadFile(it,upP,job){
+  it.status='up';it.msg=lb('رفع…||Uploading…');rcptProgPaint();
+  const r=await upP;
+  if(!r||r._netErr)throw rcptErr(lb('تعذّر الاتصال بالخادم||Could not reach the server'));
+  const j=await r.json().catch(()=>null);
+  if(r.status===413||(j&&j.error==='TOO_LARGE'))throw rcptErr(lb('الملف أكبر من الحد||File exceeds the size limit'));
+  if(j&&j.error==='BAD_TYPE')throw rcptErr(lb('نوع غير مدعوم (PDF أو صورة فقط)||Unsupported type (PDF or image only)'));
+  if(r.status===429)throw rcptErr(lb('رفعٌ كثير في وقت قصير — حاول بعد قليل||Too many uploads — try again shortly'));
+  if(r.status===401||r.status===403)throw rcptErr(lb('انتهت الجلسة — سجّل الدخول مجدداً||Session expired — sign in again'));
+  if(r.status!==200||!j||!j.ok)throw rcptErr(lb('تعذّر تحليل الملف على الخادم||The server could not read the file'));
+  const file={fileId:j.fileId,url:j.url,name:it.f.name,mime:j.mime,size:j.size,hash:j.hash||'',scanned:!!j.scanned};
+  const pdfTxt=Array.isArray(j.pages)?j.pages:[];
+  const needOcr=Array.isArray(j.needOcr)?j.needOcr:[];
+  let segs=Array.isArray(j.receipts)?j.receipts:[];
+  const ocrTxt=[],qrPages=[],thumbs=[];let N=0,ocrd=0,renderFail=false,ocrFail='';
+  it.status='read';it.msg=lb('تجهيز الصفحات…||Preparing pages…');rcptProgPaint();
+  try{
+    await rcptEachPage(it.f,j.mime,async(c,i,total,info)=>{
+      N=total;
+      const doOcr=!pdfTxt[i]||needOcr[i]||info.scan;
+      if(doOcr&&!job.cancel&&!ocrFail){
+        it.status='ocr';it.msg=lb('قراءة ضوئية: صفحة ||OCR: page ')+(i+1)+' / '+total;rcptProgPaint();
+        try{
+          const o=await ocrCanvas(c);
+          ocrTxt[i]=o.text;ocrd++;
+          if(o.deg)c=rotCanvas(c,o.deg);                     /* صفحة مقلوبة/جانبية: المعاينة و QR بالاتجاه الصحيح */
+        }catch(e){console.error('[ocr]',e);ocrFail=e&&e.userMsg||lb('تعذّرت القراءة الضوئية||OCR failed');}
+      }
+      if(!job.cancel){try{qrPages[i]=await rcptQrCanvas(c);}catch(e){console.error('[qr]',e);qrPages[i]=[];}}
+      thumbs[i]=canvasThumb(c,1100);
+      it.pct=(i+1)/total;rcptProgPaint();
+    },job);
+  }catch(e){
+    console.error('[render]',e);renderFail=true;
+    if(file.scanned)it.msg=e&&e.userMsg?e.userMsg:lb('تعذّر عرض الملف في المتصفح — أكمل الحقول يدوياً||The browser could not render this file — fill in manually');
+  }
+  if(ocrd||(!segs.length&&pdfTxt.some(t=>t&&t.trim()))){
+    it.msg=lb('استخراج الحقول…||Extracting fields…');rcptProgPaint();
+    const pr=await api('/receipts/parse',{method:'POST',body:JSON.stringify({pages:Array.from({length:Math.max(N,pdfTxt.length)},(_,i)=>ocrTxt[i]||''),alt:pdfTxt})}).catch(()=>null);
+    const pj=pr&&await pr.json().catch(()=>null);
+    if(pr&&pr.ok&&pj&&pj.ok&&pj.receipts.length){
+      const ch=pj.chosen||[];
+      segs=pj.receipts.map(s=>Object.assign({},s,{ocr:ch.slice((s.pageFrom||1)-1,s.pageTo||s.pageFrom||1).includes('ocr')}));
+    }
+  }
+  segs=rcptMergeQr(segs,qrPages);
+  if(!segs.length)segs=[{text:j.text||'',fields:j.fields||{},pageFrom:N>1?1:null,pageTo:N>1?N:null}];
+  return segs.map(s=>{const p=Math.max(1,s.pageFrom||1);
+    return Object.assign({},file,{text:s.text||'',fields:s.fields||{},pageFrom:s.pageFrom||null,pageTo:s.pageTo||null,
+      qr:!!s.qr,ocr:!!s.ocr,thumb:thumbs[p-1]||'',noRender:renderFail,warn:ocrFail||(renderFail&&file.scanned?it.msg:'')});});
+}
+
+/* ---------- صفحات الملف: PDF عبر pdf.js أو صورة — صفحة بصفحة ثم تحرير الذاكرة ---------- */
 const _scriptP={};
 function loadScript(src){return _scriptP[src]||(_scriptP[src]=new Promise((res,rej)=>{
   const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>{delete _scriptP[src];rej(new Error('load '+src));};document.head.appendChild(s);}));}
-let _ocrWorker=null;
-async function ocrWorker(){
-  if(_ocrWorker)return _ocrWorker;
-  await loadScript('/vendor/tesseract/tesseract.min.js');
-  _ocrWorker=Tesseract.createWorker('ara+eng',1,{workerPath:'/vendor/tesseract/worker.min.js',corePath:'/vendor/tesseract-core',
-    langPath:'/vendor/tessdata',workerBlobURL:false}).catch(e=>{_ocrWorker=null;throw e;});
-  return _ocrWorker;
-}
-async function pdfToCanvases(file,max){
+async function pdfLib(){
   await loadScript('/vendor/pdfjs/pdf.min.js');
-  const pdfjs=window.pdfjsLib;pdfjs.GlobalWorkerOptions.workerSrc='/vendor/pdfjs/pdf.worker.min.js';
-  const doc=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false,disableFontFace:true}).promise;
-  const n=Math.min(doc.numPages,max),out=[];
-  for(let i=1;i<=n;i++){
+  const pdfjs=window.pdfjsLib;pdfjs.GlobalWorkerOptions.workerSrc='/vendor/pdfjs/pdf.worker.min.js';return pdfjs;
+}
+async function rcptEachPage(file,mime,onPage,job){
+  const isPdf=mime==='application/pdf'||file.type==='application/pdf'||/\.pdf$/i.test(file.name||'');
+  if(!isPdf){
+    let bmp;
+    try{bmp=await createImageBitmap(file,{imageOrientation:'from-image'});}
+    catch(e){
+      /* بعض الصيغ (HEIC/TIFF) لا يفتحها المتصفح مباشرة: نجرّب عبر عنصر صورة */
+      bmp=await new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{URL.revokeObjectURL(u);res(im);};im.onerror=()=>{URL.revokeObjectURL(u);rej(rcptErr(/heic|heif/i.test(file.type+file.name)?lb('صيغة HEIC غير مدعومة في هذا المتصفح — حوّل الصورة إلى JPG||HEIC is not supported by this browser — convert the photo to JPG'):/tiff?$/i.test(file.type+file.name)?lb('صيغة TIFF غير مدعومة في هذا المتصفح — احفظ المسح كـ PDF أو JPG||TIFF is not supported by this browser — save the scan as PDF or JPG'):lb('تعذّر فتح الصورة||Could not open the image')));};im.src=u;});
+    }
+    const w=bmp.width||bmp.naturalWidth,h=bmp.height||bmp.naturalHeight;
+    const big=Math.max(w,h),k=big>3200?3200/big:1;
+    const c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
+    const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(bmp,0,0,c.width,c.height);
+    if(bmp.close)bmp.close();
+    await onPage(c,0,1,{scan:true});c.width=c.height=0;
+    return;
+  }
+  const pdfjs=await pdfLib();
+  let doc;
+  try{doc=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false,disableFontFace:true,
+    standardFontDataUrl:'/vendor/pdfjs-fonts/',cMapUrl:'/vendor/pdfjs-cmaps/',cMapPacked:true}).promise;}
+  catch(e){throw rcptErr(e&&e.name==='PasswordException'?lb('الملف محمي بكلمة مرور — احفظ نسخة بدون حماية||The PDF is password-protected — save an unprotected copy'):lb('ملف PDF تالف أو غير مقروء||The PDF is damaged or unreadable'));}
+  const total=Math.min(doc.numPages,RCPT_MAX_PAGES);
+  const OPS=pdfjs.OPS;
+  for(let i=1;i<=total;i++){
+    if(job&&job.cancel)break;
     const page=await doc.getPage(i);
     const vp0=page.getViewport({scale:1});
-    const vp=page.getViewport({scale:Math.min(3,Math.max(1.5,2000/Math.max(vp0.width,vp0.height)))});   /* ~2000px للدقة */
+    /* أكبر صورة في الصفحة: صفحة ممسوحة = صورة كبيرة (لا شعار صغير) — نقرؤها ضوئياً حتى لو فيها طبقة نص */
+    /* نتتبّع مصفوفة التحويل لنعرف مساحة الصفحة التي تغطيها كل صورة: صورة تغطي نصف الصفحة فأكثر = مسح ضوئي */
+    let imgW=0,imgH=0,cover=0;
+    try{const ol=await page.getOperatorList({intent:'print'});
+      const mul=(m,n)=>[m[0]*n[0]+m[2]*n[1],m[1]*n[0]+m[3]*n[1],m[0]*n[2]+m[2]*n[3],m[1]*n[2]+m[3]*n[3],m[0]*n[4]+m[2]*n[5]+m[4],m[1]*n[4]+m[3]*n[5]+m[5]];
+      let ctm=[1,0,0,1,0,0];const stack=[];const pageArea=Math.max(1,vp0.width*vp0.height/(vp0.scale*vp0.scale||1));
+      for(let k=0;k<ol.fnArray.length;k++){const fn=ol.fnArray[k],a=ol.argsArray[k]||[];let w=0,h=0;
+        if(fn===OPS.save)stack.push(ctm);
+        else if(fn===OPS.restore)ctm=stack.pop()||ctm;
+        else if(fn===OPS.transform&&a.length>=6)ctm=mul(ctm,a);
+        else if(fn===OPS.paintFormXObjectBegin){stack.push(ctm);if(Array.isArray(a[0])&&a[0].length>=6)ctm=mul(ctm,a[0]);}
+        else if(fn===OPS.paintFormXObjectEnd)ctm=stack.pop()||ctm;
+        else if(fn===OPS.paintImageXObject||fn===OPS.paintJpegXObject){w=a[1]||0;h=a[2]||0;}
+        else if(fn===OPS.paintInlineImageXObject||fn===OPS.paintImageMaskXObject){const d=a[0]||{};w=d.width||0;h=d.height||0;}
+        if(w*h>0){const cv=Math.abs(ctm[0]*ctm[3]-ctm[1]*ctm[2])/pageArea;
+          if(cv>cover||(cv>=cover*0.9&&w*h>imgW*imgH)){cover=Math.min(1,cv);imgW=w;imgH=h;}}}
+    }catch(e){}
+    const scan=(cover>=0.5&&imgW*imgH>=1e5)||imgW*imgH>=3e6;
+    /* الدقة: الممسوحة بدقة صورتها الأصلية (التكبير يضخّم الحروف فيبطئ OCR ويضعفه)، والنصية ~2000 بكسل (للمعاينة و QR) */
+    const side=Math.max(vp0.width,vp0.height);
+    let target=scan?Math.max(imgW,imgH)/Math.sqrt(Math.max(0.25,cover||1)):2000;target=Math.min(3500,Math.max(1400,target));
+    const vp=page.getViewport({scale:target/side});
     const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
-    await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
-    out.push(c);
+    const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);
+    /* intent:'print' يرسم دون requestAnimationFrame — فلا تتوقف القراءة إذا انتقل المستخدم لتبويب آخر */
+    await page.render({canvasContext:g,viewport:vp,intent:'print'}).promise;
+    await onPage(c,i-1,total,{scan});
+    c.width=c.height=0;page.cleanup();
   }
-  return {canvases:out,total:doc.numPages};
+  if(doc.numPages>total)toast(lb('قُرئت أول ||Read the first ')+total+lb(' صفحة فقط من || pages only of ')+doc.numPages,'err');
+  doc.destroy();
 }
-/* صفحات الملف كلوحات canvas: PDF عبر pdf.js، والصورة مع تصحيح اتجاه الجوال وتكبير الصغيرة */
-async function fileCanvases(file){
-  const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name||'');
-  if(isPdf){const r=await pdfToCanvases(file,OCR_MAX_PAGES);
-    if(r.total>r.canvases.length)toast(lb('سيُقرأ أول ||Only the first ')+r.canvases.length+lb(' صفحة فقط|| pages will be read'));
-    return r;}
-  const bmp=await createImageBitmap(file,{imageOrientation:'from-image'});
-  const big=Math.max(bmp.width,bmp.height),k=big<1400?2:Math.min(1,3000/big);
-  const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
-  const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(bmp,0,0,c.width,c.height);
-  return {canvases:[c],total:1};
+function canvasThumb(c,max){
+  if(!c||!c.width)return '';
+  const k=Math.min(1,max/Math.max(c.width,c.height)),t=document.createElement('canvas');
+  t.width=Math.round(c.width*k);t.height=Math.round(c.height*k);
+  const g=t.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(c,0,0,t.width,t.height);
+  try{return t.toDataURL('image/jpeg',0.72);}catch(e){return '';}
 }
+function rotCanvas(src,deg){
+  const c=document.createElement('canvas'),s=deg%180!==0;
+  c.width=s?src.height:src.width;c.height=s?src.width:src.height;
+  const g=c.getContext('2d');g.translate(c.width/2,c.height/2);g.rotate(deg*Math.PI/180);g.drawImage(src,-src.width/2,-src.height/2);return c;
+}
+
+/* ---------- تحسين الصورة قبل القراءة الضوئية ----------
+   تدرّج رمادي → توحيد الإضاءة (إزالة الظلال واصفرار الورق) → شدّ التباين → تحجيم يجعل ارتفاع السطر ~34 بكسل.
+   الحساب في Web Worker (/rcpt-prep.js) فلا تتجمّد الواجهة؛ وإن تعذّر يُنفَّذ الملف نفسه في الصفحة. */
+let _prepW=null,_prepSeq=0;const _prepCb={};
+function prepWorker(){
+  if(_prepW!==null)return _prepW;
+  try{
+    _prepW=new Worker('/rcpt-prep.js?v=1');
+    _prepW.onmessage=e=>{const d=e.data||{},cb=_prepCb[d.id];delete _prepCb[d.id];if(cb)cb(d);};
+    _prepW.onerror=()=>{Object.keys(_prepCb).forEach(k=>{_prepCb[k]({error:'worker'});delete _prepCb[k];});try{_prepW.terminate();}catch(e){}_prepW=false;};
+  }catch(e){_prepW=false;}
+  return _prepW;
+}
+async function prepPixels(id,w,h,clip){
+  const wk=prepWorker();
+  if(wk){
+    const buf=id.data.buffer.slice(0);   /* نسخة تُنقل للعامل؛ الأصل يبقى للبديل إن فشل */
+    const r=await new Promise(res=>{const k=++_prepSeq;_prepCb[k]=res;wk.postMessage({id:k,buf,w,h,clip},[buf]);});
+    if(!r.error)return {out:new Uint8ClampedArray(r.buf),lineH:r.lineH};
+  }
+  await loadScript('/rcpt-prep.js?v=1');
+  return rcptPrepPixels(id.data,w,h,clip);
+}
+async function ocrPrep(src,opt){
+  opt=opt||{};
+  const W=src.width,H=src.height,mn=Math.min(W,H),mx=Math.max(W,H);
+  let k=1;if(mn<1100)k=1100/mn;if(mx*k>3600)k=3600/mx;if(W*H*k*k>6e6)k=Math.sqrt(6e6/(W*H));
+  const c=document.createElement('canvas');c.width=Math.max(1,Math.round(W*k));c.height=Math.max(1,Math.round(H*k));
+  const g=c.getContext('2d',{willReadFrequently:true});g.imageSmoothingQuality='high';g.drawImage(src,0,0,c.width,c.height);
+  const w=c.width,h=c.height,id=g.getImageData(0,0,w,h);
+  const r=await prepPixels(id,w,h,opt.clip);
+  id.data.set(r.out);g.putImageData(id,0,0);
+  /* حجم الخط الأمثل لـ Tesseract: أسرع بكثير مع الصفحات المكبّرة وأدق مع الصور الصغيرة */
+  if(r.lineH){
+    let s=34/r.lineH;s=Math.max(0.6,Math.min(1.5,s));
+    if(Math.max(w,h)*s>3600)s=3600/Math.max(w,h);
+    if(w*h*s*s>5e6)s=Math.sqrt(5e6/(w*h));          /* سقف ~5 ميغابكسل: يكفي للدقة ويحفظ السرعة */
+    if(s<0.75||s>1.3){
+      const o=document.createElement('canvas');o.width=Math.max(1,Math.round(w*s));o.height=Math.max(1,Math.round(h*s));
+      const og=o.getContext('2d');og.imageSmoothingQuality='high';og.drawImage(c,0,0,o.width,o.height);c.width=c.height=0;return o;
+    }
+  }
+  return c;
+}
+
+/* ---------- محرك القراءة الضوئية: عامل Tesseract واحد (عربي+إنجليزي) يُعاد استخدامه ---------- */
+const OCR_PSM='3';
+let _ocrSched=null;
+function ocrScheduler(){
+  if(_ocrSched)return _ocrSched;
+  _ocrSched=(async()=>{
+    await loadScript('/vendor/tesseract/tesseract.min.js');
+    const sch=Tesseract.createScheduler();
+    const mk=async()=>{const w=await Tesseract.createWorker('ara+eng',1,{workerPath:'/vendor/tesseract/worker.min.js',corePath:'/vendor/tesseract-core',langPath:'/vendor/tessdata',workerBlobURL:false});
+      /* tessedit_do_invert=0: لا يعيد فحص كل سطر ضعيف كنص معكوس — يضاعف السرعة تقريباً */
+      await w.setParameters({tessedit_pageseg_mode:OCR_PSM,preserve_interword_spaces:'1',user_defined_dpi:'300',tessedit_do_invert:'0'});sch.addWorker(w);return w;};
+    await mk();   /* عامل واحد: الصفحات تُقرأ بالتتابع، وعامل إضافي يستهلك ذاكرة (~300 م.ب) دون فائدة */
+    return sch;
+  })().catch(e=>{_ocrSched=null;throw rcptErr(lb('تعذّر تحميل محرك القراءة الضوئية||Could not load the OCR engine'));});
+  return _ocrSched;
+}
+/* نص الصفحة مع إسقاط الأسطر الحرفية منخفضة الثقة (ضجيج المسح) — أسطر الأرقام تبقى دائماً */
+function ocrText(data){
+  const lines=(data&&data.lines)||[];
+  if(!lines.length)return String(data&&data.text||'');
+  return lines.filter(l=>/\d/.test(l.text)||l.confidence>=30).map(l=>l.text.replace(/\n+$/,'')).join('\n');
+}
+function ocrQuality(data){const t=String(data&&data.text||'');
+  return (data&&data.confidence||0)*Math.min(1,(t.match(/[A-Za-zء-ي0-9]/g)||[]).length/80);}
+async function ocrCanvas(src){
+  const sch=await ocrScheduler();
+  const t0=performance.now();
+  const prep=await ocrPrep(src);
+  const t1=performance.now();
+  const r0=(await sch.addJob('recognize',prep)).data;
+  console.debug('[ocr]',src.width+'x'+src.height,'→',prep.width+'x'+prep.height,'prep',Math.round(t1-t0)+'ms','ocr',Math.round(performance.now()-t1)+'ms','conf',Math.round(r0.confidence||0));
+  let best={data:r0,deg:0,q:ocrQuality(r0)};
+  /* ثقة منخفضة: ربما الصفحة جانبية أو مقلوبة — نجرّب الاتجاهات على نسخة مصغّرة ثم نعيد بالدقة الكاملة */
+  if((r0.confidence||0)<45){
+    const small=document.createElement('canvas'),k=Math.min(1,1100/Math.max(prep.width,prep.height));
+    small.width=Math.round(prep.width*k);small.height=Math.round(prep.height*k);small.getContext('2d').drawImage(prep,0,0,small.width,small.height);
+    const base=ocrQuality((await sch.addJob('recognize',small)).data);
+    let win=null;
+    for(const deg of [90,270,180]){
+      const q=ocrQuality((await sch.addJob('recognize',rotCanvas(small,deg))).data);
+      if(q>base*1.35&&q>(win?win.q:0))win={deg,q};
+    }
+    if(win){const d=(await sch.addJob('recognize',rotCanvas(prep,win.deg))).data;const q=ocrQuality(d);if(q>best.q)best={data:d,deg:win.deg,q};}
+  }
+  prep.width=prep.height=0;
+  return {text:ocrText(best.data),conf:Math.round(best.data.confidence||0),deg:best.deg};
+}
+
 /* ===== رمز QR لفواتير هيئة الزكاة (ZATCA): TLV بترميز base64 — 1 البائع، 2 الرقم الضريبي، 3 الوقت، 4 الإجمالي، 5 الضريبة ===== */
 function zatcaQr(str){
   try{
-    const s=String(str||'').trim();if(!/^[A-Za-z0-9+/=\s]{20,}$/.test(s))return null;
-    const bin=atob(s.replace(/\s/g,'')),b=Uint8Array.from(bin,c=>c.charCodeAt(0)),tags={},dec=new TextDecoder('utf-8');
-    for(let i=0;i+2<=b.length;){const t=b[i],l=b[i+1];if(i+2+l>b.length)break;if(t>=1&&t<=5)tags[t]=dec.decode(b.slice(i+2,i+2+l));i+=2+l;}
+    const s=String(str||'').trim();if(!/^[A-Za-z0-9+/=\s_-]{20,}$/.test(s))return null;
+    const bin=atob(s.replace(/\s/g,'').replace(/-/g,'+').replace(/_/g,'/')),b=Uint8Array.from(bin,c=>c.charCodeAt(0)),tags={},dec=new TextDecoder('utf-8');
+    for(let i=0;i+2<=b.length;){const t=b[i];let l=b[i+1],o=i+2;
+      if(l===0x81){l=b[i+2];o=i+3;}else if(l===0x82){l=(b[i+2]<<8)|b[i+3];o=i+4;}   /* طول ممتد (المرحلة الثانية) */
+      if(o+l>b.length)break;if(t>=1&&t<=5)tags[t]=dec.decode(b.slice(o,o+l));i=o+l;}
     if(!tags[1]||!tags[4])return null;
-    const amount=parseFloat(tags[4]),vat=parseFloat(tags[5]);
+    const amount=parseFloat(String(tags[4]).replace(/,/g,'')),vat=parseFloat(String(tags[5]||'').replace(/,/g,''));
     let date='';const ts=String(tags[3]||'');
-    if(/^\d{4}-\d{2}-\d{2}/.test(ts)){ date=ts.slice(0,10);
-      if(/Z$|[+-]00:?00$/.test(ts)){const d=new Date(ts);if(!isNaN(d))date=new Date(d.getTime()+3*3600e3).toISOString().slice(0,10);} }   /* UTC → توقيت السعودية */
+    if(/^\d{4}-\d{2}-\d{2}/.test(ts)){date=ts.slice(0,10);
+      if(/Z$|[+-]00:?00$/.test(ts)){const d=new Date(ts);if(!isNaN(d))date=new Date(d.getTime()+3*3600e3).toISOString().slice(0,10);}}   /* UTC → توقيت السعودية */
     return {vendor:tags[1].trim().slice(0,120),supplierNo:String(tags[2]||'').replace(/\D/g,'').slice(0,20),date,
       amount:isFinite(amount)?amount:null,vat:isFinite(vat)?vat:null,currency:'SAR'};
   }catch(e){return null;}
 }
-/* كل رموز QR في كل صفحة بمحرك ZXing (WebAssembly، يُخدَم من /vendor): يقرأ عدة رموز في مسح واحد
-   ويتحمّل الصور المائلة والباهتة. القارئ المدمج في المتصفح يُجرَّب أولاً حين يتوفر (أندرويد/ماك). */
+/* ZXing (WebAssembly، يُخدَم من /vendor): عدة رموز في مسح واحد، ويتحمّل الصور المائلة والباهتة.
+   القارئ المدمج في المتصفح يُجرَّب أولاً حين يتوفر (أندرويد/ماك). */
 let _zxing=null;
 async function zxingReady(){
   if(_zxing)return _zxing;
@@ -8079,156 +8363,259 @@ async function zxingReady(){
     return ZXingWASM;})().catch(e=>{_zxing=null;throw e;});
   return _zxing;
 }
-async function rcptQrPages(imgs){
-  let bd=null;
-  try{ if('BarcodeDetector' in window&&(await BarcodeDetector.getSupportedFormats()).includes('qr_code'))bd=new BarcodeDetector({formats:['qr_code']}); }catch(e){}
-  const zx=await zxingReady().catch(e=>{console.error('[zxing]',e);return null;});
-  const out=[];
-  for(const src of imgs){
-    const found=[],seen={};
-    const add=(raw,y)=>{ if(!raw||seen[raw])return;seen[raw]=1;const z=zatcaQr(raw);if(z)found.push(Object.assign(z,{y})); };
-    if(bd){ try{ (await bd.detect(src)).forEach(c=>add(c.rawValue,c.boundingBox.y)); }catch(e){} }
-    if(!found.length&&zx){
-      const k=Math.min(1,2400/Math.max(src.width,src.height));
-      const c=document.createElement('canvas');c.width=Math.round(src.width*k);c.height=Math.round(src.height*k);
-      const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(src,0,0,c.width,c.height);
-      try{ (await zx.readBarcodes(g.getImageData(0,0,c.width,c.height),{formats:['QRCode'],tryHarder:true,maxNumberOfSymbols:12}))
-        .forEach(r=>{ if(r.isValid)add(r.text,r.position.topLeft.y/k); }); }catch(e){console.error('[zxing]',e);}
+let _qrBD;
+async function rcptQrCanvas(src){
+  if(_qrBD===undefined){_qrBD=null;try{if('BarcodeDetector' in window&&(await BarcodeDetector.getSupportedFormats()).includes('qr_code'))_qrBD=new BarcodeDetector({formats:['qr_code']});}catch(e){}}
+  const found=[],seen={};
+  const add=(raw,y)=>{if(!raw||seen[raw])return;seen[raw]=1;const z=zatcaQr(raw);if(z)found.push(Object.assign(z,{y}));};
+  if(_qrBD){try{(await _qrBD.detect(src)).forEach(c=>add(c.rawValue,c.boundingBox.y));}catch(e){}}
+  if(!found.length){
+    const zx=await zxingReady().catch(e=>{console.error('[zxing]',e);return null;});
+    if(zx){
+      const scan=async(img,k)=>{const c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+        const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,c.width,c.height);
+        try{(await zx.readBarcodes(g.getImageData(0,0,c.width,c.height),{formats:['QRCode'],tryHarder:true,maxNumberOfSymbols:12}))
+          .forEach(r=>{if(r.isValid)add(r.text,r.position.topLeft.y/k);});}catch(e){console.error('[zxing]',e);}
+        c.width=c.height=0;};
+      await scan(src,Math.min(1,2400/Math.max(src.width,src.height)));
+      if(!found.length&&Math.max(src.width,src.height)>1600)await scan(src,1600/Math.max(src.width,src.height));   /* مقاس آخر يساعد مع الطباعة النقطية */
     }
-    out.push(found.sort((a,b)=>a.y-b.y));
   }
-  return out;
+  return found.sort((a,b)=>a.y-b.y);
 }
 /* بيانات QR موثوقة: تُكمّل/تصحّح مقاطع الصفحة بالترتيب من الأعلى، وتُضاف إيصالات لم يجدها النص */
 function rcptMergeQr(segs,qrPages){
   const out=(segs||[]).map(s=>Object.assign({},s,{fields:Object.assign({},s.fields||{})}));
-  qrPages.forEach((q,pi)=>{
+  (qrPages||[]).forEach((q,pi)=>{
     if(!q||!q.length)return;const p=pi+1;
     const cands=out.filter(s=>!s.qr&&(s.pageFrom||1)<=p&&p<=(s.pageTo||s.pageFrom||1));
     q.forEach((z,k)=>{
       let s=cands[k];
       if(!s){s={pageFrom:p,pageTo:p,text:'',fields:{}};out.push(s);}
       Object.keys(z).forEach(key=>{if(key!=='y'&&z[key]!==''&&z[key]!=null)s.fields[key]=z[key];});
-      s.qr=true;
+      s.fields.checked=true;s.qr=true;
     });
   });
   return out.sort((a,b)=>(a.pageFrom||1)-(b.pageFrom||1));
 }
-async function rcptOcr(imgs){
-  toast(lb('جارٍ تجهيز التعرّف الضوئي (أول مرة قد تأخذ وقتاً)…||Preparing OCR (first run may take a while)…'));
-  const w=await ocrWorker();
-  const pages=[];
-  for(let i=0;i<imgs.length;i++){
-    toast(lb('التعرّف الضوئي: صفحة ||OCR: page ')+(i+1)+' / '+imgs.length);
-    const {data}=await w.recognize(imgs[i]);
-    pages.push(String(data&&data.text||''));
-  }
-  return pages;
+
+/* ---------- فحوص الجودة والتكرار ---------- */
+const rcptNorm=s=>String(s||'').toLowerCase().replace(/[ً-ٟـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[^a-z0-9ء-ي]+/g,'');
+/* تشابه نصّين (0..1) — يتحمّل اختلاف حرف أو حرفين من القراءة الضوئية */
+function rcptSim(a,b){
+  if(!a||!b)return 0;if(a===b)return 1;
+  const m=a.length,n=b.length;if(Math.abs(m-n)>Math.max(m,n)*0.3)return 0;
+  let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur;}
+  return 1-prev[n]/Math.max(m,n);
 }
+function rcptDupOf(r,pool){
+  const v=rcptNorm(r.vendor),sn=String(r.supplierNo||''),no=String(r.receiptNo||'').trim();
+  const same=x=>(v&&rcptSim(rcptNorm(x.vendor),v)>=0.8)||(sn&&String(x.supplierNo||'')===sn);
+  const sameAmt=x=>r.amount!=null&&r.amount!==''&&x.amount!=null&&Math.abs(Number(x.amount)-Number(r.amount))<0.005;
+  for(const x of pool){
+    if(x===r)continue;
+    if(r.hash&&x.fileHash===r.hash&&(x.pageFrom||null)===(r.pageFrom||null))return lb('نفس الملف رُفع سابقاً||Same file already uploaded');
+    if(no&&String(x.receiptNo||'').trim()===no&&(same(x)||sameAmt(x)))return lb('نفس رقم الإيصال||Same receipt number');
+    if(r.date&&sameAmt(x)&&x.date===r.date&&same(x))return lb('نفس المورّد والتاريخ والمبلغ||Same vendor, date and amount');
+  }
+  return '';
+}
+function rcptMarkDups(list){
+  const ex=rcptQ(),seen=[];
+  list.forEach(x=>{const f=x.fields||{};
+    const r={hash:x.hash,pageFrom:x.pageFrom,vendor:f.vendor,supplierNo:f.supplierNo,receiptNo:f.no,amount:f.amount,date:f.date};
+    x.dup=rcptDupOf(r,ex)||rcptDupOf(r,seen);
+    seen.push({fileHash:x.hash,pageFrom:x.pageFrom,vendor:f.vendor,supplierNo:f.supplierNo,receiptNo:f.no,amount:f.amount,date:f.date});
+  });
+}
+function rcptChecks(r){
+  const out=[];const a=Number(r.amount),v=Number(r.vat);
+  if(r.warn)out.push({ok:0,t:r.warn});
+  if(r.amount!=null&&r.amount!==''&&r.vat!=null&&r.vat!==''&&a>0){
+    const rate=[0.15,0.05,0.14,0.10].find(x=>Math.abs(a*x/(1+x)-v)<=Math.max(0.03,a*0.0004));
+    if(rate)out.push({ok:1,t:lb('الضريبة متسقة مع الإجمالي||VAT matches the total')+' ('+Math.round(rate*100)+'%)'});
+    else if(v>=a)out.push({ok:0,t:lb('الضريبة أكبر من الإجمالي||VAT is larger than the total')});
+    else out.push({ok:0,t:lb('الضريبة لا تطابق نسبة معروفة من الإجمالي — راجع المبلغين||VAT does not match a known rate of the total — check both amounts')});
+  }
+  if(r.amount==null||r.amount==='')out.push({ok:0,t:lb('المبلغ لم يُستخرج||Amount not found')});
+  if(!r.date)out.push({ok:0,t:lb('التاريخ لم يُستخرج||Date not found')});
+  else{const d=new Date(r.date),now=Date.now();
+    if(d-now>2*864e5)out.push({ok:0,t:lb('التاريخ في المستقبل||Date is in the future')});
+    else if(now-d>3*365*864e5)out.push({ok:0,t:lb('التاريخ أقدم من 3 سنوات||Date is over 3 years old')});}
+  if(r.supplierNo&&(r.currency||'SAR')==='SAR'&&!/^3\d{13}3$/.test(String(r.supplierNo)))out.push({ok:0,t:lb('الرقم الضريبي السعودي 15 رقماً يبدأ وينتهي بـ 3||A Saudi VAT number has 15 digits starting and ending with 3')});
+  if(r.dup)out.push({ok:0,t:lb('مكرر محتمل: ||Possible duplicate: ')+r.dup});
+  return out;
+}
+function rcptChecksHtml(r){
+  const c=rcptChecks(r);if(!c.length)return '';
+  return `<div class="rc-checks">${c.map(x=>`<span class="${x.ok?'ok':'warn'}">${x.ok?'✓':'⚠'} ${esc(x.t)}</span>`).join('')}</div>`;
+}
+function rcptStatusIcon(r){const c=rcptChecks(r),bad=c.filter(x=>!x.ok);
+  return bad.length?`<span class="rc-st warn" title="${esc(bad.map(x=>x.t).join(' • '))}">⚠</span>`
+    :`<span class="rc-st ok" title="${esc((c[0]&&c[0].t)||lb('جاهز||Ready'))}">✓</span>`;}
+
+/* معاينة مكبّرة فوق أي نافذة (لا تستبدل نافذة المراجعة) */
+function rcptZoom(src){
+  if(!src)return;
+  const d=document.createElement('div');d.className='rc-zoom';d.tabIndex=-1;
+  d.innerHTML=`<img src="${esc(src)}" alt=""><button class="btn ghost sm" aria-label="${lb('إغلاق||Close')}">✕</button>`;
+  const close=()=>{d.remove();document.removeEventListener('keydown',kd,true);};
+  const kd=e=>{if(e.key==='Escape'){e.stopPropagation();e.preventDefault();close();}};
+  d.addEventListener('click',close);document.addEventListener('keydown',kd,true);
+  document.body.appendChild(d);d.focus();
+}
+
 /* ===== مراجعة جماعية: جدول قابل للتعديل لكل الإيصالات المستخرجة قبل الحفظ ===== */
-function rcptPageUrl(r){return r.url?(r.url+(r.pageFrom?'#page='+r.pageFrom:'')):'';}
+function rcptPageUrl(r){return r.url?(r.url+(r.pageFrom&&r.mime==='application/pdf'?'#page='+r.pageFrom:'')):'';}
 function rcptPagesLbl(r){return r.pageFrom?(r.pageTo&&r.pageTo!==r.pageFrom?r.pageFrom+'–'+r.pageTo:String(r.pageFrom)):'';}
-function rcptBatch(results){
-  window._rcptBatch=results.map(x=>{const f=x.fields||{};
-    return {keep:true,fileId:x.fileId,url:x.url,name:x.name,mime:x.mime,size:x.size,scanned:!!x.scanned,ocr:!!x.ocr,qr:!!x.qr,text:x.text||'',
-      pageFrom:x.pageFrom,pageTo:x.pageTo,vendor:f.vendor||'',date:f.date||'',receiptNo:f.no||'',
-      amount:f.amount!=null?f.amount:null,vat:f.vat!=null?f.vat:null,currency:f.currency||'SAR',projectId:'',notes:''};});
+function rcptRow(x){const f=x.fields||{};
+  return {keep:!x.dup,fileId:x.fileId,url:x.url,name:x.name,mime:x.mime,size:x.size,hash:x.hash||'',scanned:!!x.scanned,ocr:!!x.ocr,qr:!!x.qr,
+    text:x.text||'',thumb:x.thumb||'',pageFrom:x.pageFrom,pageTo:x.pageTo,dup:x.dup||'',warn:x.warn||'',
+    vendor:f.vendor||'',supplierNo:f.supplierNo||'',date:f.date||'',receiptNo:f.no||'',
+    amount:f.amount!=null?f.amount:null,vat:f.vat!=null?f.vat:null,currency:f.currency||'SAR',projectId:'',notes:''};}
+function rcptBatch(results,failed){
+  window._rcptBatch=results.map(rcptRow);
+  window._rcptFailed=failed||[];
   rcptBatchPaint();
 }
 function rcptBatchSet(i,k,v){const r=(window._rcptBatch||[])[i];if(!r)return;
   if(k==='amount'||k==='vat')v=v===''?null:+v;
-  r[k]=v;if(k==='amount'||k==='keep')rcptBatchTotals();}
+  r[k]=v;
+  if(['vendor','supplierNo','receiptNo','amount','date'].includes(k)){
+    const others=(window._rcptBatch||[]).filter((x,j)=>j<i).map(x=>({fileHash:x.hash,pageFrom:x.pageFrom,vendor:x.vendor,supplierNo:x.supplierNo,receiptNo:x.receiptNo,amount:x.amount,date:x.date}));
+    r.dup=rcptDupOf(r,rcptQ())||rcptDupOf(r,others);
+  }
+  const st=$('rb_st_'+i);if(st)st.innerHTML=rcptStatusIcon(r);
+  if(k==='amount'||k==='vat'||k==='keep')rcptBatchTotals();}
 function rcptBatchTotals(){const el=$('rb_tot');if(!el)return;
   const rows=(window._rcptBatch||[]).filter(r=>r.keep);
-  el.textContent=rows.length+' '+lb('إيصال · الإجمالي ||receipts · total ')+money(rows.reduce((s,r)=>s+(Number(r.amount)||0),0));}
+  const all=(window._rcptBatch||[]).length;
+  el.innerHTML=`<b>${rows.length}</b> / ${all} ${lb('محدد · الإجمالي ||selected · total ')}<b>${money(rows.reduce((s,r)=>s+(Number(r.amount)||0),0))}</b> · ${lb('الضريبة ||VAT ')}${money(rows.reduce((s,r)=>s+(Number(r.vat)||0),0))}`;
+  const ca=$('rb_all');if(ca){ca.checked=rows.length===all&&all>0;ca.indeterminate=rows.length>0&&rows.length<all;}}
+function rcptBatchAll(on){(window._rcptBatch||[]).forEach(r=>r.keep=on);rcptBatchPaint();}
+function rcptBatchBulk(k,v){if(v==='__')return;(window._rcptBatch||[]).forEach(r=>{if(r.keep)r[k]=v;});rcptBatchPaint();}
 function rcptBatchDel(i){window._rcptBatch.splice(i,1);rcptBatchPaint();}
 function rcptBatchAdd(){const b=window._rcptBatch||[],last=b[b.length-1]||{};
-  b.push({keep:true,fileId:last.fileId||'',url:last.url||'',name:last.name||'',mime:last.mime||'',size:last.size||0,scanned:false,text:'',
-    pageFrom:null,pageTo:null,vendor:'',date:'',receiptNo:'',amount:null,vat:null,currency:last.currency||'SAR',projectId:'',notes:''});
+  b.push({keep:true,fileId:last.fileId||'',url:last.url||'',name:last.name||'',mime:last.mime||'',size:last.size||0,hash:'',scanned:false,text:'',thumb:'',
+    pageFrom:null,pageTo:null,vendor:'',supplierNo:'',date:'',receiptNo:'',amount:null,vat:null,currency:last.currency||'SAR',projectId:'',notes:''});
   rcptBatchPaint();}
 function rcptBatchDetail(i){const r=(window._rcptBatch||[])[i];if(!r)return;
   const el=$('rb_det');if(!el)return;
-  el.innerHTML=`<div class="fsec">${lb('الإيصال ||Receipt ')}${i+1}${rcptPagesLbl(r)?' · '+lb('صفحة ||page ')+rcptPagesLbl(r):''}</div>
+  el.innerHTML=`<div class="rc-detail"><div>${r.thumb?`<img class="rc-prev" src="${r.thumb}" alt="" onclick="rcptZoom(this.src)">`:''}</div><div>
+    <div class="fsec">${lb('الإيصال ||Receipt ')}${i+1}${rcptPagesLbl(r)?' · '+lb('صفحة ||page ')+rcptPagesLbl(r):''} <span class="muted">${esc(r.name||'')}</span></div>
+    ${rcptChecksHtml(r)}
+    <label>${lb('الرقم الضريبي للمورّد||Supplier VAT No.')}</label><input dir="ltr" value="${esc(r.supplierNo||'')}" oninput="rcptBatchSet(${i},'supplierNo',this.value.replace(/\\s/g,''))">
     <label>${lb('ملاحظات||Notes')}</label><textarea rows="2" oninput="rcptBatchSet(${i},'notes',this.value)">${esc(r.notes||'')}</textarea>
-    ${r.text?`<pre style="white-space:pre-wrap;max-height:24vh;overflow:auto;font-size:11px">${esc(String(r.text).slice(0,3000))}</pre>`:''}`;}
+    ${r.text?`<details><summary class="muted">${lb('النص المستخرج||Extracted text')}</summary><pre class="rc-text">${esc(String(r.text).slice(0,3000))}</pre></details>`:''}
+  </div></div>`;
+  el.scrollIntoView({block:'nearest',behavior:'smooth'});}
 function rcptBatchPaint(){
-  const b=window._rcptBatch||[];
-  const ex=rcptQ();
-  const dup=r=>r.receiptNo&&ex.some(x=>x.receiptNo===r.receiptNo&&(x.vendor||'')===(r.vendor||''));
+  const b=window._rcptBatch||[],failed=window._rcptFailed||[];
   const projs=db.projects.filter(p=>p.compoundId===activeCmp());
-  const rows=b.map((r,i)=>`<tr${r.keep?'':' style="opacity:.45"'}>
-    <td><input type="checkbox" ${r.keep?'checked':''} onchange="rcptBatchSet(${i},'keep',this.checked);this.closest('tr').style.opacity=this.checked?1:.45" aria-label="${lb('تضمين||Include')}"></td>
+  const miss=v=>v==null||v===''?'rc-miss':'';
+  const rows=b.map((r,i)=>`<tr class="${r.keep?'':'rc-off'}">
+    <td><input type="checkbox" ${r.keep?'checked':''} onchange="rcptBatchSet(${i},'keep',this.checked);this.closest('tr').classList.toggle('rc-off',!this.checked)" aria-label="${lb('تضمين||Include')}"></td>
+    <td id="rb_st_${i}">${rcptStatusIcon(r)}</td>
+    <td>${r.thumb?`<img class="rc-th" src="${r.thumb}" alt="" onclick="rcptZoom(this.src)" title="${lb('تكبير||Zoom')}">`:''}</td>
     <td nowrap>${r.url?`<a href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener" dir="ltr">${esc(rcptPagesLbl(r)||lb('ملف||file'))}</a>`:'—'}${r.qr?` <span class="badge b-ok" title="${lb('من رمز QR لهيئة الزكاة — المورّد والتاريخ والمبالغ موثوقة||From the ZATCA QR code — vendor, date and amounts are reliable')}">QR</span>`:r.ocr?` <span class="badge b-wait" title="${lb('قُرئ بالتعرّف الضوئي — راجع الحقول||Read by OCR — check the fields')}">OCR</span>`:''}</td>
-    <td><input value="${esc(r.vendor)}" oninput="rcptBatchSet(${i},'vendor',this.value)" style="min-width:140px"></td>
-    <td><input type="date" value="${esc(r.date)}" onchange="rcptBatchSet(${i},'date',this.value)"></td>
-    <td><input value="${esc(r.receiptNo)}" oninput="rcptBatchSet(${i},'receiptNo',this.value)" style="min-width:90px">${dup(r)?`<span class="badge b-wait" title="${lb('يوجد إيصال بنفس الرقم والمورّد||A receipt with this number and vendor exists')}">${lb('مكرر؟||dup?')}</span>`:''}</td>
-    <td><input type="number" step="any" min="0" value="${r.amount!=null?esc(r.amount):''}" oninput="rcptBatchSet(${i},'amount',this.value)" style="width:100px;${r.amount==null?'border-color:#f59e0b':''}"></td>
-    <td><input type="number" step="any" min="0" value="${r.vat!=null?esc(r.vat):''}" oninput="rcptBatchSet(${i},'vat',this.value)" style="width:80px"></td>
-    <td><select onchange="rcptBatchSet(${i},'currency',this.value)" style="min-width:84px">${['SAR','USD','EUR','AED','EGP'].map(c=>`<option ${r.currency===c?'selected':''}>${c}</option>`).join('')}</select></td>
+    <td><input class="${miss(r.vendor)}" value="${esc(r.vendor)}" oninput="rcptBatchSet(${i},'vendor',this.value)" style="min-width:150px"></td>
+    <td><input class="${miss(r.date)}" type="date" value="${esc(r.date)}" onchange="rcptBatchSet(${i},'date',this.value)"></td>
+    <td><input value="${esc(r.receiptNo)}" oninput="rcptBatchSet(${i},'receiptNo',this.value)" style="min-width:90px" dir="ltr"></td>
+    <td><input class="${miss(r.amount)}" type="number" step="any" min="0" value="${r.amount!=null?esc(r.amount):''}" oninput="rcptBatchSet(${i},'amount',this.value)" style="width:100px"></td>
+    <td><input type="number" step="any" min="0" value="${r.vat!=null?esc(r.vat):''}" oninput="rcptBatchSet(${i},'vat',this.value)" style="width:84px"></td>
+    <td><select onchange="rcptBatchSet(${i},'currency',this.value)" style="min-width:76px">${['SAR','USD','EUR','AED','EGP'].map(c=>`<option ${r.currency===c?'selected':''}>${c}</option>`).join('')}</select></td>
     ${projs.length?`<td><select onchange="rcptBatchSet(${i},'projectId',this.value)" style="min-width:90px"><option value="">—</option>${projs.map(p=>`<option value="${p.id}" ${r.projectId===p.id?'selected':''}>${esc(p.no)}</option>`).join('')}</select></td>`:''}
-    <td nowrap><button class="btn sm ghost" onclick="rcptBatchDetail(${i})" title="${lb('النص والملاحظات||Text & notes')}">${ic('view',13)}</button>
+    <td nowrap><button class="btn sm ghost" onclick="rcptBatchDetail(${i})" title="${lb('التفاصيل والنص||Details & text')}">${ic('view',13)}</button>
     <button class="btn sm danger" onclick="rcptBatchDel(${i})" title="${lb('حذف الصف||Remove row')}">${ic('del',13)}</button></td></tr>`).join('');
+  const dups=b.filter(r=>r.dup).length,warn=b.filter(r=>rcptChecks(r).some(c=>!c.ok)).length;
   modal(`<h3>${lb('مراجعة الإيصالات المستخرجة||Review extracted receipts')} (${b.length})</h3>
-  <p class="muted">${lb('عدّل أي حقل خاطئ، أزل علامة الصف لتجاهله، ثم احفظ الكل. الحقول المميّزة بلون برتقالي لم تُستخرج.||Fix anything that is wrong, untick a row to skip it, then save all. Fields outlined in orange were not found.')}</p>
-  <div class="tbl-wrap"><table>
-  <tr><th></th><th>${lb('صفحة||Page')}</th><th>${lb('المورّد||Vendor')}</th><th>${lb('التاريخ||Date')}</th><th>${lb('الرقم||No.')}</th><th>${lb('المبلغ||Amount')}</th><th>${lb('الضريبة||VAT')}</th><th>${lb('العملة||Cur.')}</th>${projs.length?`<th>${lb('المشروع||Project')}</th>`:''}<th></th></tr>
-  ${rows||`<tr><td colspan="10"><div class="empty">${lb('لا صفوف||No rows')}</div></td></tr>`}</table></div>
+  <p class="muted">${lb('راجع الصفوف المعلّمة بـ ⚠ (مرّر المؤشر لمعرفة السبب)، وانقر الصورة لتكبيرها. الصفوف المكررة غير محددة تلقائياً. الحقول بإطار برتقالي لم تُستخرج.||Check rows marked ⚠ (hover for the reason) and click a thumbnail to zoom. Duplicates are unticked automatically. Orange-outlined fields were not found.')}</p>
+  ${failed.length?`<div class="rc-failed"><b>⚠ ${lb('ملفات لم تُقرأ||Files not read')} (${failed.length}):</b> ${failed.map(x=>`<span>${esc(x.name)} — ${esc(x.msg)}</span>`).join('')}</div>`:''}
+  <div class="rc-tools">
+    <span class="muted">${b.length-warn} ✓ · ${warn} ⚠${dups?` · ${dups} ${lb('مكرر||duplicate')}`:''}</span>
+    <select onchange="rcptBatchBulk('currency',this.value);this.value='__'" aria-label="${lb('العملة للمحدد||Currency for selected')}"><option value="__">${lb('العملة للمحدد…||Currency for selected…')}</option>${['SAR','USD','EUR','AED','EGP'].map(c=>`<option>${c}</option>`).join('')}</select>
+    ${projs.length?`<select onchange="rcptBatchBulk('projectId',this.value);this.value='__'" aria-label="${lb('المشروع للمحدد||Project for selected')}"><option value="__">${lb('المشروع للمحدد…||Project for selected…')}</option><option value="">—</option>${projs.map(p=>`<option value="${p.id}">${esc(p.no)} — ${esc(p.name)}</option>`).join('')}</select>`:''}
+  </div>
+  <div class="tbl-wrap rc-tbl"><table>
+  <tr><th><input type="checkbox" id="rb_all" onchange="rcptBatchAll(this.checked)" aria-label="${lb('تحديد الكل||Select all')}"></th><th></th><th></th><th>${lb('صفحة||Page')}</th><th>${lb('المورّد||Vendor')}</th><th>${lb('التاريخ||Date')}</th><th>${lb('الرقم||No.')}</th><th>${lb('المبلغ||Amount')}</th><th>${lb('الضريبة||VAT')}</th><th>${lb('العملة||Cur.')}</th>${projs.length?`<th>${lb('المشروع||Project')}</th>`:''}<th></th></tr>
+  ${rows||`<tr><td colspan="12"><div class="empty">${lb('لا صفوف||No rows')}</div></td></tr>`}</table></div>
   <button class="btn ghost sm" style="margin-top:8px" onclick="rcptBatchAdd()">＋ ${lb('إضافة صف||Add row')}</button>
   <div id="rb_det"></div>
   <div class="ma"><span class="muted" id="rb_tot" style="margin-inline-end:auto"></span>
   <button class="btn ghost" onclick="rcptBatchCancel()">${lb('إلغاء||Cancel')}</button>
-  <button class="btn" onclick="rcptBatchSave()">${lb('حفظ الكل||Save all')}</button></div>`,'modal-evidence');
+  <button class="btn" onclick="rcptBatchSave()">${lb('حفظ المحدد||Save selected')}</button></div>`,'modal-evidence sticky');
   rcptBatchTotals();
 }
 function rcptBatchCancel(){
   if((window._rcptBatch||[]).length&&!confirm(lb('تجاهل كل الإيصالات المستخرجة؟||Discard all extracted receipts?')))return;
-  window._rcptBatch=null;closeModal();
+  window._rcptBatch=null;window._rcptFailed=null;closeModal();
+}
+function rcptRecord(r,src){
+  return {vendor:String(r.vendor||'').trim(),supplierNo:String(r.supplierNo||'').replace(/\s/g,''),date:r.date||'',receiptNo:String(r.receiptNo||'').trim(),
+    amount:r.amount==null||r.amount===''?null:+r.amount,vat:r.vat==null||r.vat===''?null:+r.vat,
+    currency:r.currency||'SAR',projectId:r.projectId||'',notes:String(r.notes||'').trim(),
+    fileId:r.fileId||'',url:r.url||'',name:r.name||'',mime:r.mime||'',size:r.size||0,fileHash:r.hash||r.fileHash||'',scanned:!!r.scanned,
+    src:src||(r.qr?'qr':r.ocr?'ocr':r.fileId?'text':'manual'),pageFrom:r.pageFrom||null,pageTo:r.pageTo||null,text:String(r.text||'').slice(0,4000)};
 }
 function rcptBatchSave(){
   const rows=(window._rcptBatch||[]).filter(r=>r.keep);
   if(!rows.length)return toast(lb('لا توجد صفوف محددة للحفظ||No rows selected to save'),'err');
-  const bad=rows.findIndex(r=>!String(r.vendor||'').trim()&&r.amount==null);
+  const bad=rows.findIndex(r=>!String(r.vendor||'').trim()&&(r.amount==null||r.amount===''));
   if(bad>=0)return toast(lb('أدخل المورّد أو المبلغ في كل صف محدد||Each selected row needs a vendor or an amount'),'err');
+  const neg=rows.findIndex(r=>Number(r.amount)<0||Number(r.vat)<0);
+  if(neg>=0)return toast(lb('المبالغ لا تكون سالبة||Amounts cannot be negative'),'err');
   const now=Date.now();
   rows.slice().reverse().forEach(r=>{
-    const o={id:uid('R'),compoundId:activeCmp(),by:me?me.name:'',createdAt:now,
-      vendor:String(r.vendor||'').trim(),date:r.date||'',receiptNo:String(r.receiptNo||'').trim(),amount:r.amount,vat:r.vat,
-      currency:r.currency||'SAR',projectId:r.projectId||'',notes:String(r.notes||'').trim(),
-      fileId:r.fileId||'',url:r.url||'',name:r.name||'',mime:r.mime||'',size:r.size||0,scanned:!!r.scanned,
-      pageFrom:r.pageFrom||null,pageTo:r.pageTo||null,text:String(r.text||'').slice(0,4000)};
+    const o=Object.assign({id:uid('R'),compoundId:activeCmp(),by:me?me.name:'',createdAt:now},rcptRecord(r));
     db.receipts.unshift(o);auditLog('create','receipt',o.receiptNo||o.vendor);
   });
-  window._rcptBatch=null;persist();closeModal();paintTab();
+  window._rcptBatch=null;window._rcptFailed=null;persist();closeModal();paintTab();
   toast(lb('حُفظت ||Saved ')+rows.length+lb(' إيصالات|| receipts'),'ok');
 }
-function rcptNextInQueue(){
-  const q=window._rcptQueue||[];
-  if(!q.length){window._rcptQueue=null;return;}
-  rcptReview(q.shift());
-}
-function rcptCancel(){window._rcptQueue=null;closeModal();}
+function rcptCancel(){closeModal();}
+/* ===== مراجعة إيصال واحد (رفع جديد أو تعديل محفوظ) ===== */
 function rcptReview(rec,idx){
   const ex=(idx!=null&&idx!=='')?rcptQ()[idx]:null;
-  const base=rec?Object.assign({},rec.fields||{},rec):{};   /* يقبل الحقول مسطّحة أو تحت fields */
+  const base=rec?rcptRow(rec):{};
   const r=ex?Object.assign({},ex,base):base;
-  window._rcptFile={fileId:r.fileId,url:r.url,name:r.name,mime:r.mime,size:r.size,scanned:!!r.scanned,ocr:!!r.ocr,text:r.text||'',pageFrom:r.pageFrom||null,pageTo:r.pageTo||null};
+  window._rcptFile={fileId:r.fileId,url:r.url,name:r.name,mime:r.mime,size:r.size,hash:r.hash||r.fileHash||'',scanned:!!r.scanned,ocr:!!r.ocr,qr:!!r.qr,
+    src:r.src||'',dup:r.dup||'',warn:ex?'':(r.warn||''),text:r.text||'',pageFrom:r.pageFrom||null,pageTo:r.pageTo||null};
   const isImg=/^image\//.test(r.mime||'');
-  const preview=r.url?(isImg?`<img src="${esc(r.url)}" style="width:100%;max-height:40vh;object-fit:contain;border-radius:10px;background:#fff">`:`<a class="btn ghost sm" href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener">${lb('فتح ملف PDF||Open the PDF')}${rcptPagesLbl(r)?' · '+lb('صفحة ||page ')+rcptPagesLbl(r):''}</a>`):'';
-  modal(`<h3>${lb('مراجعة الإيصال||Review receipt')} ${r.qr?`<span class="badge b-ok">${lb('من رمز QR — موثوق||From QR code — reliable')}</span>`:r.ocr?`<span class="badge b-wait">${lb('تعرّف ضوئي — راجع الحقول||OCR — check the fields')}</span>`:r.scanned?`<span class="badge b-wait">${lb('لا نص — أكمله يدوياً||no text — fill manually')}</span>`:''}</h3>
-  ${preview}
+  const prevSrc=r.thumb||(isImg&&r.url?r.url:'');
+  const preview=prevSrc?`<img class="rc-prev" src="${esc(prevSrc)}" alt="" onclick="rcptZoom(this.src)" title="${lb('تكبير||Zoom')}">`
+    :r.url?`<a class="btn ghost sm" href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener">${lb('فتح ملف PDF||Open the PDF')}${rcptPagesLbl(r)?' · '+lb('صفحة ||page ')+rcptPagesLbl(r):''}</a>`:'';
+  const miss=v=>v==null||v===''?' class="rc-miss"':'';
+  const badge=r.qr?`<span class="badge b-ok">${lb('من رمز QR — موثوق||From QR code — reliable')}</span>`
+    :r.ocr?`<span class="badge b-wait">${lb('قراءة ضوئية — راجع الحقول||OCR — check the fields')}</span>`
+    :(r.scanned&&!ex)?`<span class="badge b-wait">${lb('لا نص — أكمله يدوياً||no text — fill manually')}</span>`:'';
+  modal(`<h3>${ex?lb('تعديل الإيصال||Edit receipt'):lb('مراجعة الإيصال||Review receipt')} ${badge}</h3>
+  <div class="rc-review${preview?'':' rc-nopv'}">
+  ${preview?`<div class="rc-pv">${preview}${r.url&&!isImg&&prevSrc?`<a class="muted" style="font-size:12px" href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener">${lb('فتح الملف الأصلي||Open original file')}</a>`:''}</div>`:''}
+  <div>
+  <div id="fr_checks">${rcptChecksHtml(r)}</div>
   <div class="fg">
-    <div><label>${lb('المورّد||Vendor')}</label><input id="fr_v" value="${esc(r.vendor||'')}"></div>
-    <div><label>${lb('التاريخ||Date')}</label><input type="date" id="fr_d" value="${esc(r.date||'')}"></div>
-    <div><label>${lb('رقم الإيصال||Receipt No.')}</label><input id="fr_n" value="${esc(r.receiptNo||r.no||'')}"></div>
-    <div><label>${lb('المبلغ||Amount')}</label><input type="number" step="any" min="0" id="fr_a" value="${r.amount!=null?esc(r.amount):''}"></div>
-    <div><label>${lb('الضريبة||VAT')}</label><input type="number" step="any" min="0" id="fr_t" value="${r.vat!=null?esc(r.vat):''}"></div>
-    <div><label>${lb('العملة||Currency')}</label><select id="fr_c">${['SAR','USD','EUR','AED','EGP'].map(c=>`<option value="${c}" ${(r.currency||'SAR')===c?'selected':''}>${c}</option>`).join('')}</select></div>
-    <div><label>${lb('المشروع (اختياري)||Project (optional)')}</label><select id="fr_p"><option value="">—</option>${db.projects.filter(p=>p.compoundId===activeCmp()).map(p=>`<option value="${p.id}" ${r.projectId===p.id?'selected':''}>${esc(p.no)} — ${esc(p.name)}</option>`).join('')}</select></div>
+    <div style="grid-column:1/-1"><label>${lb('المورّد||Vendor')}</label><input id="fr_v"${miss(r.vendor)} value="${esc(r.vendor||'')}"></div>
+    <div><label>${lb('التاريخ||Date')}</label><input type="date" id="fr_d"${miss(r.date)} value="${esc(r.date||'')}" onchange="rcptReviewCheck()"></div>
+    <div><label>${lb('رقم الإيصال||Receipt No.')}</label><input id="fr_n" dir="ltr" value="${esc(r.receiptNo||r.no||'')}"></div>
+    <div><label>${lb('المبلغ (شامل الضريبة)||Amount (incl. VAT)')}</label><input type="number" step="any" min="0" id="fr_a"${miss(r.amount)} value="${r.amount!=null?esc(r.amount):''}" oninput="rcptReviewCheck()"></div>
+    <div><label>${lb('الضريبة||VAT')}</label><input type="number" step="any" min="0" id="fr_t" value="${r.vat!=null?esc(r.vat):''}" oninput="rcptReviewCheck()"></div>
+    <div><label>${lb('العملة||Currency')}</label><select id="fr_c" onchange="rcptReviewCheck()">${['SAR','USD','EUR','AED','EGP'].map(c=>`<option value="${c}" ${(r.currency||'SAR')===c?'selected':''}>${c}</option>`).join('')}</select></div>
+    <div><label>${lb('الرقم الضريبي للمورّد||Supplier VAT No.')}</label><input id="fr_s" dir="ltr" inputmode="numeric" value="${esc(r.supplierNo||'')}" oninput="rcptReviewCheck()"></div>
+    <div style="grid-column:1/-1"><label>${lb('المشروع (اختياري)||Project (optional)')}</label><select id="fr_p"><option value="">—</option>${db.projects.filter(p=>p.compoundId===activeCmp()).map(p=>`<option value="${p.id}" ${r.projectId===p.id?'selected':''}>${esc(p.no)} — ${esc(p.name)}</option>`).join('')}</select></div>
   </div>
   <label>${lb('ملاحظات||Notes')}</label><textarea id="fr_no" rows="2">${esc(r.notes||'')}</textarea>
-  ${(r.text&&String(r.text).trim())?`<details><summary class="muted">${lb('النص المستخرج||Extracted text')}</summary><pre style="white-space:pre-wrap;max-height:22vh;overflow:auto;font-size:11px">${esc(String(r.text).slice(0,3000))}</pre></details>`:''}
+  ${(r.text&&String(r.text).trim())?`<details><summary class="muted">${lb('النص المستخرج||Extracted text')}</summary><pre class="rc-text">${esc(String(r.text).slice(0,3000))}</pre></details>`:''}
+  </div></div>
   <div class="ma"><button class="btn ghost" onclick="rcptCancel()">${lb('إلغاء||Cancel')}</button>
-  <button class="btn" onclick="rcptSave(${idx!=null&&idx!==''?idx:'null'})">${lb('حفظ||Save')}</button></div>`);
+  <button class="btn" onclick="rcptSave(${idx!=null&&idx!==''?idx:'null'})">${lb('حفظ||Save')}</button></div>`,'modal-evidence sticky');
+  setTimeout(()=>{const e=$(r.vendor?'fr_a':'fr_v');if(e&&!r.amount)e.focus();},50);
+}
+function rcptReviewCheck(){
+  const el=$('fr_checks');if(!el)return;
+  const f=window._rcptFile||{};
+  el.innerHTML=rcptChecksHtml({amount:$('fr_a').value===''?null:+$('fr_a').value,vat:$('fr_t').value===''?null:+$('fr_t').value,
+    date:$('fr_d').value,currency:$('fr_c').value,supplierNo:$('fr_s').value.replace(/\s/g,''),dup:f.dup,warn:f.warn});
 }
 function rcptSave(idx){
   const f=window._rcptFile||{};
@@ -8236,29 +8623,29 @@ function rcptSave(idx){
   const amount=$('fr_a').value===''?null:+$('fr_a').value;
   const vat=$('fr_t').value===''?null:+$('fr_t').value;
   if(!vendor&&amount==null)return toast(lb('أدخل المورّد أو المبلغ على الأقل||Enter at least a vendor or an amount'),'err');
-  const o={vendor,date:$('fr_d').value||'',receiptNo:$('fr_n').value.trim(),amount,vat,
-    currency:$('fr_c').value,projectId:$('fr_p')?$('fr_p').value:'',notes:$('fr_no').value.trim(),
-    fileId:f.fileId||'',url:f.url||'',name:f.name||'',mime:f.mime||'',size:f.size||0,scanned:!!f.scanned,pageFrom:f.pageFrom||null,pageTo:f.pageTo||null,
-    text:String(f.text||'').slice(0,4000)};
-  if(idx!=null&&idx!==''){const ex=rcptQ()[idx];if(!ex)return toast(lb('الإيصال غير موجود||Receipt not found'),'err');Object.assign(ex,o);auditLog('update','receipt',o.receiptNo||vendor);}
+  if((amount!=null&&amount<0)||(vat!=null&&vat<0))return toast(lb('المبالغ لا تكون سالبة||Amounts cannot be negative'),'err');
+  const o=rcptRecord(Object.assign({},f,{vendor,amount,vat,date:$('fr_d').value||'',receiptNo:$('fr_n').value,currency:$('fr_c').value,
+    supplierNo:$('fr_s').value,projectId:$('fr_p')?$('fr_p').value:'',notes:$('fr_no').value}),f.src||undefined);
+  if(idx!=null&&idx!==''){const ex=rcptQ()[idx];if(!ex)return toast(lb('الإيصال غير موجود||Receipt not found'),'err');
+    Object.assign(ex,o,{updatedAt:Date.now()});auditLog('update','receipt',o.receiptNo||vendor);}
   else{db.receipts.unshift(Object.assign({id:uid('R'),compoundId:activeCmp(),by:me?me.name:'',createdAt:Date.now()},o));auditLog('create','receipt',o.receiptNo||vendor);}
   persist();closeModal();paintTab();toast(lb('حُفظ الإيصال||Receipt saved'),'ok');
-  if(window._rcptQueue&&window._rcptQueue.length)rcptNextInQueue();   /* متابعة مراجعة بقية الملفات */
 }
 function rcptView(idx){
   const r=rcptQ()[idx];if(!r)return;
   const isImg=/^image\//.test(r.mime||'');
-  const prev=r.url?(isImg?`<img src="${esc(r.url)}" style="width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#fff">`
+  const prev=r.url?(isImg?`<img src="${esc(r.url)}" style="width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#fff;cursor:zoom-in" onclick="rcptZoom(this.src)" alt="">`
     :`<embed src="${esc(rcptPageUrl(r))}" type="application/pdf" style="width:100%;height:65vh;border-radius:10px">`):`<p class="muted">${lb('لا ملف مرفق||No file attached')}</p>`;
-  modal(`<h3>${lb('الإيصال||Receipt')} — ${esc(r.vendor||r.receiptNo||'')}</h3>
-  <table><tr><th>${lb('التاريخ||Date')}</th><th>${lb('رقم الإيصال||No.')}</th><th>${lb('المبلغ||Amount')}</th><th>${lb('الضريبة||VAT')}</th><th>${lb('المشروع||Project')}</th></tr>
-  <tr><td>${fmtD(r.date)}</td><td>${esc(r.receiptNo||'—')}</td><td><b>${esc(rcptMoney(r))}</b></td><td>${r.vat!=null?(r.vat+' '+esc(r.currency||'SAR')):'—'}</td>
-  <td>${esc((db.projects.find(p=>p.id===r.projectId)||{}).name||'—')}</td></tr></table>
+  modal(`<h3>${lb('الإيصال||Receipt')} — ${esc(r.vendor||r.receiptNo||'')} ${r.src==='qr'?'<span class="badge b-ok">QR</span>':''}</h3>
+  <div class="tbl-wrap"><table><tr><th>${lb('التاريخ||Date')}</th><th>${lb('رقم الإيصال||No.')}</th><th>${lb('المبلغ||Amount')}</th><th>${lb('الضريبة||VAT')}</th><th>${lb('الرقم الضريبي||VAT No.')}</th><th>${lb('المشروع||Project')}</th></tr>
+  <tr><td>${fmtD(r.date)}</td><td dir="ltr">${esc(r.receiptNo||'—')}</td><td><b>${esc(rcptMoney(r))}</b></td><td>${r.vat!=null?(esc(String(r.vat))+' '+esc(r.currency||'SAR')):'—'}</td>
+  <td dir="ltr">${esc(r.supplierNo||'—')}</td><td>${esc((db.projects.find(p=>p.id===r.projectId)||{}).name||'—')}</td></tr></table></div>
+  ${rcptChecksHtml(Object.assign({},r,{dup:''}))}
   ${r.notes?`<p class="muted">${esc(r.notes)}</p>`:''}
   <div style="margin-top:8px">${prev}</div>
   <div class="ma">
     ${r.url?`<a class="btn ghost" href="${esc(rcptPageUrl(r))}" target="_blank" rel="noopener">${lb('فتح الملف||Open file')}${rcptPagesLbl(r)?' · '+lb('صفحة ||p. ')+rcptPagesLbl(r):''}</a>`:''}
-    ${canRcpt()?`<button class="btn ghost" onclick="closeModal();rcptReview(null,${idx})">${lb('تعديل||Edit')}</button>`:''}
+    ${canRcpt()?`<button class="btn ghost" onclick="rcptReview(null,${idx})">${lb('تعديل||Edit')}</button>`:''}
     <button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button></div>`);
 }
 function rcptDel(idx){
@@ -8270,14 +8657,15 @@ function rcptDel(idx){
 function vRcpt(){
   const q=(FILT.rcpt||'').toLowerCase();
   const all=rcptQ().slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||(b.createdAt||0)-(a.createdAt||0));
-  const list=all.filter(r=>!q||((r.vendor||'')+' '+(r.receiptNo||'')+' '+(r.notes||'')).toLowerCase().includes(q));
+  const list=all.filter(r=>!q||((r.vendor||'')+' '+(r.receiptNo||'')+' '+(r.supplierNo||'')+' '+(r.notes||'')).toLowerCase().includes(q));
   const tot=all.reduce((s,r)=>s+(Number(r.amount)||0),0);
   const vat=all.reduce((s,r)=>s+(Number(r.vat)||0),0);
+  const idxOf=new Map(rcptQ().map((r,i)=>[r,i]));
   const rows=list.map(r=>{
-    const i=all.indexOf(r);
+    const i=idxOf.get(r);
     return `<tr><td>${fmtD(r.date)}</td>
-    <td><b>${esc(r.vendor||'—')}</b>${r.scanned?` <span class="badge b-wait" title="${lb('لا نص مستخرج||no text')}">PDF</span>`:''}${r.notes?`<br><span class="muted">${esc(r.notes.slice(0,60))}</span>`:''}</td>
-    <td>${esc(r.receiptNo||'—')}</td>
+    <td><b>${esc(r.vendor||'—')}</b>${r.src==='qr'?' <span class="badge b-ok">QR</span>':''}${r.notes?`<br><span class="muted">${esc(r.notes.slice(0,60))}</span>`:''}</td>
+    <td dir="ltr">${esc(r.receiptNo||'—')}</td>
     <td><b>${esc(rcptMoney(r))}</b></td>
     <td>${r.vat!=null?esc(String(r.vat)):'—'}</td>
     <td>${esc((db.projects.find(p=>p.id===r.projectId)||{}).name||'—')}</td>
@@ -8285,20 +8673,25 @@ function vRcpt(){
     ${canRcpt()?`<button class="btn sm ghost" onclick="rcptReview(null,${i})">${ic('edit',13)}</button>
     <button class="btn sm danger" onclick="rcptDel(${i})">${ic('del',13)}</button>`:''}</td></tr>`;
   }).join('');
+  const drop=canRcpt()?`<div class="rc-drop" tabindex="0" role="button" onclick="rcptUpload()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rcptUpload()}"
+      ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="rcptDrop(event)">
+      <b>${lb('اسحب الإيصالات هنا أو انقر للاختيار||Drop receipts here or click to choose')}</b>
+      <span class="muted">${lb('PDF (نصي أو ممسوح ضوئياً) أو صور — ملف واحد أو عدة ملفات، ويمكن لصق صورة بـ Ctrl+V. تُقرأ رموز QR لفواتير هيئة الزكاة تلقائياً.||PDF (text or scanned) or photos — one or many files; paste an image with Ctrl+V. ZATCA QR codes are read automatically.')}</span></div>`:'';
   return `<div class="stats">
     <div class="stat"><div class="num">${all.length}</div><div class="lbl">${lb('عدد الإيصالات||Receipts')}</div></div>
     <div class="stat"><div class="num" style="font-size:19px">${money(tot)}</div><div class="lbl">${lb('إجمالي المبالغ||Total amount')}</div></div>
     <div class="stat"><div class="num" style="font-size:19px">${money(vat)}</div><div class="lbl">${lb('إجمالي الضريبة||Total VAT')}</div></div>
   </div>
-  <input class="searchbar" placeholder="${lb('بحث بالمورّد أو الرقم…||Search vendor or number…')}" value="${esc(FILT.rcpt||'')}" oninput="FILT.rcpt=this.value;paintProc();sbFocus()">
+  ${drop}
+  <input class="searchbar" placeholder="${lb('بحث بالمورّد أو الرقم أو الرقم الضريبي…||Search vendor, number or VAT no.…')}" value="${esc(FILT.rcpt||'')}" oninput="FILT.rcpt=this.value;paintProc();sbFocus()">
   <div class="card"><h2>${lb('الإيصالات||Receipts')} (${list.length})</h2><div class="tbl-wrap"><table>
   <tr><th>${lb('التاريخ||Date')}</th><th>${lb('المورّد||Vendor')}</th><th>${lb('الرقم||No.')}</th><th>${lb('المبلغ||Amount')}</th><th>${lb('الضريبة||VAT')}</th><th>${lb('المشروع||Project')}</th><th></th></tr>
-  ${rows||`<tr><td colspan="7"><div class="empty">${lb('لا إيصالات — ارفع ملف PDF للبدء||No receipts yet — upload a PDF to start')}</div></td></tr>`}</table></div></div>`;
+  ${rows||`<tr><td colspan="7"><div class="empty">${lb('لا إيصالات بعد — ارفع ملف PDF أو صورة للبدء||No receipts yet — upload a PDF or a photo to start')}</div></td></tr>`}</table></div></div>`;
 }
 function rcptCsv(){
-  const rows=rcptQ().map(r=>[r.date||'',r.vendor||'',r.receiptNo||'',Number(r.amount)||0,Number(r.vat)||0,r.currency||'SAR',
+  const rows=rcptQ().map(r=>[r.date||'',r.vendor||'',r.supplierNo||'',r.receiptNo||'',Number(r.amount)||0,Number(r.vat)||0,r.currency||'SAR',
     (db.projects.find(p=>p.id===r.projectId)||{}).name||'',r.notes||'']);
-  csvExport('receipts',[lb('التاريخ||Date'),lb('المورّد||Vendor'),lb('الرقم||No.'),lb('المبلغ||Amount'),lb('الضريبة||VAT'),lb('العملة||Currency'),lb('المشروع||Project'),lb('ملاحظات||Notes')],rows);
+  csvExport('receipts',[lb('التاريخ||Date'),lb('المورّد||Vendor'),lb('الرقم الضريبي||VAT No.'),lb('الرقم||No.'),lb('المبلغ||Amount'),lb('الضريبة||VAT'),lb('العملة||Currency'),lb('المشروع||Project'),lb('ملاحظات||Notes')],rows);
 }
 function vPrList(){
   const mine=prsQ();
