@@ -16,4 +16,5 @@ jobs:
       - run: npm ci
       - run: node --check server.js
       - run: node -e "const fs=require('fs');for(const f of ['public/index.html','public/request.html']){const h=fs.readFileSync(f,'utf8');const m=h.match(/<script>([\s\S]*?)<\/script>/g)||[];if(!m.length)throw new Error('no script in '+f);}"
+      - run: npm test
       - run: npm audit --audit-level=high
