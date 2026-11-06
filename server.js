@@ -2000,6 +2000,49 @@ function pmAddIntervalISO(iso,p){
   return addMonthsISO(iso,n);
 }
 function pmIntervalDays(p){const n=Math.max(1,Number(p.freqVal)||1);return p.freqUnit==='days'?n:p.freqUnit==='weeks'?n*7:n*30;}
+/* ---- مؤشرات الحالة (asset.gauges): نفس قاعدة الواجهة (gaugeBreachWo في index.html) ----
+   آخر قراءة خارج [min,max] ولا يوجد أمر مفتوح لهذا المؤشر، ولم يُغلق أمر له بعد تلك القراءة → أمر عمل واحد */
+function gaugeNumS(x){ return x==null||x===''||!Number.isFinite(+x)?null:+x; }
+function gaugeStateS(g){
+  const v=gaugeNumS(g.value); if(v==null) return '';
+  const mn=gaugeNumS(g.min), mx=gaugeNumS(g.max);
+  if(mn!=null&&v<mn) return 'low';
+  if(mx!=null&&v>mx) return 'high';
+  return 'ok';
+}
+function gaugeCheck(d){
+  if(!Array.isArray(d.wos)) d.wos=[];
+  let created=0;
+  (d.assets||[]).forEach(a=>{
+    (Array.isArray(a.gauges)?a.gauges:[]).forEach(g=>{
+      const st=gaugeStateS(g); if(st!=='low'&&st!=='high') return;
+      if(d.wos.some(w=>w.gaugeId===g.id&&w.status!=='closed')) return;
+      if(d.wos.some(w=>w.gaugeId===g.id&&w.closedAt&&w.closedAt>(Number(g.at)||0))) return;
+      const lim=st==='high'?gaugeNumS(g.max):gaugeNumS(g.min), u=g.unit?' '+g.unit:'', ar=d.lang!=='en';
+      const bld=(d.buildings||[]).find(b=>b.id===a.building);
+      d.seq=(d.seq||0)+1;
+      const no='WO-'+new Date().getFullYear()+'-'+String(d.seq).padStart(4,'0');
+      d.wos.unshift({no,type:'fault',source:'gauge',compoundId:a.compoundId||'',
+        title:(ar?'قراءة خارج الحد: ':'Reading out of limits: ')+g.name+' = '+g.value+u,
+        desc:(ar?'آخر قراءة ':'Last reading ')+g.value+u+(ar?' للمؤشر «'+g.name+'» والحد '+(st==='high'?'الأعلى ':'الأدنى '):' on gauge "'+g.name+'" vs '+(st==='high'?'max ':'min '))+lim+u+'.',
+        gaugeId:g.id,gaugeName:g.name,gaugeValue:Number(g.value),gaugeLimit:lim,gaugeSide:st,gaugeUnit:g.unit||'',
+        assetId:a.id,assetName:a.name||'',assetLabel:(a.name||'')+(bld&&bld.name?' — '+bld.name+(a.floor?' · '+a.floor:''):''),bname:bld?bld.name:'',
+        priority:g.priority||'high',status:'open',dueDate:isoDay(new Date()),assigneeId:'',assigneeName:'',
+        teamId:a.teamId||'',teamName:a.team||'',projectId:'',unitId:'',unitCode:'',tenantName:'',
+        cost:0,closeNotes:'',parts:[],photos:[],sig:'',checklist:[],reportedBy:'Auto-scheduler',
+        createdAt:Date.now(),startedAt:null,closedAt:null,auto:true,scheduledBy:'server'});
+      if(!Array.isArray(d.notifs)) d.notifs=[];
+      d.notifs.unshift({id:'N'+crypto.randomBytes(4).toString('hex'),icon:'',text:(ar?'قراءة خارج الحد — ':'Out-of-limit reading — ')+(a.name||'')+' / '+g.name+' = '+g.value+u+' ('+no+')',
+        tab:'wos',key:'gauge:'+g.id+':'+no,at:Date.now(),read:false,resolved:false,compoundId:a.compoundId||''});
+      if(!Array.isArray(d.audit)) d.audit=[];
+      d.audit.unshift({id:'L'+crypto.randomBytes(4).toString('hex'),at:Date.now(),by:'Auto-scheduler',byId:'',role:'system',
+        action:'create',entity:'wo',ref:no,details:'gauge out of limits: '+(a.name||'')+' / '+g.name,compoundId:a.compoundId||''});
+      if(d.audit.length>2000) d.audit.length=2000;
+      created++;
+    });
+  });
+  return created;
+}
 /* المتبقي من العدّاد حتى الاستحقاق — null إذا لا توجد خطة عدّاد أو لا قراءة للأصل */
 function pmMeterLeft(p,ast){
   const every=Number(p.mEvery);
@@ -2040,10 +2083,11 @@ async function runPmScheduler(reason){
     let st;
     try{ st=await getState(); }catch(e){ console.error('[pm-scheduler] state read failed:',e.message); return 0; }
     const d=st.data;
-    if(!d||!Array.isArray(d.pms)||!d.pms.length)return 0;
+    if(!d)return 0;
     const today=isoDay(new Date());
-    let created=0;
-    d.pms.forEach(p=>{
+    /* مؤشرات الحالة خارج الحد بلا أمر مفتوح (احتياط لما تفتحه الواجهة عند التسجيل) */
+    let created=gaugeCheck(d);
+    (Array.isArray(d.pms)?d.pms:[]).forEach(p=>{
       if(p.active===false)return;
       if(p.startDate&&today<p.startDate)return;
       if(p.endDate&&today>p.endDate)return;

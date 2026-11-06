@@ -5393,6 +5393,10 @@ function vDash(){
 
   /* --- التنبيهات المهمة والطارئة فقط (كل تنبيه يقفز لسجله المصفّى) --- */
   const alerts=[];
+  /* مؤشرات حالة خارج حدودها (آخر قراءة) */
+  if(!isTech())db.assets.filter(a=>a.compoundId===act).forEach(a=>assetGaugesOut(a).forEach(g=>{const ow=gaugeOpenWo(g.id);
+    alerts.push({ic:'',h:`${lb('مؤشر خارج الحد:||Gauge out of limits:')} <b>${esc(a.name)} — ${esc(g.name)}</b> = ${g.value} ${esc(g.unit||'')} (${esc(gaugeLimitTxt(g))})${ow?' · '+esc(ow.no):''}`,
+      tab:ow?'wos':'assets',q:ow?ow.no:a.name});}));
   unclosed.filter(w=>w.priority==='urgent')
    .forEach(w=>alerts.push({ic:'',h:`<b>${PRIO[w.priority]}</b>: ${esc(w.title)} — ${esc(w.assetName||w.bname||'')}`,tab:'wos',q:w.no}));
   if(canAppr())unclosed.filter(w=>w.status==='planned')
@@ -5601,12 +5605,13 @@ function drawAssetsTable(){
         : `<span class="muted">—</span>`;
       const par=a.parentId?(db.assets.find(x=>x.id===a.parentId)||null):null;
       const kids=db.assets.filter(x=>x.parentId===a.id).length;
-      rows+=`<tr><td><b>${highlightSearchText(a.name, FILT.assets)}</b>${a.critical==='critical'?' <span class="badge b-down">'+lb('حرج||Critical')+'</span>':a.critical==='high'?' <span class="badge b-maint">'+lb('عالية||High')+'</span>':''}${(a.photos&&a.photos.length)?' 📷':''}${a.meter!=null&&a.meter!==''?'<br><span class="muted">⏱ '+a.meter+' '+esc(a.meterUnit||'')+'</span>':''}${(a.manufacturer||a.model)?`<br><span class="muted">${esc([a.manufacturer,a.model].filter(Boolean).join(' / '))}</span>`:''}${par?`<br><span class="muted">↳ ${esc(par.name)}</span>`:''}${kids?` <span class="badge b-open" title="${lb('مكوّنات تابعة||Components')}">${kids}</span>`:''}${a.barcode?`<br><span class="muted" style="font-family:monospace;font-size:10.5px">🏷 ${esc(a.barcode)}</span>`:''}</td><td>${highlightSearchText(a.category||'—', FILT.assets)}</td>
+      rows+=`<tr><td><b>${highlightSearchText(a.name, FILT.assets)}</b>${a.critical==='critical'?' <span class="badge b-down">'+lb('حرج||Critical')+'</span>':a.critical==='high'?' <span class="badge b-maint">'+lb('عالية||High')+'</span>':''}${(a.photos&&a.photos.length)?' 📷':''}${assetGaugesOut(a).length?` <span class="badge b-down" title="${esc(assetGaugesOut(a).map(g=>g.name+' = '+g.value+' '+(g.unit||'')).join('، '))}">${lb('مؤشر خارج الحد||Gauge out of limits')}</span>`:''}${a.meter!=null&&a.meter!==''?'<br><span class="muted">⏱ '+a.meter+' '+esc(a.meterUnit||'')+'</span>':''}${(a.manufacturer||a.model)?`<br><span class="muted">${esc([a.manufacturer,a.model].filter(Boolean).join(' / '))}</span>`:''}${par?`<br><span class="muted">↳ ${esc(par.name)}</span>`:''}${kids?` <span class="badge b-open" title="${lb('مكوّنات تابعة||Components')}">${kids}</span>`:''}${a.barcode?`<br><span class="muted" style="font-family:monospace;font-size:10.5px">🏷 ${esc(a.barcode)}</span>`:''}</td><td>${highlightSearchText(a.category||'—', FILT.assets)}</td>
       <td>${highlightSearchText(bName(a.building), FILT.assets)}${a.zone?`<br><span class="muted">${esc(a.zone)}${a.room?' / '+esc(a.room):''}</span>`:''}</td><td>${esc(a.floor||'—')}</td>
       <td><span class="badge ${st[1]}">${st[0]}</span></td>
       <td>${wCell}</td>
       ${isEng()?`<td nowrap><button class="btn sm ghost" title="${lb('صور ومستندات||Photos')}" onclick="assetPhotos('${a.id}')">${ic('cam',13)}</button>
         <button class="btn sm ghost" title=" ${lb('تسجيل قراءة عداد||Log meter')}" onclick="meterLog('${a.id}')">${ic('clock',13)}</button>
+        <button class="btn sm ghost" title="${lb('مؤشرات الحالة وحدودها||Condition gauges & limits')}" onclick="gaugeModal('${a.id}')">${ic('gauge',13)}</button>
         <button class="btn sm ghost" title="${lb('ملصق QR للطباعة||Printable QR tag')}" onclick="assetTag('${a.id}')">${ic('tag',13)}</button>
         <button class="btn sm ghost" title="${lb('بلاغ جديد||New report')}" onclick="woForm(null,'${a.id}')">${ic('tool',13)}</button>
         <button class="btn sm ghost" onclick="assetForm('${a.id}')">${ic('edit',13)}</button>
@@ -6471,22 +6476,146 @@ function assetPhotoDel(id,j){const a=db.assets.find(x=>x.id===id);if(!a)return;
   a.photos.splice(j,1);persist();assetPhotos(id);}
 /* تسجيل قراءة عداد (تسجيل القراءة ليس صيانة — لا يصفّر عدّاد الخطة) */
 /* ===== سجل قراءات العدادات: كل قراءة قيد مستقل، وasset.meter = آخر قراءة (للتوافق مع خطط «كل N وحدة») ===== */
-function meterRecord(a,value,src,ref){
+/* gaugeId فارغ = العداد التراكمي الرئيسي للأصل؛ غير ذلك = مؤشر حالة (ضغط/حرارة…) */
+function meterRecord(a,value,src,ref,gaugeId,unit){
   if(!a||value==null||value===''||!Number.isFinite(+value))return;
   if(!Array.isArray(db.readings))db.readings=[];
-  const last=meterReadings(a.id)[0];
+  const last=meterReadings(a.id,gaugeId)[0];
   if(last&&+last.value===+value&&Date.now()-last.at<6e4)return;   /* نفس القراءة قبل لحظات = تكرار */
-  db.readings.unshift({id:uid('RD'),assetId:a.id,compoundId:a.compoundId||activeCmp(),value:+value,unit:a.meterUnit||'',
-    at:Date.now(),by:me?me.name:'',byId:me?me.id:'',src:src||'manual',ref:ref||''});
+  db.readings.unshift({id:uid('RD'),assetId:a.id,compoundId:a.compoundId||activeCmp(),value:+value,unit:unit!=null?unit:(a.meterUnit||''),
+    at:Date.now(),by:me?me.name:'',byId:me?me.id:'',src:src||'manual',ref:ref||'',gaugeId:gaugeId||''});
   if(db.readings.length>20000)db.readings.length=20000;
 }
-function meterReadings(assetId){return (db.readings||[]).filter(r=>r.assetId===assetId).sort((x,y)=>y.at-x.at);}
+function meterReadings(assetId,gaugeId){const gid=gaugeId||'';
+  return (db.readings||[]).filter(r=>r.assetId===assetId&&(r.gaugeId||'')===gid).sort((x,y)=>y.at-x.at);}
+
+/* ===== مؤشرات الحالة بحدود دنيا/عليا =====
+   كل أصل يحمل a.gauges = [{id,name,unit,min,max,priority,value,at}]. القراءة خارج الحد تفتح أمر عمل واحداً
+   لهذا المؤشر، ولا يُفتح غيره ما دام مفتوحاً. يعيد مُجدوِل الخادم الفحص نفسه احتياطياً (gaugeCheck في server.js). */
+const GAUGE_UNITS=['بار','psi','°م','%','فولت','أمبير','هرتز','لتر/دقيقة','م³/ساعة','ppm','مم/ث'];
+function gaugeNum(x){return x==null||x===''||!Number.isFinite(+x)?null:+x;}
+function gaugeState(g,v){
+  const val=gaugeNum(v===undefined?g.value:v);if(val==null)return '';
+  const mn=gaugeNum(g.min),mx=gaugeNum(g.max);
+  if(mn!=null&&val<mn)return 'low';
+  if(mx!=null&&val>mx)return 'high';
+  return 'ok';
+}
+function gaugeLimitTxt(g){
+  const mn=gaugeNum(g.min),mx=gaugeNum(g.max),u=g.unit?' '+g.unit:'';
+  if(mn!=null&&mx!=null)return mn+' – '+mx+u;
+  if(mn!=null)return '≥ '+mn+u;
+  if(mx!=null)return '≤ '+mx+u;
+  return lb('بلا حدود||No limits');
+}
+function gaugeBadge(st){
+  return st==='high'?`<span class="badge b-down">${lb('فوق الحد||Above limit')}</span>`
+    :st==='low'?`<span class="badge b-down">${lb('تحت الحد||Below limit')}</span>`
+    :st==='ok'?`<span class="badge b-ok">${lb('طبيعي||Normal')}</span>`:`<span class="badge b-wait">${lb('لا قراءة||No reading')}</span>`;
+}
+function gaugeOpenWo(gid){return (db.wos||[]).find(w=>w.gaugeId===gid&&w.status!=='closed');}
+function assetGaugesOut(a){return (a.gauges||[]).filter(g=>{const s=gaugeState(g);return s==='low'||s==='high';});}
+/* أمر عمل لقراءة خارج الحد — null إن كان هناك أمر مفتوح للمؤشر، أو أُغلق أمر بعد هذه القراءة (أُصلح ولم تُسجَّل قراءة جديدة) */
+function gaugeBreachWo(a,g){
+  const st=gaugeState(g);if(st!=='low'&&st!=='high')return null;
+  if(gaugeOpenWo(g.id))return null;
+  if((db.wos||[]).some(w=>w.gaugeId===g.id&&w.closedAt&&w.closedAt>(g.at||0)))return null;
+  const lim=st==='high'?gaugeNum(g.max):gaugeNum(g.min),u=g.unit?' '+g.unit:'';
+  db.seq++;const y=new Date().getFullYear();
+  const w={no:'WO-'+y+'-'+String(db.seq).padStart(4,'0'),type:'fault',source:'gauge',compoundId:a.compoundId||activeCmp(),
+    title:lb('قراءة خارج الحد: ||Reading out of limits: ')+g.name+' = '+g.value+u,
+    desc:lb('سُجّلت قراءة ||Reading ')+g.value+u+lb(' للمؤشر «|| on gauge "')+g.name+lb('» والحد ||" vs limit ')+(st==='high'?lb('الأعلى ||max '):lb('الأدنى ||min '))+lim+u+'.',
+    gaugeId:g.id,gaugeName:g.name,gaugeValue:+g.value,gaugeLimit:lim,gaugeSide:st,gaugeUnit:g.unit||'',
+    assetId:a.id,assetName:a.name,assetLabel:assetFullLabel(a),bname:bName(a.building),
+    priority:g.priority||'high',status:'open',dueDate:todayISO(),assigneeId:'',assigneeName:'',
+    teamId:a.teamId||'',teamName:a.team||'',projectId:'',unitId:'',unitCode:'',tenantName:'',
+    cost:0,closeNotes:'',parts:[],photos:[],sig:'',checklist:[],reportedBy:me?me.name:lb('فحص الحدود||Limit check'),
+    createdAt:Date.now(),startedAt:null,closedAt:null,auto:true};
+  db.wos.unshift(w);
+  auditLog('create','wo',w.no,lb('قراءة خارج الحد: ||Out-of-limit reading: ')+a.name+' / '+g.name);
+  notify('',lb('قراءة خارج الحد — ||Out-of-limit reading — ')+a.name+' / '+g.name+' = '+g.value+u+' ('+w.no+')','wos','gauge:'+g.id+':'+w.no);
+  return w;
+}
+function gaugeRecord(a,g,v,src,ref){
+  g.value=+v;g.at=Date.now();
+  meterRecord(a,+v,src,ref,g.id,g.unit||'');
+  return {st:gaugeState(g),w:gaugeBreachWo(a,g)};
+}
+function gaugeModal(aid){
+  const a=db.assets.find(x=>x.id===aid);if(!a||!isEng())return;
+  const gs=a.gauges||[];
+  modal(`<h3>${ic('gauge')} ${lb('مؤشرات الحالة||Condition gauges')} — ${esc(a.name)}</h3>
+  <p class="muted">${lb('ضغط، حرارة، جهد… لكل مؤشر حد أدنى و/أو أعلى. أي قراءة خارج الحد تفتح أمر عمل تلقائياً (أمر واحد لكل مؤشر حتى يُغلق).||Pressure, temperature, voltage… each gauge has a min and/or max. Any reading outside the limits opens a work order automatically (one per gauge until it is closed).')}</p>
+  ${gs.length?gs.map(g=>{const st=gaugeState(g),ow=gaugeOpenWo(g.id),rs=meterReadings(a.id,g.id);
+    return `<div class="card" style="padding:12px;margin:10px 0">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+        <div><b>${esc(g.name)}</b> ${gaugeBadge(st)}<br><span class="muted">${lb('الحدود||Limits')}: ${esc(gaugeLimitTxt(g))}
+          · ${lb('آخر قراءة||Last')}: <b>${g.value??'—'}</b> ${esc(g.unit||'')}${g.at?' · '+fmtDT(g.at):''}</span>
+          ${ow?`<br><a href="#" onclick="closeModal();goWO('${ow.no}');return false">${lb('أمر مفتوح||Open WO')}: ${esc(ow.no)}</a>`:''}</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" step="any" id="gv_${g.id}" placeholder="${lb('قراءة جديدة||New reading')}" style="width:120px">
+          <button class="btn sm" onclick="gaugeSave('${a.id}','${g.id}')">${lb('تسجيل||Log')}</button>
+          <button class="btn sm ghost" onclick="gaugeForm('${a.id}','${g.id}')">${ic('edit',13)}</button>
+          <button class="btn sm danger" onclick="gaugeDel('${a.id}','${g.id}')">${ic('del',13)}</button></div></div>
+      ${meterSpark(rs,[g.min,g.max])}</div>`;}).join('')
+    :`<div class="empty">${lb('لا توجد مؤشرات بعد||No gauges yet')}</div>`}
+  <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إغلاق||Close')}</button>
+  <button class="btn" onclick="gaugeForm('${a.id}')">＋ ${lb('إضافة مؤشر||Add gauge')}</button></div>`);
+}
+function gaugeForm(aid,gid){
+  const a=db.assets.find(x=>x.id===aid);if(!a||!isEng())return;
+  const g=gid?(a.gauges||[]).find(x=>x.id===gid)||{}:{priority:'high'};
+  const units=GAUGE_UNITS.includes(g.unit)||!g.unit?GAUGE_UNITS:[g.unit].concat(GAUGE_UNITS);
+  modal(`<h3>${gid?lb('تعديل مؤشر||Edit gauge'):lb('مؤشر حالة جديد||New condition gauge')} — ${esc(a.name)}</h3>
+  <label>${lb('اسم المؤشر *||Gauge name *')}</label><input id="fg_n" value="${esc(g.name||'')}" placeholder="${lb('مثال: ضغط شبكة الإطفاء||e.g. Fire network pressure')}">
+  <div class="fg"><div><label>${lb('الوحدة||Unit')}</label><select id="fg_u">${units.map(u=>`<option ${g.unit===u?'selected':''}>${esc(u)}</option>`).join('')}</select></div>
+  <div><label>${lb('أولوية أمر العمل||Work order priority')}</label><select id="fg_p">${Object.keys(PRIO).map(k=>`<option value="${k}" ${(g.priority||'high')===k?'selected':''}>${PRIO[k]}</option>`).join('')}</select></div></div>
+  <div class="fg"><div><label>${lb('الحد الأدنى (اختياري)||Min (optional)')}</label><input type="number" step="any" id="fg_mn" value="${g.min??''}"></div>
+  <div><label>${lb('الحد الأعلى (اختياري)||Max (optional)')}</label><input type="number" step="any" id="fg_mx" value="${g.max??''}"></div></div>
+  <div class="ma"><button class="btn ghost" onclick="gaugeModal('${aid}')">${lb('رجوع||Back')}</button>
+  <button class="btn" onclick="gaugeFormSave('${aid}','${gid||''}')">${lb('حفظ||Save')}</button></div>`);
+}
+function gaugeFormSave(aid,gid){
+  const a=db.assets.find(x=>x.id===aid);if(!a)return;
+  const name=$('fg_n').value.trim();if(!name)return toast(lb(' الاسم مطلوب|| Name required'),'err');
+  const mn=gaugeNum($('fg_mn').value),mx=gaugeNum($('fg_mx').value);
+  if(mn==null&&mx==null)return toast(lb(' حدّد حداً أدنى أو أعلى على الأقل|| Set at least a min or a max'),'err');
+  if(mn!=null&&mx!=null&&mn>=mx)return toast(lb(' الحد الأدنى يجب أن يكون أقل من الأعلى|| Min must be lower than max'),'err');
+  if(!Array.isArray(a.gauges))a.gauges=[];
+  const o={name,unit:$('fg_u').value,priority:$('fg_p').value,min:mn,max:mx};
+  let g=gid?a.gauges.find(x=>x.id===gid):null;
+  if(g)Object.assign(g,o);else{g=Object.assign({id:uid('G'),value:null,at:null},o);a.gauges.push(g);}
+  auditLog(gid?'update':'create','gauge',a.name+' / '+name,gaugeLimitTxt(g));
+  persist();gaugeModal(aid);drawAssetsTable();toast(lb(' تم الحفظ|| Saved'),'ok');
+}
+function gaugeDel(aid,gid){
+  const a=db.assets.find(x=>x.id===aid);if(!a)return;
+  const g=(a.gauges||[]).find(x=>x.id===gid);if(!g)return;
+  if(!confirm(lb('حذف المؤشر «||Delete gauge "')+g.name+lb('»؟ تبقى قراءاته السابقة في السجل.||"? Its past readings stay in the log.')))return;
+  a.gauges=a.gauges.filter(x=>x.id!==gid);auditLog('delete','gauge',a.name+' / '+g.name);
+  persist();gaugeModal(aid);drawAssetsTable();
+}
+function gaugeSave(aid,gid){
+  const a=db.assets.find(x=>x.id===aid);if(!a)return;
+  const g=(a.gauges||[]).find(x=>x.id===gid);if(!g)return;
+  const v=$('gv_'+gid)?$('gv_'+gid).value:'';
+  if(gaugeNum(v)==null)return toast(lb(' أدخل قراءة صحيحة|| Enter a valid reading'),'err');
+  const r=gaugeRecord(a,g,+v,'manual');
+  persist();gaugeModal(aid);drawAssetsTable();
+  if(r.w)toast(lb(' قراءة خارج الحد — أُنشئ أمر العمل || Out of limits — work order created ')+r.w.no,'err');
+  else if(r.st==='low'||r.st==='high'){const ow=gaugeOpenWo(g.id);
+    toast(ow?lb(' خارج الحد — يوجد أمر مفتوح || Out of limits — open work order ')+ow.no:lb(' خارج الحد|| Out of limits'),'err');}
+  else toast(lb(' سُجلت القراءة|| Reading saved'),'ok');
+}
 /* منحنى مصغّر للقراءات (SVG بلا مكتبات) */
-function meterSpark(rs){
+function meterSpark(rs,lims){
   const pts=rs.slice(0,30).reverse();if(pts.length<2)return '';
-  const vs=pts.map(r=>+r.value),mn=Math.min(...vs),mx=Math.max(...vs),W=320,H=60,span=(mx-mn)||1;
-  const d=pts.map((r,i)=>`${(i/(pts.length-1)*W).toFixed(1)},${(H-4-((+r.value-mn)/span)*(H-8)).toFixed(1)}`).join(' ');
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;direction:ltr" role="img" aria-label="${lb('منحنى القراءات||Readings trend')}"><polyline fill="none" stroke="var(--pri,#0e7490)" stroke-width="2" points="${d}"/></svg>`;
+  const L=(lims||[]).filter(x=>x!=null&&Number.isFinite(+x)).map(Number);   /* حدود المؤشر تُرسم خطوطاً متقطعة */
+  const vs=pts.map(r=>+r.value).concat(L),mn=Math.min(...vs),mx=Math.max(...vs),W=320,H=60,span=(mx-mn)||1;
+  const Y=v=>(H-4-((v-mn)/span)*(H-8)).toFixed(1);
+  const d=pts.map((r,i)=>`${(i/(pts.length-1)*W).toFixed(1)},${Y(+r.value)}`).join(' ');
+  const lines=L.map(v=>`<line x1="0" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--red,#dc2626)" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;direction:ltr" role="img" aria-label="${lb('منحنى القراءات||Readings trend')}">${lines}<polyline fill="none" stroke="var(--pri,#0e7490)" stroke-width="2" points="${d}"/></svg>`;
 }
 /* معدّل الاستهلاك اليومي من أول وآخر قراءة (آخر 90 يوماً) */
 function meterRate(rs){
@@ -7492,6 +7621,8 @@ function woCloseForm(i){
   <label>${lb('ما الذي تم عمله؟||What was done?')}</label><textarea id="wc_n" rows="2"></textarea>
   <div class="fg"><div><label>${lb('تكلفة العمالة (ريال)||Labor Cost (SAR)')}</label><input type="number" step="any" id="wc_c" value="0"></div>
   ${a&&a.meter!=null&&a.meter!==''?`<div><label>${lb('قراءة العداد عند الإغلاق||Meter reading at close')} (${esc(a.meterUnit||'')})</label><input type="number" step="any" min="0" id="wc_mr" placeholder="${esc(String(a.meter))}"></div>`:''}</div>
+  ${(()=>{const g=w.gaugeId&&a?(a.gauges||[]).find(x=>x.id===w.gaugeId):null;
+    return g?`<label>${lb('قراءة المؤشر بعد الإصلاح||Gauge reading after repair')}: ${esc(g.name)} (${esc(gaugeLimitTxt(g))})</label><input type="number" step="any" id="wc_gv" placeholder="${lb('للتحقق من عودة القراءة للحدود||To confirm it is back within limits')}">`:'';})()}
   ${a&&a.status==='down'?`<label style="font-weight:400;margin-top:6px"><input type="checkbox" id="wc_up" checked> ${lb('الأصل عاد للعمل (إنهاء فترة التوقف)||Asset is back in service (end downtime)')}</label>`:''}
   <div class="fg">
     <div><label> ${lb('صور قبل الإصلاح||Photos BEFORE')}</label><div id="wpg_b" class="pgrid"></div>
@@ -7565,6 +7696,11 @@ async function doCloseWO(i){
       const mr=$('wc_mr')?$('wc_mr').value:'';
       if(mr!==''&&Number.isFinite(+mr)&&+mr>=0){ca.meter=+mr;meterRecord(ca,+mr,'wo',w.no);w.meterAtClose=+mr;}
       if($('wc_up')&&$('wc_up').checked&&ca.status==='down'){downtimeTrack(ca,'down','ok',w.no);ca.status='ok';}
+      /* قراءة التحقق لمؤشر الحالة: إن بقيت خارج الحد يُفتح أمر جديد (هذا الأمر صار مغلقاً) */
+      const cg=w.gaugeId?(ca.gauges||[]).find(x=>x.id===w.gaugeId):null;
+      const gv=$('wc_gv')?$('wc_gv').value:'';
+      if(cg&&gaugeNum(gv)!=null){const gr=gaugeRecord(ca,cg,+gv,'wo',w.no);w.gaugeAfter=+gv;
+        if(gr.w)toast(lb(' القراءة ما زالت خارج الحد — فُتح أمر جديد || Still out of limits — new work order ')+gr.w.no,'err');}
     }}
   if(w.type==='pm'&&w.pmId){
     const p=db.pms.find(x=>x.id===w.pmId);
