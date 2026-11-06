@@ -2337,6 +2337,7 @@ async function queueSave(){
         AUTH.usersRaw=JSON.parse(JSON.stringify(payload.users||[]));
         SAVE.usersIntent=false;
         SAVE.retry=0;setSaveState('saved');
+        if(j&&Array.isArray(j.dropped)&&j.dropped.length)await rbacResync(j.dropped);
       }else if(r.status===401){
         setSaveState('error');sessionExpired();
       }else if(r.status===403){
@@ -2370,6 +2371,25 @@ function scheduleSaveRetry(status){
     setSaveState('offline');
     toast(lb(' تعذّر الوصول للخادم — سيُعاد المحاولة عند أول تغيير|| Server unreachable — will retry on your next change'),'err');
   }
+}
+/* الخادم استبعد تغييرات في مجموعات خارج صلاحيات الدور: نعيد تلك المجموعات (وسجل التدقيق) من نسخة الخادم
+   حتى لا تبقى نسخة محلية مخالفة تُرسل في كل حفظ. التنبيه مرة واحدة في الجلسة لكل مجموعة. */
+async function rbacResync(keys){
+  try{
+    const r=await api('/state');if(!r.ok)return;
+    const s=await r.json();if(!s||!s.data||typeof s.ver!=='number')return;
+    if(SAVE.dirt||SAVE.timer&&SAVE.retry)return;   /* تعديل جديد في الطريق — سيتولاه الحفظ التالي */
+    keys.concat(['audit']).forEach(k=>{if(k in s.data)db[k]=s.data[k];});
+    AUTH.ver=s.ver;saveLocalCopy();
+    let seen={};try{seen=JSON.parse(sessionStorage.getItem('rbacDropSeen')||'{}');}catch(e){}
+    const fresh=keys.filter(k=>!seen[k]);
+    if(fresh.length){
+      fresh.forEach(k=>seen[k]=1);
+      try{sessionStorage.setItem('rbacDropSeen',JSON.stringify(seen));}catch(e){}
+      toast(lb(' بعض التغييرات خارج صلاحيات دورك لم تُحفظ: || Some changes outside your role were not saved: ')+fresh.join('، '),'err');
+    }
+    paintTab();
+  }catch(e){}
 }
 /* Merge local mutations with server collection on 409 conflict (P1 SYNC-01) */
 function mergeCollectionById(serverArr, localArr, keyField){
@@ -2678,7 +2698,7 @@ function migrate(d){
   }
   /* ---- شبكة أمان تُنفَّذ دائماً (حتى مع أحدث ver) لضمان بيانات قابلة للاستخدام ---- */
   ['compounds','buildings','units','tenants','contracts','assets','wos','inv','moves','pms',
-   'suppliers','prs','pos','projects','employees','shifts','notifs','fuelLogs','utilityLogs','certs','providers','rfqs','pmTemplates','audit','orgs','receipts','teams']
+   'suppliers','prs','pos','projects','employees','shifts','notifs','fuelLogs','utilityLogs','certs','providers','rfqs','pmTemplates','audit','orgs','receipts','teams','readings','downtime']
    .forEach(k=>{if(!Array.isArray(d[k]))d[k]=[];});
   ['seq','prSeq','poSeq','rnSeq','prjSeq','ctSeq','rfqSeq'].forEach(k=>{if(d[k]==null)d[k]=0;});
   if(typeof d.lang!=='string')d.lang='ar';
@@ -5366,6 +5386,10 @@ function vDash(){
   const mttrH=closedW.length?closedW.reduce((s,w)=>s+Math.max(0,(w.closedAt-(w.startedAt||w.createdAt||w.closedAt))/36e5),0)/closedW.length:0;
   const pmOkN=pmAll.filter(p=>!pmIsLate(p)).length;
   const pmComp=pmAll.length?Math.round(pmOkN/pmAll.length*100):100;
+  /* التوافرية وMTBF من فترات التوقف المسجّلة (آخر 90 يوم) */
+  const rel=reliabilityOf(db.assets.filter(a=>a.compoundId===act).map(a=>a.id),90);
+  const hasDt=(db.downtime||[]).some(p=>p.compoundId===act);
+  const relTxt=h=>h==null?'—':(h>=48?Math.round(h/24)+' '+lb('يوم||d'):Math.round(h)+' '+lb('ساعة||h'));
 
   /* --- التنبيهات المهمة والطارئة فقط (كل تنبيه يقفز لسجله المصفّى) --- */
   const alerts=[];
@@ -5426,7 +5450,9 @@ function vDash(){
     ${isTech()?'':kpi(ic('cal',19),pmLateN,lb('صيانة دورية متأخرة||Overdue PM'),'pm',pmLateN>0)}
     ${isTech()?'':kpi(ic('check',19),pmComp+'%',lb('التزام الصيانة الدورية||PM Compliance'),'pm',pmComp<80)}
     ${kpi(ic('gear',19),down.length,lb('أصول متوقفة||Assets Down'),'assets',down.length>0)}
-    ${kpi(ic('box',19),low.length,lb('أصناف تحت الحد||Low Stock'),'inv',low.length>0)}`;
+    ${kpi(ic('box',19),low.length,lb('أصناف تحت الحد||Low Stock'),'inv',low.length>0)}
+    ${isTech()||!hasDt?'':kpi(ic('check',19),(rel.avail*100).toFixed(1)+'%',lb('توافرية الأصول (90 يوم)||Asset Availability (90d)'),'assets',rel.avail<0.95)}
+    ${isTech()||!hasDt?'':kpi(ic('clock',19),relTxt(rel.mtbfH),lb('متوسط الوقت بين الأعطال MTBF||Mean Time Between Failures'),'assets')}`;
 
   /* تنبيه غير حاجب: غير المدير لا يستطيع تغيير كلمة مروره من الواجهة (يحتاج نقطة خادم مخصّصة) */
   const pwBanner=(!isAdmin()&&((me&&me.defaultPw)||AUTH.mustChange))?`<div class="card" style="border:1.5px solid var(--red)"><b>${lb('حسابك يستخدم كلمة المرور الافتراضية — غيّرها الآن لحماية النظام||Your account uses the default password — change it now to secure the system')}</b> <button class="btn sm" onclick="myPwForm()">${lb('تغيير كلمة المرور||Change password')}</button></div>`:'';
@@ -6265,8 +6291,12 @@ function saveAsset(id){
   o.critical=$('fa_cr')?$('fa_cr').value:'normal';
   o.provider=$('fa_pv')?$('fa_pv').value.trim():'';
   o.access=$('fa_ac')?$('fa_ac').value.trim():'';
-  if(id)Object.assign(db.assets.find(x=>x.id===id),o);
-  else db.assets.push(Object.assign({id:uid('A'),projectId:''},o));
+  let ta;
+  if(id){ta=db.assets.find(x=>x.id===id);const prevSt=ta.status,prevM=ta.meter;Object.assign(ta,o);
+    downtimeTrack(ta,prevSt,ta.status);
+    if(o.meter!=null&&+o.meter!==+prevM)meterRecord(ta,o.meter,'manual');}
+  else{ta=Object.assign({id:uid('A'),projectId:''},o);db.assets.push(ta);
+    downtimeTrack(ta,'ok',ta.status);if(o.meter!=null)meterRecord(ta,o.meter,'manual');}
   auditLog(id?'update':'create','asset',name);
   persist();closeModal();paintTab();toast(lb(' تم الحفظ|| Saved'),'ok');
 }
@@ -6440,11 +6470,42 @@ function assetPhotoAdd(id){pickImages(imgs=>{
 function assetPhotoDel(id,j){const a=db.assets.find(x=>x.id===id);if(!a)return;
   a.photos.splice(j,1);persist();assetPhotos(id);}
 /* تسجيل قراءة عداد (تسجيل القراءة ليس صيانة — لا يصفّر عدّاد الخطة) */
+/* ===== سجل قراءات العدادات: كل قراءة قيد مستقل، وasset.meter = آخر قراءة (للتوافق مع خطط «كل N وحدة») ===== */
+function meterRecord(a,value,src,ref){
+  if(!a||value==null||value===''||!Number.isFinite(+value))return;
+  if(!Array.isArray(db.readings))db.readings=[];
+  const last=meterReadings(a.id)[0];
+  if(last&&+last.value===+value&&Date.now()-last.at<6e4)return;   /* نفس القراءة قبل لحظات = تكرار */
+  db.readings.unshift({id:uid('RD'),assetId:a.id,compoundId:a.compoundId||activeCmp(),value:+value,unit:a.meterUnit||'',
+    at:Date.now(),by:me?me.name:'',byId:me?me.id:'',src:src||'manual',ref:ref||''});
+  if(db.readings.length>20000)db.readings.length=20000;
+}
+function meterReadings(assetId){return (db.readings||[]).filter(r=>r.assetId===assetId).sort((x,y)=>y.at-x.at);}
+/* منحنى مصغّر للقراءات (SVG بلا مكتبات) */
+function meterSpark(rs){
+  const pts=rs.slice(0,30).reverse();if(pts.length<2)return '';
+  const vs=pts.map(r=>+r.value),mn=Math.min(...vs),mx=Math.max(...vs),W=320,H=60,span=(mx-mn)||1;
+  const d=pts.map((r,i)=>`${(i/(pts.length-1)*W).toFixed(1)},${(H-4-((+r.value-mn)/span)*(H-8)).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;direction:ltr" role="img" aria-label="${lb('منحنى القراءات||Readings trend')}"><polyline fill="none" stroke="var(--pri,#0e7490)" stroke-width="2" points="${d}"/></svg>`;
+}
+/* معدّل الاستهلاك اليومي من أول وآخر قراءة (آخر 90 يوماً) */
+function meterRate(rs){
+  const cut=Date.now()-90*864e5,w=rs.filter(r=>r.at>=cut);if(w.length<2)return null;
+  const a=w[w.length-1],b=w[0],days=(b.at-a.at)/864e5;
+  return days>=1?(b.value-a.value)/days:null;
+}
 function meterLog(id){
   const a=db.assets.find(x=>x.id===id);if(!a||!isEng())return;
+  const rs=meterReadings(id),rate=meterRate(rs);
   modal(`<h3> ${lb('تسجيل قراءة عداد||Log Meter Reading')} — ${esc(a.name)}</h3>
-  <p class="muted">${lb('القراءة الحالية:||Current:')} <b>${a.meter??'—'}</b> ${esc(a.meterUnit||'')}</p>
+  <p class="muted">${lb('القراءة الحالية:||Current:')} <b>${a.meter??'—'}</b> ${esc(a.meterUnit||'')}
+    ${rate!=null?` · ${lb('المعدّل||Rate')}: <b>${rate>=10?Math.round(rate):rate.toFixed(1)}</b> ${esc(a.meterUnit||'')}/${lb('يوم||day')}`:''}</p>
   <label>${lb('القراءة الجديدة *||New Reading *')}</label><input type="number" step="any" min="0" id="fm_v" value="${a.meter??''}">
+  ${rs.length?`<div style="margin-top:12px">${meterSpark(rs)}
+    <table class="tbl" style="margin-top:6px"><thead><tr><th>${lb('التاريخ||Date')}</th><th>${lb('القراءة||Reading')}</th><th>${lb('بواسطة||By')}</th></tr></thead><tbody>
+    ${rs.slice(0,10).map(r=>`<tr><td>${fmtDT(r.at)}</td><td><b>${r.value}</b> ${esc(r.unit||'')}</td><td>${esc(r.by||'—')}${r.src==='wo'&&r.ref?` <span class="muted">(${esc(r.ref)})</span>`:''}</td></tr>`).join('')}
+    </tbody></table>${rs.length>10?`<p class="muted">${lb('+ ||+ ')}${rs.length-10} ${lb('قراءة أقدم||older readings')}</p>`:''}</div>`
+    :`<p class="muted">${lb('لا يوجد سجل قراءات بعد — سيُحفظ كل إدخال من الآن.||No reading history yet — every entry is kept from now on.')}</p>`}
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" onclick="meterSave('${id}')">${lb('حفظ القراءة||Save Reading')}</button></div>`);
 }
@@ -6453,20 +6514,75 @@ function meterSave(id){
   const v=$('fm_v').value;
   if(v===''||v==null||+v<0)return toast(lb(' أدخل قراءة صحيحة|| Enter a valid reading'),'err');
   if(a.meter!=null&&a.meter!==''&&+v<+a.meter&&!confirm(lb(' القراءة الجديدة أقل من الحالية — متابعة؟|| New reading is lower than current — continue?')))return;
-  a.meter=+v;persist();closeModal();drawAssetsTable();toast(lb(' سُجلت القراءة|| Reading saved'),'ok');
+  a.meter=+v;meterRecord(a,+v,'manual');auditLog('update','meter',a.name,String(+v));
+  persist();closeModal();drawAssetsTable();toast(lb(' سُجلت القراءة|| Reading saved'),'ok');
 }
-/* ملصق QR للطباعة: المسح يفتح بوابة البلاغات على هذا الأصل (خدمة QR مجانية، والنص بديل عند انقطاعها) */
-function assetTag(id){
+/* ===== فترات توقف الأصول: تُفتح عند الانتقال إلى «متوقف» وتُغلق عند العودة — أساس التوافرية وMTBF ===== */
+function downtimeTrack(a,prev,next,ref){
+  if(!a||prev===next)return;
+  if(!Array.isArray(db.downtime))db.downtime=[];
+  const open=db.downtime.find(x=>x.assetId===a.id&&!x.to);
+  if(next==='down'&&!open){
+    db.downtime.unshift({id:uid('DT'),assetId:a.id,compoundId:a.compoundId||activeCmp(),from:Date.now(),to:null,
+      by:me?me.name:'',ref:ref||''});
+  }else if(prev==='down'&&next!=='down'&&open){
+    open.to=Date.now();open.closedBy=me?me.name:'';if(ref&&!open.closeRef)open.closeRef=ref;
+  }
+}
+/* التوافرية وMTBF وMTTR (التوقف) خلال نافذة أيام لقائمة أصول */
+function reliabilityOf(assetIds,days){
+  const now=Date.now(),start=now-days*864e5,ids=new Set(assetIds);
+  let downMs=0,fails=0;
+  (db.downtime||[]).forEach(p=>{
+    if(!ids.has(p.assetId))return;
+    const f=Math.max(p.from,start),t=Math.min(p.to||now,now);
+    if(t>f)downMs+=t-f;
+    if(p.from>=start)fails++;
+  });
+  const total=ids.size*days*864e5;
+  return {fails,downH:downMs/36e5,avail:total?Math.max(0,1-downMs/total):1,
+    mtbfH:fails?(total-downMs)/fails/36e5:null,mttrH:fails?downMs/fails/36e5:null};
+}
+/* مولّد QR محلي (zxing-wasm writer من /vendor) — لا يُرسَل رابط البوابة لأي خدمة خارجية.
+   نسخة القارئ والكاتب تُعرّفان المتغير العام نفسه (ZXingWASM)، لذا نحتفظ بالكاتب في متغير خاص ونعيد العام كما كان. */
+let _zxW=null;
+function zxingWriterReady(){
+  if(_zxW)return _zxW;
+  _zxW=(async()=>{
+    const prev=window.ZXingWASM;
+    await loadScript('/vendor/zxing/zxing-writer.js');
+    const W=window.ZXingWASM;
+    if(prev)window.ZXingWASM=prev;
+    W.prepareZXingModule({overrides:{locateFile:(f,pre)=>f.endsWith('.wasm')?'/vendor/zxing/zxing_writer.wasm':pre+f},fireImmediately:true});
+    return W;
+  })().catch(e=>{_zxW=null;throw e;});
+  return _zxW;
+}
+async function qrSvg(text){
+  const W=await zxingWriterReady();
+  const r=await W.writeBarcode(text,{format:'QRCode',ecLevel:'M'});
+  if(!r||r.error||!r.svg)throw new Error((r&&r.error)||'QR');
+  let s=String(r.svg).replace(/<\?xml[^>]*\?>/,'').replace(/<!DOCTYPE[^>]*>/i,'').trim();   /* يُدرج داخل HTML */
+  /* المخرجات بلا viewBox: نضيفه من الأبعاد الأصلية ليتمدد الرمز بأي حجم CSS دون تشويش */
+  const m=s.match(/^<svg[^>]*\swidth="(\d+(?:\.\d+)?)"[^>]*\sheight="(\d+(?:\.\d+)?)"/);
+  if(m&&!/viewBox=/.test(s.slice(0,s.indexOf('>'))))
+    s=s.replace(/^<svg/,`<svg viewBox="0 0 ${m[1]} ${m[2]}" shape-rendering="crispEdges"`);
+  return s;
+}
+/* ملصق QR للطباعة: المسح يفتح بوابة البلاغات على هذا الأصل (الرابط نصاً بديلاً إن تعذّر التوليد) */
+async function assetTag(id){
   const a=db.assets.find(x=>x.id===id);if(!a)return;
   const url=location.origin+'/request.html?c='+a.compoundId+'&asset='+encodeURIComponent(a.name);
-  const qr='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(url);
-  const w=window.open('','_blank','width=440,height=620');
+  const w=window.open('','_blank','width=440,height=620');   /* تُفتح فوراً مع النقرة حتى لا يحجبها المتصفح */
   if(!w)return toast(lb(' اسمح بالنوافذ المنبثقة للطباعة|| Allow popups to print'),'err');
+  let svg='';
+  try{svg=await qrSvg(url);}catch(e){console.error('[qr]',e);toast(lb(' تعذّر توليد رمز QR — سيُطبع الرابط نصاً|| Could not generate the QR code — the link will print as text'),'err');}
+  const qr=svg?'<div class="qr">'+svg+'</div>':'';
   w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+esc(a.name)+'</title>'
-  +'<style>body{font-family:Tahoma,Arial;text-align:center;padding:24px;color:#111}.tag{border:2px dashed #0e7490;border-radius:16px;padding:22px;max-width:340px;margin:0 auto}h2{font-size:19px;margin:10px 0 2px}.sub{font-size:13px;color:#555;margin-bottom:10px}img{width:200px;height:200px}.url{font-size:11px;direction:ltr;word-break:break-all;color:#333;margin-top:10px}.hint{font-size:12px;color:#666;margin-top:12px}</style></head>'
+  +'<style>body{font-family:Tahoma,Arial;text-align:center;padding:24px;color:#111}.tag{border:2px dashed #0e7490;border-radius:16px;padding:22px;max-width:340px;margin:0 auto}h2{font-size:19px;margin:10px 0 2px}.sub{font-size:13px;color:#555;margin-bottom:10px}.qr svg{width:200px;height:200px;display:block;margin:0 auto}.url{font-size:11px;direction:ltr;word-break:break-all;color:#333;margin-top:10px}.hint{font-size:12px;color:#666;margin-top:12px}</style></head>'
   +'<body onload="setTimeout(function(){window.print()},700)"><div class="tag"><div style="font-size:30px"></div>'
   +'<h2>'+esc(a.name)+'</h2><div class="sub">'+esc(bName(a.building))+(a.floor?' · '+esc(a.floor):'')+'</div>'
-  +'<img src="'+qr+'" onerror="this.style.display=\'none\'"><div class="url">'+esc(url)+'</div>'
+  +qr+'<div class="url">'+esc(url)+'</div>'
   +'<div class="hint">امسح الرمز لإرسال بلاغ صيانة لهذا الأصل</div></div></body></html>');
   w.document.close();
 }
@@ -7374,7 +7490,9 @@ function woCloseForm(i){
   </div>` : ''}
   ${ck}
   <label>${lb('ما الذي تم عمله؟||What was done?')}</label><textarea id="wc_n" rows="2"></textarea>
-  <div class="fg"><div><label>${lb('تكلفة العمالة (ريال)||Labor Cost (SAR)')}</label><input type="number" step="any" id="wc_c" value="0"></div></div>
+  <div class="fg"><div><label>${lb('تكلفة العمالة (ريال)||Labor Cost (SAR)')}</label><input type="number" step="any" id="wc_c" value="0"></div>
+  ${a&&a.meter!=null&&a.meter!==''?`<div><label>${lb('قراءة العداد عند الإغلاق||Meter reading at close')} (${esc(a.meterUnit||'')})</label><input type="number" step="any" min="0" id="wc_mr" placeholder="${esc(String(a.meter))}"></div>`:''}</div>
+  ${a&&a.status==='down'?`<label style="font-weight:400;margin-top:6px"><input type="checkbox" id="wc_up" checked> ${lb('الأصل عاد للعمل (إنهاء فترة التوقف)||Asset is back in service (end downtime)')}</label>`:''}
   <div class="fg">
     <div><label> ${lb('صور قبل الإصلاح||Photos BEFORE')}</label><div id="wpg_b" class="pgrid"></div>
       <button class="btn ghost sm" onclick="woAddPhotos('b')">＋ ${lb('إضافة صور||Add Photos')}</button></div>
@@ -7442,6 +7560,12 @@ async function doCloseWO(i){
   if(sigHasInk())w.sig=await uploadMedia($('sigpad').toDataURL('image/png'),'signature.png');
   w.closeNotes=notes;w.cost=+$('wc_c').value||0;
   w.status='closed';w.closedAt=Date.now();if(!w.startedAt)w.startedAt=w.closedAt;
+  {const ca=w.assetId?db.assets.find(x=>x.id===w.assetId):null;
+    if(ca){
+      const mr=$('wc_mr')?$('wc_mr').value:'';
+      if(mr!==''&&Number.isFinite(+mr)&&+mr>=0){ca.meter=+mr;meterRecord(ca,+mr,'wo',w.no);w.meterAtClose=+mr;}
+      if($('wc_up')&&$('wc_up').checked&&ca.status==='down'){downtimeTrack(ca,'down','ok',w.no);ca.status='ok';}
+    }}
   if(w.type==='pm'&&w.pmId){
     const p=db.pms.find(x=>x.id===w.pmId);
     if(p){p.lastDone=todayISO();p.nextDue=pmNextDueAfterDone(p);
@@ -7514,7 +7638,9 @@ function woEvidenceModal(i){
   const isClosed=w.status==='closed';
   const beforePhs=(w.photos||[]).filter(p=>p.tag==='before');
   const afterPhs=(w.photos||[]).filter(p=>p.tag==='after');
-  const qrUrl=`https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=2&data=${encodeURIComponent('https://amlaki.cmms/verify/'+w.no+'?h='+(w.integrityHash||''))}`;
+  /* رمز التحقق يُولَّد محلياً بعد ظهور النافذة (لا خدمة QR خارجية) */
+  qrSvg('https://amlaki.cmms/verify/'+w.no+'?h='+(w.integrityHash||''))
+    .then(s=>{const el=$('evi_qr');if(el)el.innerHTML=s;}).catch(e=>console.error('[qr]',e));
   const certId=`CERT-${w.no}`;
   const pj=w.projectId?db.projects.find(p=>p.id===w.projectId):null;
   const ast=w.assetId?db.assets.find(a=>a.id===w.assetId):null;
@@ -7668,7 +7794,7 @@ function woEvidenceModal(i){
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
-        <img src="${qrUrl}" width="78" height="78" style="border-radius:8px;border:1px solid var(--line);background:#fff;padding:2px" title="${lb('رمز التحقق الرقمي||Digital Verification QR')}">
+        <div id="evi_qr" style="width:78px;height:78px;border-radius:8px;border:1px solid var(--line);background:#fff;padding:2px;box-sizing:border-box" title="${lb('رمز التحقق الرقمي||Digital Verification QR')}"></div>
       </div>
     </div>
 

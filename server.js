@@ -124,7 +124,7 @@ app.use((req, res, next) => {
     'X-Frame-Options': 'SAMEORIGIN',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-    'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https://api.qrserver.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; connect-src 'self' data:; frame-ancestors 'self'",
+    'Content-Security-Policy': "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; connect-src 'self' data:; frame-ancestors 'self'",
   });
   if (isProduction && req.secure) res.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
   next();
@@ -175,6 +175,11 @@ app.get('/vendor/zxing/zxing-reader.js', (req, res) => { res.set('Cache-Control'
   res.sendFile(path.join(NM, 'zxing-wasm', 'dist', 'iife', 'reader', 'index.js')); });
 app.get('/vendor/zxing/zxing_reader.wasm', (req, res) => { res.set('Cache-Control', 'public, max-age=2592000, immutable');
   res.type('application/wasm').sendFile(path.join(NM, 'zxing-wasm', 'dist', 'reader', 'zxing_reader.wasm')); });
+/* مولّد QR محلي لملصقات الأصول (بدل خدمة QR خارجية: لا يخرج رابط البوابة لطرف ثالث، ويعمل دون إنترنت) */
+app.get('/vendor/zxing/zxing-writer.js', (req, res) => { res.set('Cache-Control', 'public, max-age=2592000, immutable');
+  res.sendFile(path.join(NM, 'zxing-wasm', 'dist', 'iife', 'writer', 'index.js')); });
+app.get('/vendor/zxing/zxing_writer.wasm', (req, res) => { res.set('Cache-Control', 'public, max-age=2592000, immutable');
+  res.type('application/wasm').sendFile(path.join(NM, 'zxing-wasm', 'dist', 'writer', 'zxing_writer.wasm')); });
 app.get('/vendor/tessdata/:lang.traineddata.gz', (req, res) => {
   const lang = String(req.params.lang);
   if (!['ara', 'eng'].includes(lang)) return res.status(404).end();
@@ -378,7 +383,8 @@ function seedState(){
     compounds:[{id:C,name:'مجمع الخير السكني - حي الروضة',loc:'',notes:'',createdAt:Date.now()}],
     buildings:[],units:[],tenants:[],contracts:[],assets:[],wos:[],inv:[],moves:[],
     pms:[],suppliers:[],prs:[],pos:[],projects:[],employees:[],shifts:[],notifs:[],
-    providers:[],rfqs:[],pmTemplates:[],audit:[],orgs:[],woPhotoReq:false,receipts:[]
+    providers:[],rfqs:[],pmTemplates:[],audit:[],orgs:[],woPhotoReq:false,receipts:[],
+    readings:[],downtime:[]
   };
   initDefaultTeams(d);
   const addB=(name,type,floors)=>d.buildings.push({id:rid('B'),name,type,floors:floors.slice(),compoundId:C});
@@ -418,6 +424,8 @@ function normalizeState(d){
   if(!Array.isArray(d.orgs))d.orgs=[];
   if(!Array.isArray(d.receipts))d.receipts=[];
   if(!Array.isArray(d.teams))d.teams=[];
+  if(!Array.isArray(d.readings))d.readings=[];    /* سجل قراءات العدادات */
+  if(!Array.isArray(d.downtime))d.downtime=[];    /* فترات توقف الأصول */
   if(d.rfqSeq==null) d.rfqSeq=0;
   ['seq','prSeq','poSeq','rnSeq','prjSeq','ctSeq'].forEach(k=>{ if(d[k]==null) d[k]=0; });
   if(!Array.isArray(d.users)) d.users=[];
@@ -987,6 +995,49 @@ app.get('/api/state', async (req,res)=>{
   res.json(cur);
 });
 
+/* ---- حارس صلاحيات الكتابة لكل مجموعة بيانات (Server-side RBAC) ----
+   الحفظ يرسل الحالة كاملة، لذا نقارن كل مجموعة بنسختها المخزّنة: أي تغيير في مجموعة
+   لا يملكها الدور يُستبعد (تُعاد النسخة المخزّنة) ويُحفظ الباقي، ثم يُبلَّغ العميل بالمستبعد.
+   الاستبعاد بدل الرفض الكامل حتى لا يضيع عمل مشروع بسبب أثر جانبي غير متوقع.
+   RBAC_GUARD = enforce (افتراضي) | log (تسجيل فقط) | off */
+const RBAC_GUARD = String(process.env.RBAC_GUARD || 'enforce').toLowerCase();
+/* مسموح لكل دور يكتب: إشعاراته، سجل التدقيق، العدّادات التسلسلية، اللغة */
+const RBAC_COMMON = ['lang','ver','notifs','notifKeys','audit','splitReport',
+  'seq','woSeq','assetSeq','prSeq','poSeq','rnSeq','prjSeq','ctSeq','rfqSeq'];
+/* كل ما يعدّله الدور فعلياً من الواجهة، بما فيه الآثار الجانبية
+   (مثلاً: إغلاق الفني لأمر صيانة دورية يحدّث الخطة ويصرف القطع من المخزون) */
+const RBAC_WRITE = {
+  sitemgr:    ['wos','pms','pmTemplates','projects','assets','buildings','categories','units','tenants','contracts',
+               'inv','moves','prs','pos','suppliers','receipts','rfqs','teams','fuelLogs','utilityLogs','certs',
+               'vehicles','readings','downtime'],
+  planner:    ['wos','pms','pmTemplates','projects','assets','categories','inv','moves','prs','readings','downtime'],
+  supervisor: ['wos','pms','projects','assets','categories','teams','certs','inv','moves','readings','downtime'],
+  tech:       ['wos','pms','assets','inv','moves','readings','downtime'],
+  store:      ['inv','moves','prs','receipts','suppliers'],
+  proc:       ['prs','pos','suppliers','receipts','rfqs','inv','moves']
+};
+const RBAC_FULL = ['admin','engineer'];          /* المستخدمون محميّون بفحص مستقل أدناه */
+/* المجموعات المعروفة فقط تخضع للحارس؛ مفتاح جديد غير معروف يمر (ويُسجَّل) حتى لا تنكسر ميزة جديدة */
+const RBAC_KNOWN = new Set([].concat(RBAC_COMMON, ...Object.values(RBAC_WRITE),
+  ['compounds','orgs','employees','shifts','providers','pmApproval','woPhotoReq','seeded']));
+function rbacGuard(role, cur, next){
+  if (RBAC_GUARD === 'off' || RBAC_FULL.includes(role) || !cur) return [];
+  const allowed = new Set(RBAC_COMMON.concat(RBAC_WRITE[role] || []));
+  const dropped = [];
+  const keys = new Set(Object.keys(cur).concat(Object.keys(next)));
+  keys.delete('users');
+  for (const k of keys) {
+    if (allowed.has(k)) continue;
+    if (JSON.stringify(cur[k]) === JSON.stringify(next[k])) continue;
+    if (!RBAC_KNOWN.has(k)) { console.warn('[rbac] unknown key changed by', role + ':', k); continue; }
+    dropped.push(k);
+    if (RBAC_GUARD === 'enforce') {
+      if (k in cur) next[k] = JSON.parse(JSON.stringify(cur[k])); else delete next[k];
+    }
+  }
+  return dropped;
+}
+
 /* ---- حفظ الحالة (مع كشف تعارض التعديل المتزامن + RBAC على المستخدمين) ---- */
 app.post('/api/state', async (req,res)=>{
   let cur;
@@ -1010,6 +1061,19 @@ app.post('/api/state', async (req,res)=>{
     const curU = canonUsers(normalizeUserList(JSON.parse(JSON.stringify(cur.data.users || [])), cur.data.compounds || []));
     if (nextU !== curU) return res.status(403).json({ error: 'USERS_FORBIDDEN' });
   }
+  /* صلاحيات الكتابة لكل مجموعة بيانات */
+  const dropped = cur.data ? rbacGuard(actor.session.role, cur.data, data) : [];
+  if (dropped.length) {
+    console.warn('[rbac] ' + (RBAC_GUARD === 'enforce' ? 'dropped' : 'would drop') + ' changes by role ' +
+      actor.session.role + ' (user ' + actor.session.userId + '): ' + dropped.join(','));
+    if (RBAC_GUARD === 'enforce') {
+      if (!Array.isArray(data.audit)) data.audit = [];
+      data.audit.unshift({ id: 'L' + crypto.randomBytes(4).toString('hex'), at: Date.now(), by: '', byId: actor.session.userId,
+        role: actor.session.role, action: 'rbac_drop', entity: 'state', ref: dropped.join(','),
+        details: 'changes outside role permissions were not saved', compoundId: '' });
+      if (data.audit.length > 2000) data.audit.length = 2000;
+    }
+  }
   /* الحفاظ على كلمات المرور المشفّرة السابقة وتشفير الجديدة */
   if (cur.data && Array.isArray(cur.data.users) && Array.isArray(data.users)) {
     const existingMap = new Map(cur.data.users.map(u => [u.id, u]));
@@ -1030,7 +1094,7 @@ app.post('/api/state', async (req,res)=>{
        read→write race that two simultaneous editors could otherwise slip through */
     const ver = await setState(data, cur.data ? cur.ver : null);
     if (ver == null) return res.status(409).json({error:'CONFLICT', ver:cur.ver});
-    res.json({ok:true, ver});
+    res.json(RBAC_GUARD === 'enforce' && dropped.length ? {ok:true, ver, dropped} : {ok:true, ver});
   } catch (e) { console.error('DB error on save:', e.message); return res.status(500).json({error:'DB'}); }
 });
 
@@ -1930,6 +1994,14 @@ function pmAddIntervalISO(iso,p){
   return addMonthsISO(iso,n);
 }
 function pmIntervalDays(p){const n=Math.max(1,Number(p.freqVal)||1);return p.freqUnit==='days'?n:p.freqUnit==='weeks'?n*7:n*30;}
+/* المتبقي من العدّاد حتى الاستحقاق — null إذا لا توجد خطة عدّاد أو لا قراءة للأصل */
+function pmMeterLeft(p,ast){
+  const every=Number(p.mEvery);
+  if(!(every>0)||!ast||ast.meter==null||ast.meter==='')return null;
+  const cur=Number(ast.meter);
+  if(!Number.isFinite(cur))return null;
+  return ((Number(p.lastMeter)||0)+every)-cur;
+}
 function pmNextDue(p,today){if(p.nextDue)return p.nextDue;if(p.lastDone)return pmAddIntervalISO(p.lastDone,p);return today;}
 function pmReqPartsMissing(d,p){
   const out=[];
@@ -1969,14 +2041,19 @@ async function runPmScheduler(reason){
       if(p.active===false)return;
       if(p.startDate&&today<p.startDate)return;
       if(p.endDate&&today>p.endDate)return;
-      const due=pmNextDue(p,today);
+      const timeDue=pmNextDue(p,today);
       /* مهلة الإنشاء لكل خطة (Maximo lead time) — والاحتياطي هو الأفق العام */
       const lead=(p.leadDays==null||p.leadDays==='')?horizon:Math.max(0,Math.min(365,Number(p.leadDays)||0));
-      if(daysBetweenISO(today,due)>lead)return;
+      const ast=(d.assets||[]).find(a=>a.id===p.assetId)||{};
+      /* استحقاق بالعدّاد: الخطة «كل N وحدة» تستحق عند بلوغ آخر قراءة عند الإنجاز + N */
+      const meterLeft=pmMeterLeft(p,ast);
+      const meterDue=meterLeft!=null&&meterLeft<=0;
+      const byTime=daysBetweenISO(today,timeDue)<=lead;
+      if(!byTime&&!meterDue)return;
+      const due=byTime?timeDue:today;
       const active=(d.wos||[]).some(w=>w.pmId===p.id&&w.status!=='closed');
       const dismissed=(d.wos||[]).some(w=>w.pmId===p.id&&w.dueDate===due&&w.approval==='rejected');
       if(active||dismissed)return;
-      const ast=(d.assets||[]).find(a=>a.id===p.assetId)||{};
       const bld=(d.buildings||[]).find(b=>b.id===(ast.building||p.buildingId));
       const missing=pmReqPartsMissing(d,p);
       const tasksStr=String(p.tasks||'');
@@ -1985,7 +2062,8 @@ async function runPmScheduler(reason){
       d.wos.unshift({
         no:'WO-'+y+'-'+String(d.seq).padStart(4,'0'),
         type:'pm',pmId:p.id,compoundId:p.compoundId||ast.compoundId||'',
-        title:(d.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name,
+        title:(d.lang==='ar'?'[صيانة دورية] ':'[PM] ')+p.name+(!byTime?(d.lang==='ar'?' (بالعدّاد)':' (meter)'):''),
+        meterTrigger:!byTime,meterAt:!byTime?Number(ast.meter):null,
         desc:tasksStr,assetId:p.assetId||'',assetName:ast.name||'',bname:bld?bld.name:'',
         assetLabel:(ast&&ast.name)?(ast.name+(bld&&bld.name?(' — '+bld.name+(ast.floor?' · '+ast.floor:'')):(ast.floor?(' — '+ast.floor):''))):'',
         priority:p.priority||'normal',status:approval?'planned':'open',
