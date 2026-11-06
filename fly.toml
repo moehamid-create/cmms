@@ -21,3 +21,5 @@ destination = "/data"
 [env]
 DATA_DIR = "/data"
 NODE_ENV = "production"
+# Trial period for the server-side write guard: log only. Remove once logs show no [rbac] lines.
+RBAC_GUARD = "log"

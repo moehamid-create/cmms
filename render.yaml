@@ -13,3 +13,7 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         sync: false
+      # Trial period for the server-side write guard: log only, block nothing.
+      # Remove (or set to enforce) once the logs show no [rbac] lines for real workflows.
+      - key: RBAC_GUARD
+        value: log
