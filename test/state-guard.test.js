@@ -109,6 +109,28 @@ async function runPm(s) {
     const w1 = st.data.wos.find(w => w.pmId === 'PM1');
     ok('meter-due plan generated a WO flagged meterTrigger', w1 && w1.meterTrigger === true && w1.meterAt === 1000, w1);
     ok('not-yet-due meter plan did not generate', !st.data.wos.some(w => w.pmId === 'PM2'));
+
+    /* 5. مؤشرات الحالة: أمر واحد للقراءة خارج الحد، ولا تكرار مع أمر مفتوح، ولا أمر لقراءة سبقت إصلاحاً مغلقاً */
+    const d5 = st.data, now = Date.now();
+    d5.assets.push({ id: 'AG1', name: 'Fire pump', compoundId: C, status: 'ok', gauges: [
+      { id: 'G-LOW', name: 'Pressure', unit: 'بار', min: 6, max: 10, priority: 'urgent', value: 4.5, at: now },
+      { id: 'G-OK', name: 'Temp', unit: '°م', max: 60, value: 40, at: now },
+      { id: 'G-OPEN', name: 'Vibration', unit: 'مم/ث', max: 7, value: 9, at: now },
+      { id: 'G-FIXED', name: 'Voltage', unit: 'فولت', min: 210, value: 190, at: now - 3600e3 }
+    ] });
+    d5.wos.unshift({ no: 'WO-G-OPEN', gaugeId: 'G-OPEN', status: 'open', compoundId: C, title: 'vib' });
+    d5.wos.unshift({ no: 'WO-G-FIXED', gaugeId: 'G-FIXED', status: 'closed', closedAt: now - 60e3, compoundId: C, title: 'volt' });
+    r = await save(admin, st.ver, d5);
+    ok('admin seeded gauges', r.status === 200, r);
+    const g = await runPm(admin);
+    ok('gauge check created exactly one WO', g.created === 1, g);
+    st = await getState(admin);
+    const gw = st.data.wos.filter(w => w.source === 'gauge');
+    ok('low reading opened an urgent WO with value and limit', gw.length === 1 && gw[0].gaugeId === 'G-LOW' && gw[0].priority === 'urgent'
+      && gw[0].gaugeValue === 4.5 && gw[0].gaugeLimit === 6 && gw[0].gaugeSide === 'low', gw);
+    ok('gauge WO raised a notification', st.data.notifs.some(n => String(n.key).startsWith('gauge:G-LOW:')));
+    const again = await runPm(admin);
+    ok('second run does not duplicate the gauge WO', again.created === 0, again);
   } catch (e) {
     fail++; console.log('FAIL exception', e.message);
   } finally {
