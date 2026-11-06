@@ -166,7 +166,7 @@ const NM = path.join(__dirname, 'node_modules');
 const vendorOpts = { maxAge: '30d', immutable: true, index: false };
 app.use('/vendor/tesseract', express.static(path.join(NM, 'tesseract.js', 'dist'), vendorOpts));
 app.use('/vendor/tesseract-core', express.static(path.join(NM, 'tesseract.js-core'), vendorOpts));
-app.use('/vendor/pdfjs', express.static(path.join(NM, 'pdfjs-dist', 'build'), vendorOpts));
+app.use('/vendor/pdfjs', express.static(path.join(NM, 'pdfjs-dist', 'legacy', 'build'), vendorOpts));   /* 4.x: نسخة legacy (.mjs) لدعم المتصفحات الأقدم */
 /* خطوط PDF القياسية (Helvetica/Times… غير المضمّنة) وخرائط CMap للخطوط CID — بدونها تُرسم الصفحة بلا نص */
 app.use('/vendor/pdfjs-fonts', express.static(path.join(NM, 'pdfjs-dist', 'standard_fonts'), vendorOpts));
 app.use('/vendor/pdfjs-cmaps', express.static(path.join(NM, 'pdfjs-dist', 'cmaps'), vendorOpts));
@@ -810,8 +810,14 @@ app.get('/api/files/:id', async (req,res)=>{
 const RCPT_MAX_PAGES = Number(process.env.RECEIPT_MAX_PAGES || 60);
 const { splitReceiptText, extractReceiptFields, normDateStr, pageTextQuality, sniffMime } = require('./receipts');
 /* نص كل صفحة على حدة، مع إعادة بناء الأسطر من إحداثيات العناصر (العربية من اليمين لليسار) */
+/* pdfjs-dist 4.x حزمة ES فقط (.mjs) — تُحمَّل مرة واحدة بـ import() الديناميكي */
+let _pdfjsP = null;
+function loadPdfjs(){
+  if (!_pdfjsP) _pdfjsP = import('pdfjs-dist/legacy/build/pdf.mjs').catch(e => { _pdfjsP = null; throw e; });
+  return _pdfjsP;
+}
 async function pdfPages(buf, maxPages){
-  const pdfjs = require('pdfjs-dist/legacy/build/pdf.js');
+  const pdfjs = await loadPdfjs();
   const data = new Uint8Array(buf.length); data.set(buf);   /* نسخة دقيقة الحجم */
   const doc = await pdfjs.getDocument({ data, useWorkerFetch:false, isEvalSupported:false, useSystemFonts:true, disableFontFace:true, verbosity:0 }).promise;
   const n = Math.min(doc.numPages || 1, maxPages || RCPT_MAX_PAGES);

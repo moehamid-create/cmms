@@ -8292,9 +8292,13 @@ async function rcptReadFile(it,upP,job){
 const _scriptP={};
 function loadScript(src){return _scriptP[src]||(_scriptP[src]=new Promise((res,rej)=>{
   const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>{delete _scriptP[src];rej(new Error('load '+src));};document.head.appendChild(s);}));}
-async function pdfLib(){
-  await loadScript('/vendor/pdfjs/pdf.min.js');
-  const pdfjs=window.pdfjsLib;pdfjs.GlobalWorkerOptions.workerSrc='/vendor/pdfjs/pdf.worker.min.js';return pdfjs;
+/* pdf.js 4.x وحدة ES (نسخة legacy لدعم المتصفحات الأقدم) — تُحمَّل مرة واحدة بـ import() */
+let _pdfLibP=null;
+function pdfLib(){
+  if(!_pdfLibP)_pdfLibP=import('/vendor/pdfjs/pdf.min.mjs').then(pdfjs=>{
+    pdfjs.GlobalWorkerOptions.workerSrc='/vendor/pdfjs/pdf.worker.min.mjs';return pdfjs;})
+    .catch(e=>{_pdfLibP=null;throw e;});
+  return _pdfLibP;
 }
 async function rcptEachPage(file,mime,onPage,job){
   const isPdf=mime==='application/pdf'||file.type==='application/pdf'||/\.pdf$/i.test(file.name||'');
