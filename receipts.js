@@ -11,9 +11,16 @@ const BIDI = /[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF\u061C]/g;
 const TASHKEEL = /[\u064B-\u065F\u0670\u0640]/g;
 const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩', FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 
+/* حروف فارسية/أردية تُخرجها بعض خطوط PDF والمتصفحات بدل العربية (ھ ہ ی ک) — فواتيرنا عربية، فنوحّدها */
+const FA_LETTERS = /[ھہیک]/g, FA_TO_AR = { 'ھ': 'ه', 'ہ': 'ه', 'ی': 'ي', 'ک': 'ك' };
+function arabicFold(s) {
+  return String(s || '').replace(/[ﭐ-﷿ﹰ-ﻼ]+/g, m => m.normalize('NFKC'))   /* أشكال العرض → حروف أساسية */
+    .replace(FA_LETTERS, c => FA_TO_AR[c]);
+}
+
 /* تطبيع عام للنص قبل أي تحليل — طول السطر قد يتغير هنا (NFKC يفك الحروف المركّبة) */
 function prepText(text) {
-  return String(text || '').normalize('NFKC')
+  return arabicFold(String(text || '').normalize('NFKC'))
     .replace(BIDI, '')
     .replace(/\r\n?/g, '\n')
     .replace(/[٠-٩]/g, c => String(AR_DIGITS.indexOf(c)))
@@ -424,6 +431,48 @@ function pageTextQuality(txt) {
   return { chars: nonSpace.length, hits, needOcr, reason };
 }
 
+/* ---- نص صفحة PDF من عناصر pdf.js (getTextContent().items) ----
+   ملفات PDF المطبوعة من المتصفح (Edge/Chrome) ترسم كل حرف عربي مُشكَّل عنصراً مستقلاً، والمسافة عنصراً مستقلاً " ".
+   لذلك لا نضع مسافة بين كل عنصرين، بل نقرّرها من الفجوة الأفقية الفعلية: حروف متلاصقة = كلمة واحدة،
+   وعنصر مسافة أو فجوة أعرض من ~12% من حجم الخط = كلمة جديدة. العربية (ومنها أشكال العرض U+FB50–FEFF) تُرتَّب من اليمين. */
+const RTL_CHARS = /[֐-ࣿיִ-﷿ﹰ-ﻼ]/;
+function joinTextRow(items, rtl) {
+  const list = items.slice().sort((a, b) => rtl ? b.x - a.x : a.x - b.x);
+  let out = '', prev = null, pendingSpace = false;
+  for (const it of list) {
+    if (!String(it.s).trim()) { if (prev) pendingSpace = true; continue; }   /* عنصر مسافة: علامة فصل فقط */
+    if (prev) {
+      const w = prev.w, cw = it.w;
+      let gap = Infinity;
+      if (w > 0 && cw > 0) gap = rtl ? prev.x - (it.x + cw) : it.x - (prev.x + w);
+      const size = Math.max(prev.h || 0, it.h || 0, 4);
+      if (pendingSpace || !(gap < size * 0.12)) out += ' ';   /* عرض مجهول (0) = نفصل كالسابق */
+    }
+    out += it.s;
+    prev = it; pendingSpace = false;
+  }
+  return arabicFold(out).replace(/[ \t]{2,}/g, ' ').trim();
+}
+function pageTextFromItems(items) {
+  const rows = [];
+  (items || []).forEach(it => {
+    const s = it && typeof it.str === 'string' ? it.str : '';
+    if (!s) return;
+    const tr = it.transform || [];
+    const x = tr[4] || 0, y = tr[5] || 0;
+    const h = Math.abs(it.height || tr[3] || 0);
+    const tol = Math.max(2, h || 8) * 0.5;
+    let row = rows.find(r => Math.abs(r.y - y) <= Math.max(tol, r.tol));
+    if (!row) { row = { y, tol, items: [] }; rows.push(row); }
+    row.items.push({ x, w: Math.abs(it.width || 0), h, s, dir: it.dir });
+  });
+  rows.sort((a, b) => b.y - a.y);
+  return rows.map(r => {
+    const rtl = r.items.some(t => RTL_CHARS.test(t.s));
+    return joinTextRow(r.items, rtl);
+  }).filter(Boolean).join('\n');
+}
+
 /* ---- نوع الملف من بايتاته الأولى (لا نثق برأس Content-Type وحده) ---- */
 function sniffMime(buf) {
   if (!buf || buf.length < 12) return '';
@@ -443,4 +492,4 @@ function sniffMime(buf) {
   return '';
 }
 
-module.exports = { prepText, skel, normDateStr, num, moneyTokens, extractReceiptFields, splitReceiptText, pageTextQuality, sniffMime };
+module.exports = { prepText, skel, normDateStr, num, moneyTokens, extractReceiptFields, splitReceiptText, pageTextQuality, sniffMime, joinTextRow, pageTextFromItems, arabicFold };

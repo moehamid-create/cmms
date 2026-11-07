@@ -808,7 +808,7 @@ app.get('/api/files/:id', async (req,res)=>{
    الصفحات النصية تُحلَّل هنا؛ الصفحات الممسوحة (أو ذات طبقة نص رديئة) تُعلَّم needOcr
    فيقرؤها المتصفح بـ OCR ثم يرسل نصها إلى /api/receipts/parse. منطق الاستخراج في receipts.js */
 const RCPT_MAX_PAGES = Number(process.env.RECEIPT_MAX_PAGES || 60);
-const { splitReceiptText, extractReceiptFields, normDateStr, pageTextQuality, sniffMime } = require('./receipts');
+const { splitReceiptText, extractReceiptFields, normDateStr, pageTextQuality, sniffMime, pageTextFromItems } = require('./receipts');
 /* نص كل صفحة على حدة، مع إعادة بناء الأسطر من إحداثيات العناصر (العربية من اليمين لليسار) */
 /* pdfjs-dist 4.x حزمة ES فقط (.mjs) — تُحمَّل مرة واحدة بـ import() الديناميكي */
 let _pdfjsP = null;
@@ -825,21 +825,7 @@ async function pdfPages(buf, maxPages){
   for (let i = 1; i <= n; i++) {
     const page = await doc.getPage(i);
     const c = await page.getTextContent();
-    const rows = [];
-    (c.items || []).forEach(it => {
-      const s = it.str || ''; if (!s.trim()) return;
-      const x = it.transform ? it.transform[4] : 0, y = it.transform ? it.transform[5] : 0;
-      const h = Math.max(2, Math.abs(it.height || (it.transform ? it.transform[3] : 0) || 8));
-      let row = rows.find(r => Math.abs(r.y - y) <= h * 0.5);
-      if (!row) { row = { y, items: [] }; rows.push(row); }
-      row.items.push({ x, s });
-    });
-    rows.sort((a, b) => b.y - a.y);
-    pages.push(rows.map(r => {
-      const rtl = r.items.some(t => /[؀-ۿ]/.test(t.s));
-      r.items.sort((a, b) => rtl ? b.x - a.x : a.x - b.x);
-      return r.items.map(t => t.s.trim()).join(' ');
-    }).join('\n'));
+    pages.push(pageTextFromItems(c.items));   /* إعادة بناء الأسطر والكلمات من الإحداثيات — receipts.js */
   }
   return { pages, total: doc.numPages || n };
 }
