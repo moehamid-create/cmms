@@ -5463,7 +5463,7 @@ function vDash(){
 
   if(isTech()){
     return `<div class="stats">${stats}</div>
-    ${pwBanner}${splitReportCard()}<div class="qa">${qa.join('')}</div>
+    ${pwBanner}${timerBanner()}${splitReportCard()}<div class="qa">${qa.join('')}</div>
     ${vHub()}
     <div class="dash-grid">
       <div class="card dg-6"><h2> ${lb('مهامي المفتوحة||My Open Tasks')}</h2>
@@ -5472,7 +5472,7 @@ function vDash(){
     </div>`;
   }
   return `<div class="stats">${stats}</div>
-  ${pwBanner}${splitReportCard()}<div class="qa">${qa.join('')}</div>
+  ${pwBanner}${timerBanner()}${splitReportCard()}<div class="qa">${qa.join('')}</div>
   ${vHub()}
   <div class="dash-grid">
     ${alertsCard}
@@ -7469,6 +7469,9 @@ function saveWO(idxStr){
 }
 function woSet(i,st){const w=db.wos[i];w.status=st;
   if(st==='inprog'&&!w.startedAt)w.startedAt=Date.now();
+  /* «بدء التنفيذ» يبدأ مؤقت المستخدم على هذا الأمر، و«بانتظار قطعة» يوقفه */
+  if(st==='inprog'&&canWoLabor(w))woTimerStart(w.no,true);
+  if(st==='wait')woTimerStop(w.no,true);
   auditLog('status','wo',w.no,st);persist();paintTab();toast(st==='wait'?lb(' بانتظار قطعة||Waiting parts'):lb(' بدأ التنفيذ||Started'));}
 function woApprove(i){
   const w=db.wos[i];if(!w)return;
@@ -7517,6 +7520,139 @@ function skipPlanCycleFor(w,why){
   return next;
 }
 function woDel(i){if(!confirm(lb('حذف البلاغ؟||Delete report?')))return;const w=db.wos[i];skipPlanCycleFor(w,lb('حذف أمر||deleted WO'));notifResolveWo(w);db.wos.splice(i,1);if(w)auditLog('delete','wo',w.no,'');persist();paintTab();}
+/* ===== سجلات وقت العمالة والتكاليف الإضافية لأمر العمل =====
+   w.labor = [{id,userId,name,start,end,mins,rate,note,src:'timer'|'manual'}] — end=null يعني مؤقتاً يعمل الآن.
+   w.extraCosts = [{id,desc,amount,cat,at,by}]. التكلفة الكلية = العمالة + القطع (unitCost وقت الصرف) + الإضافي. */
+const XCOST_CATS={mat:lb('مواد||Materials'),sub:lb('مقاول باطن||Subcontractor'),trn:lb('نقل||Transport'),eqp:lb('معدات/إيجار||Equipment/rental'),oth:lb('أخرى||Other')};
+function woByNo(no){return (db.wos||[]).find(w=>w.no===no);}
+function woReopen(no){const k=(db.wos||[]).findIndex(w=>w.no===no);if(k>=0)woView(k);}
+function userRate(uid){const u=(db.users||[]).find(x=>x.id===uid);return Math.max(0,+((u&&u.rate)||0));}
+function woLabor(w){return Array.isArray(w.labor)?w.labor:[];}
+function laborMins(e){return e.end?Math.max(0,+e.mins||Math.round((e.end-e.start)/6e4)):Math.max(0,Math.round((Date.now()-e.start)/6e4));}
+function woLaborTotals(w){let mins=0,cost=0;woLabor(w).forEach(e=>{const m=laborMins(e);mins+=m;cost+=m/60*(+e.rate||0);});return {mins,cost:Math.round(cost*100)/100};}
+function woExtraTotal(w){return (w.extraCosts||[]).reduce((s,x)=>s+(+x.amount||0),0);}
+function woPartsCost(w){return (w.parts||[]).reduce((s,p)=>s+(+p.qty||0)*(+p.unitCost||0),0);}
+/* قبل الإغلاق: العمالة المسجّلة حتى الآن؛ بعده: المبلغ المعتمد في نموذج الإغلاق (w.cost) */
+function woTotalCost(w){const lab=w.status==='closed'?(+w.cost||0):woLaborTotals(w).cost;return Math.round((lab+woPartsCost(w)+woExtraTotal(w))*100)/100;}
+function minsTxt(m){m=Math.round(m||0);const h=Math.floor(m/60),r=m%60;return h?(h+lb(' س||h')+(r?' '+r+lb(' د||m'):'')):(r+lb(' د||m'));}
+function canWoLabor(w){return !!me&&w&&w.status!=='closed'&&(isEng()||canAppr()||isTech()||w.assigneeId===me.id);}
+function canEditLabor(w,e){return !!me&&(isEng()||canAppr()||(w.status!=='closed'&&e&&e.userId===me.id));}
+function myRunningTimer(){
+  if(!me)return null;
+  for(const w of db.wos||[]){const e=woLabor(w).find(x=>x.userId===me.id&&!x.end);if(e)return {w,e};}
+  return null;
+}
+function laborStop(e){if(e&&!e.end){e.end=Date.now();e.mins=Math.max(0,Math.round((e.end-e.start)/6e4));}}
+/* مؤقت واحد لكل مستخدم: بدء العمل على أمر يوقف مؤقته على أي أمر آخر */
+function woTimerStart(no,silent){
+  const w=woByNo(no);if(!w||!canWoLabor(w))return;
+  const run=myRunningTimer();
+  if(run&&run.w.no===no)return;
+  if(run){laborStop(run.e);auditLog('labor','wo',run.w.no,lb('إيقاف تلقائي||auto-stop'));}
+  if(!Array.isArray(w.labor))w.labor=[];
+  w.labor.push({id:uid('LB'),userId:me.id,name:me.name,start:Date.now(),end:null,mins:null,rate:userRate(me.id),note:'',src:'timer'});
+  if(w.status==='open'||w.status==='wait'){w.status='inprog';if(!w.startedAt)w.startedAt=Date.now();}
+  auditLog('labor','wo',no,lb('بدء المؤقت||timer start'));
+  if(!silent){persist();woReopen(no);toast(lb(' بدأ احتساب وقتك على || Timer started on ')+no+(run?lb(' (أُوقف مؤقتك على || (stopped your timer on ')+run.w.no+')':''),'ok');}
+}
+function woTimerStop(no,silent){
+  const w=woByNo(no);if(!w||!me)return;
+  const e=woLabor(w).find(x=>x.userId===me.id&&!x.end);if(!e)return;
+  laborStop(e);auditLog('labor','wo',no,lb('إيقاف المؤقت: ||timer stop: ')+minsTxt(e.mins));
+  if(!silent){persist();woReopen(no);toast(lb(' سُجّل ||Logged ')+minsTxt(e.mins),'ok');}
+}
+function laborForm(no,eid){
+  const w=woByNo(no);if(!w)return;
+  const e=eid?woLabor(w).find(x=>x.id===eid):null;
+  if(e?!canEditLabor(w,e):!canWoLabor(w)&&!isEng())return;
+  const people=(db.users||[]).filter(u=>['tech','engineer','sitemgr','supervisor','planner','admin'].includes(u.role)&&(u.role==='admin'||!u.cmpIds||!u.cmpIds.length||u.cmpIds.includes(w.compoundId)));
+  const canPick=isEng()||canAppr();
+  const sel=e?e.userId:(me?me.id:'');
+  const d0=e?new Date(e.start):new Date();
+  modal(`<h3>${e?lb('تعديل وقت||Edit time'):lb('إضافة وقت يدوياً||Add time manually')} — ${esc(no)}</h3>
+  <label>${lb('الفني||Technician')}</label><select id="lb_u" ${canPick?'':'disabled'}>${people.map(u=>`<option value="${u.id}" ${sel===u.id?'selected':''}>${esc(u.name)}</option>`).join('')}</select>
+  <div class="fg"><div><label>${lb('التاريخ||Date')}</label><input type="date" id="lb_d" value="${d0.toISOString().slice(0,10)}"></div>
+  <div><label>${lb('ساعات||Hours')}</label><input type="number" min="0" step="1" id="lb_h" value="${e?Math.floor(laborMins(e)/60):''}"></div>
+  <div><label>${lb('دقائق||Minutes')}</label><input type="number" min="0" max="59" step="1" id="lb_m" value="${e?laborMins(e)%60:''}"></div></div>
+  <label>${lb('ملاحظة||Note')}</label><input id="lb_n" value="${esc(e?e.note||'':'')}">
+  <div class="ma"><button class="btn ghost" onclick="woReopen('${no}')">${lb('رجوع||Back')}</button>
+  <button class="btn" onclick="laborFormSave('${no}','${eid||''}')">${lb('حفظ||Save')}</button></div>`);
+}
+/* تذكير في الرئيسية: مؤقت المستخدم ما زال يعمل */
+function timerBanner(){
+  const r=myRunningTimer();if(!r)return '';
+  return `<div class="card" style="border:1.5px solid var(--brand,#0e7490);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    <span>⏱ ${lb('مؤقتك يعمل على||Your timer is running on')} <b>${esc(r.w.no)}</b> — ${esc(r.w.title||'')} (${minsTxt(laborMins(r.e))})</span>
+    <span style="display:flex;gap:6px"><button class="btn sm ghost" onclick="woReopen('${r.w.no}')">${lb('فتح الأمر||Open')}</button>
+    <button class="btn sm danger" onclick="woTimerStop('${r.w.no}',true);persist();paintTab();toast(lb(' أُوقف المؤقت|| Timer stopped'),'ok')">⏹ ${lb('إيقاف||Stop')}</button></span></div>`;
+}
+function laborFormSave(no,eid){
+  const w=woByNo(no);if(!w)return;
+  const mins=Math.round((+$('lb_h').value||0)*60+(+$('lb_m').value||0));
+  if(!(mins>0))return toast(lb(' أدخل مدة صحيحة|| Enter a valid duration'),'err');
+  if(mins>24*60)return toast(lb(' المدة أكبر من 24 ساعة — قسّمها على أكثر من قيد|| Over 24 hours — split it into several entries'),'err');
+  const userId=$('lb_u').value||(me?me.id:''),u=(db.users||[]).find(x=>x.id===userId)||{};
+  const start=new Date($('lb_d').value+'T08:00:00').getTime()||Date.now();
+  const o={userId,name:u.name||'',start,end:start+mins*6e4,mins,note:$('lb_n').value.trim()};
+  if(!Array.isArray(w.labor))w.labor=[];
+  const e=eid?w.labor.find(x=>x.id===eid):null;
+  if(e)Object.assign(e,o,{rate:e.userId===userId?e.rate:userRate(userId)});
+  else w.labor.push(Object.assign({id:uid('LB'),rate:userRate(userId),src:'manual'},o));
+  auditLog('labor','wo',no,(e?lb('تعديل وقت: ||edit time: '):lb('وقت يدوي: ||manual time: '))+(u.name||'')+' '+minsTxt(mins));
+  persist();woReopen(no);
+}
+function laborDel(no,eid){
+  const w=woByNo(no);if(!w)return;const e=woLabor(w).find(x=>x.id===eid);
+  if(!e||!canEditLabor(w,e)||!confirm(lb('حذف قيد الوقت؟||Delete this time entry?')))return;
+  w.labor=w.labor.filter(x=>x.id!==eid);auditLog('labor','wo',no,lb('حذف وقت||delete time'));persist();woReopen(no);
+}
+function xcostForm(no){
+  const w=woByNo(no);if(!w||!(isEng()||canAppr()))return;
+  modal(`<h3>${lb('تكلفة إضافية||Additional cost')} — ${esc(no)}</h3>
+  <label>${lb('الوصف *||Description *')}</label><input id="xc_d" placeholder="${lb('مثال: أجرة رافعة||e.g. Crane hire')}">
+  <div class="fg"><div><label>${lb('المبلغ (ريال) *||Amount (SAR) *')}</label><input type="number" min="0" step="any" id="xc_a"></div>
+  <div><label>${lb('الفئة||Category')}</label><select id="xc_c">${Object.keys(XCOST_CATS).map(k=>`<option value="${k}">${XCOST_CATS[k]}</option>`).join('')}</select></div></div>
+  <div class="ma"><button class="btn ghost" onclick="woReopen('${no}')">${lb('رجوع||Back')}</button>
+  <button class="btn" onclick="xcostSave('${no}')">${lb('حفظ||Save')}</button></div>`);
+}
+function xcostSave(no){
+  const w=woByNo(no);if(!w)return;
+  const desc=$('xc_d').value.trim(),amount=+$('xc_a').value;
+  if(!desc||!(amount>0))return toast(lb(' أدخل الوصف ومبلغاً صحيحاً|| Enter a description and a valid amount'),'err');
+  if(!Array.isArray(w.extraCosts))w.extraCosts=[];
+  w.extraCosts.push({id:uid('XC'),desc,amount,cat:$('xc_c').value,at:Date.now(),by:me?me.name:''});
+  auditLog('cost','wo',no,desc+' '+amount);persist();woReopen(no);
+}
+function xcostDel(no,id){
+  const w=woByNo(no);if(!w||!(isEng()||canAppr())||!confirm(lb('حذف التكلفة؟||Delete this cost?')))return;
+  w.extraCosts=(w.extraCosts||[]).filter(x=>x.id!==id);auditLog('cost','wo',no,lb('حذف تكلفة||delete cost'));persist();woReopen(no);
+}
+/* قسم «الوقت والتكلفة» داخل نافذة أمر العمل */
+function woLaborSection(w){
+  const L=woLabor(w),T=woLaborTotals(w),X=w.extraCosts||[],showCost=!isTech();
+  const mine=me?L.find(e=>e.userId===me.id&&!e.end):null;
+  const timerBtn=canWoLabor(w)?(mine
+    ?`<button class="btn sm danger" onclick="woTimerStop('${w.no}')">⏹ ${lb('إيقاف مؤقتي||Stop my timer')} (${minsTxt(laborMins(mine))})</button>`
+    :`<button class="btn sm" onclick="woTimerStart('${w.no}')">▶ ${lb('بدء احتساب وقتي||Start my timer')}</button>`):'';
+  return `<label>${lb('الوقت والتكلفة||Time & cost')}</label>
+  <div class="card" style="padding:10px;margin:4px 0 10px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+      <span><b>${minsTxt(T.mins)}</b> ${lb('عمل مسجّل||logged')}${showCost?` · ${lb('عمالة||Labor')} <b>${money(w.status==='closed'?(+w.cost||0):T.cost)}</b> · ${lb('قطع||Parts')} <b>${money(woPartsCost(w))}</b> · ${lb('إضافي||Extra')} <b>${money(woExtraTotal(w))}</b> · ${lb('الإجمالي||Total')} <b>${money(woTotalCost(w))}</b>`:''}</span>
+      <span style="display:flex;gap:6px;flex-wrap:wrap">${timerBtn}
+        ${canWoLabor(w)||isEng()?`<button class="btn sm ghost" onclick="laborForm('${w.no}')">＋ ${lb('وقت يدوي||Manual time')}</button>`:''}
+        ${isEng()||canAppr()?`<button class="btn sm ghost" onclick="xcostForm('${w.no}')">＋ ${lb('تكلفة إضافية||Extra cost')}</button>`:''}</span></div>
+    ${L.length?`<div class="tbl-wrap" style="margin-top:8px"><table><tr><th>${lb('الفني||Tech')}</th><th>${lb('البداية||Start')}</th><th>${lb('المدة||Duration')}</th>${showCost?`<th>${lb('سعر الساعة||Rate')}</th><th>${lb('التكلفة||Cost')}</th>`:''}<th></th></tr>
+      ${L.map(e=>{const m=laborMins(e);return `<tr><td>${esc(e.name||'—')}${e.src==='manual'?` <span class="muted">(${lb('يدوي||manual')})</span>`:''}${e.note?`<br><span class="muted">${esc(e.note)}</span>`:''}</td>
+        <td>${fmtDT(e.start)}</td><td>${e.end?minsTxt(m):`<span class="badge b-prog">⏱ ${minsTxt(m)}</span>`}</td>
+        ${showCost?`<td>${e.rate?money(e.rate):'<span class="muted">—</span>'}</td><td>${money(m/60*(+e.rate||0))}</td>`:''}
+        <td nowrap>${canEditLabor(w,e)&&e.end?`<button class="btn sm ghost" onclick="laborForm('${w.no}','${e.id}')">${ic('edit',12)}</button><button class="btn sm danger" onclick="laborDel('${w.no}','${e.id}')">${ic('del',12)}</button>`:''}</td></tr>`;}).join('')}
+    </table></div>`:`<p class="muted" style="margin:6px 0 0">${lb('لا يوجد وقت مسجّل بعد. «بدء التنفيذ» يبدأ مؤقت الفني تلقائياً.||No time logged yet. "Start" starts the technician timer automatically.')}</p>`}
+    ${showCost&&X.length?`<div class="tbl-wrap" style="margin-top:8px"><table><tr><th>${lb('تكلفة إضافية||Extra cost')}</th><th>${lb('الفئة||Category')}</th><th>${lb('المبلغ||Amount')}</th><th></th></tr>
+      ${X.map(x=>`<tr><td>${esc(x.desc)}<br><span class="muted">${esc(x.by||'')} · ${fmtDT(x.at)}</span></td><td>${XCOST_CATS[x.cat]||esc(x.cat||'')}</td><td>${money(x.amount)}</td>
+        <td>${isEng()||canAppr()?`<button class="btn sm danger" onclick="xcostDel('${w.no}','${x.id}')">${ic('del',12)}</button>`:''}</td></tr>`).join('')}</table></div>`:''}
+    ${showCost&&L.some(e=>!e.rate)?`<p class="muted" style="margin:6px 0 0">${lb('بعض القيود بلا سعر ساعة — حدّده لكل مستخدم من شاشة المستخدمين.||Some entries have no hourly rate — set it per user in the Users screen.')}</p>`:''}
+  </div>`;
+}
 function woView(i){
   const w=db.wos[i];if(!w)return;
   const pj=w.projectId?db.projects.find(p=>p.id===w.projectId):null;
@@ -7568,7 +7704,8 @@ function woView(i){
   <td><span class="badge ${WSTAT[w.status][1]}">${WSTAT[w.status][0]}</span></td>
   <td>${w.teamName?`<span class="badge" style="background:#e0e7ff;color:#3730a3;font-weight:700">👥 ${esc(w.teamName)}</span>`:`<span class="muted">—</span>`}</td>
   <td>${w.assigneeName?esc(w.assigneeName):`<span class="badge" style="background:#fef3c7;color:#92400e">${lb('غير مخصص (في قائمة الفريق)||Unassigned (Team Queue)')}</span>`}</td>
-  <td>${money(w.cost)}</td></tr></table>
+  <td>${money(woTotalCost(w))}</td></tr></table>
+  ${woLaborSection(w)}
   ${(w.photos&&w.photos.length)?`<label> ${lb('صور التوثيق||Documentation Photos')}</label><div class="pgrid">${w.photos.map(p=>{
     const url = safeMediaUrl(p && p.d);
     if(!url) return '';
@@ -7619,7 +7756,8 @@ function woCloseForm(i){
   </div>` : ''}
   ${ck}
   <label>${lb('ما الذي تم عمله؟||What was done?')}</label><textarea id="wc_n" rows="2"></textarea>
-  <div class="fg"><div><label>${lb('تكلفة العمالة (ريال)||Labor Cost (SAR)')}</label><input type="number" step="any" id="wc_c" value="0"></div>
+  ${(()=>{const T=woLaborTotals(w);return woLabor(w).length?`<p class="muted" style="margin:6px 0">${lb('الوقت المسجّل||Logged time')}: <b>${minsTxt(T.mins)}</b>${isTech()?'':` · ${lb('تكلفته||cost')} <b>${money(T.cost)}</b>`}${woLabor(w).some(e=>!e.end)?` — ${lb('المؤقتات الجارية ستتوقف عند الإغلاق||running timers stop on close')}`:''}${woExtraTotal(w)&&!isTech()?` · ${lb('تكاليف إضافية||extra costs')} <b>${money(woExtraTotal(w))}</b>`:''}</p>`:'';})()}
+  <div class="fg"><div><label>${lb('تكلفة العمالة (ريال)||Labor Cost (SAR)')}</label><input type="number" step="any" id="wc_c" value="${woLabor(w).length?woLaborTotals(w).cost:0}"></div>
   ${a&&a.meter!=null&&a.meter!==''?`<div><label>${lb('قراءة العداد عند الإغلاق||Meter reading at close')} (${esc(a.meterUnit||'')})</label><input type="number" step="any" min="0" id="wc_mr" placeholder="${esc(String(a.meter))}"></div>`:''}</div>
   ${(()=>{const g=w.gaugeId&&a?(a.gauges||[]).find(x=>x.id===w.gaugeId):null;
     return g?`<label>${lb('قراءة المؤشر بعد الإصلاح||Gauge reading after repair')}: ${esc(g.name)} (${esc(gaugeLimitTxt(g))})</label><input type="number" step="any" id="wc_gv" placeholder="${lb('للتحقق من عودة القراءة للحدود||To confirm it is back within limits')}">`:'';})()}
@@ -7646,7 +7784,8 @@ function woCloseForm(i){
   renderWoPhGrids();initSig();
 }
 function addPartRow(){
-  const opts=invQ().map(it=>`<option value="${it.id}">${esc(it.name)} (${it.qty} ${esc(it.unit)})</option>`).join('');
+  /* الخيار الأول فارغ: الصف الافتراضي في نموذج الإغلاق لا يصرف قطعة ما لم يُخترها الفني */
+  const opts=`<option value="">— ${lb('اختر قطعة||Pick a part')} —</option>`+invQ().map(it=>`<option value="${it.id}">${esc(it.name)} (${it.qty} ${esc(it.unit)})</option>`).join('');
   $('prows').insertAdjacentHTML('beforeend',
    `<div class="partrow"><select class="pr_i">${opts}</select><input type="number" class="pr_q" min="1" value="1"><button class="btn sm danger" onclick="this.parentNode.remove()">${ic('x',12)}</button></div>`);
 }
@@ -7683,13 +7822,17 @@ async function doCloseWO(i){
   });
   used.forEach(u=>{u.it.qty-=u.q;
     db.moves.unshift({date:todayISO(),item:u.it.name,invId:u.it.id,type:'out',qty:u.q,ref:w.no,by:me.name,compoundId:u.it.compoundId||w.compoundId});});
-  w.parts=used.map(u=>({name:u.it.name,qty:u.q}));
+  w.parts=used.map(u=>({name:u.it.name,qty:u.q,unitCost:+u.it.unitCost||0}));   /* سعر الوحدة وقت الصرف — لتكلفة الأمر */
   const phs=[];
   (window._woPhB||[]).forEach(p=>phs.push({id:uid('PH'),tag:'before',d:p.d,n:p.n||'',at:Date.now()}));
   (window._woPhA||[]).forEach(p=>phs.push({id:uid('PH'),tag:'after',d:p.d,n:p.n||'',at:Date.now()}));
   if(phs.length)w.photos=phs;
   if(sigHasInk())w.sig=await uploadMedia($('sigpad').toDataURL('image/png'),'signature.png');
+  woLabor(w).forEach(laborStop);   /* إيقاف أي مؤقت ما زال يعمل على هذا الأمر */
   w.closeNotes=notes;w.cost=+$('wc_c').value||0;
+  {const T=woLaborTotals(w);w.laborMins=T.mins;w.laborCost=T.cost;
+    w.partsCost=Math.round(woPartsCost(w)*100)/100;w.extraCost=woExtraTotal(w);
+    w.totalCost=Math.round((w.cost+w.partsCost+w.extraCost)*100)/100;}
   w.status='closed';w.closedAt=Date.now();if(!w.startedAt)w.startedAt=w.closedAt;
   {const ca=w.assetId?db.assets.find(x=>x.id===w.assetId):null;
     if(ca){
@@ -9560,6 +9703,30 @@ function csvExport(fname,headers,rows){
     toast(lb(' تم تنزيل ملف Excel|| Excel downloaded'),'ok');
   }catch(e){alert(e.message);}
 }
+/* ساعات العمالة الفعلية من سجلات الوقت (آخر 90 يوماً) لكل فني */
+function repLaborRows(list){
+  const cut=Date.now()-90*864e5,by={};
+  (list||[]).forEach(w=>woLabor(w).forEach(e=>{
+    if((e.end||Date.now())<cut)return;
+    const k=e.userId||e.name;const r=by[k]=by[k]||{name:e.name||'—',mins:0,cost:0,wos:new Set(),noRate:false};
+    const m=laborMins(e);r.mins+=m;r.cost+=m/60*(+e.rate||0);r.wos.add(w.no);if(!e.rate)r.noRate=true;}));
+  return Object.values(by).sort((a,b)=>b.mins-a.mins);
+}
+function repLaborCard(scope){
+  const rows=repLaborRows(scope),tm=rows.reduce((s,r)=>s+r.mins,0),tc=rows.reduce((s,r)=>s+r.cost,0);
+  return `<div class="card"><h2> ${lb('ساعات العمالة الفعلية (آخر 90 يوم)||Actual labor hours (last 90 days)')}
+    ${rows.length?`<button class="btn sm ghost" onclick="repLaborCsv()"> Excel</button>`:''}</h2>
+  <div class="tbl-wrap"><table><tr><th>${lb('الفني||Technician')}</th><th>${lb('أوامر العمل||Work orders')}</th><th>${lb('الساعات||Hours')}</th><th>${lb('التكلفة||Cost')}</th></tr>
+  ${rows.length?rows.map(r=>`<tr><td><b>${esc(r.name)}</b>${r.noRate?` <span class="muted" title="${lb('قيود بلا سعر ساعة||Entries without a rate')}">*</span>`:''}</td><td>${r.wos.size}</td>
+    <td>${(r.mins/60).toFixed(1)}</td><td>${money(r.cost)}</td></tr>`).join('')
+    +`<tr><td><b>${lb('الإجمالي||Total')}</b></td><td></td><td><b>${(tm/60).toFixed(1)}</b></td><td><b>${money(tc)}</b></td></tr>`
+  :`<tr><td colspan="4"><div class="empty">${lb('لا توجد سجلات وقت بعد — «بدء التنفيذ» في أمر العمل يبدأ المؤقت.||No time logs yet — "Start" on a work order starts the timer.')}</div></td></tr>`}</table></div>
+  ${rows.some(r=>r.noRate)?`<p class="muted">* ${lb('بعض القيود بلا سعر ساعة؛ حدّده من شاشة المستخدمين.||Some entries have no hourly rate; set it in the Users screen.')}</p>`:''}</div>`;
+}
+function repLaborCsv(){
+  const rows=repLaborRows(db.wos.filter(w=>w.compoundId===activeCmp()));
+  csvExport('labor-hours',['technician','work_orders','hours','cost_sar'],rows.map(r=>[r.name,r.wos.size,(r.mins/60).toFixed(2),r.cost.toFixed(2)]));
+}
 function vRep(){
   const act=activeCmp();
   const scope=db.wos.filter(w=>w.compoundId===act);
@@ -9596,6 +9763,7 @@ function vRep(){
   ${techs.length?techs.map(tv=>`<tr><td><b>${esc(tv[0])}</b></td><td>${tv[1].c}</td>
   <td>${(tv[1].hrs/tv[1].c).toFixed(1)} ${lb('ساعة||hr')}</td><td>${money(tv[1].cost)}</td></tr>`).join(''):
   `<tr><td colspan="4"><div class="empty">${lb('لا بيانات بعد||No data yet')}</div></td></tr>`}</table></div></div>
+  ${repLaborCard(scope)}
   <div class="card"><h2> ${lb('نظرة عامة على المشاريع||Projects Overview')}
     <button class="btn sm ghost" onclick="repProjCsv()"> Excel</button></h2>
   <div class="tbl-wrap"><table><tr><th>${lb('المشروع||Project')}</th><th>${lb('الحالة||Status')}</th><th>${lb('الميزانية||Budget')}</th><th>${lb('المصروف||Spent')}</th><th>${lb('الإنجاز||Progress')}</th></tr>
@@ -9982,6 +10150,7 @@ function userForm(id){
     <div><label>${lb('كلمة المرور *||Password *')}</label><input id="fu_p" type="password" value="" placeholder="${id?lb('اتركها فارغة للإبقاء على الحالية||Leave blank to keep current'):lb('••••••••||••••••••')}"></div>
     <div><label>${lb('الدور||Role')}</label><select id="fu_r">${Object.keys(ROLES).map(k=>`<option value="${k}" ${u.role===k?'selected':''}>${ROLES[k]}</option>`).join('')}</select></div>
     <div><label>${lb('رقم الجوال (لواتساب)||Mobile (for WhatsApp)')}</label><input id="fu_ph" value="${esc(u.phone||'')}" placeholder="${lb('05xxxxxxxx||05xxxxxxxx')}"></div>
+    <div><label>${lb('سعر ساعة العمل (ريال) — لتكلفة العمالة||Hourly rate (SAR) — for labor cost')}</label><input id="fu_rt" type="number" min="0" step="any" value="${u.rate??''}" placeholder="0"></div>
   </div>
   <label>${lb('الأصل المسموح لهذا المستخدم *||Allowed asset for this user *')}</label>
   <select id="fu_cmp" ${u.role==='admin'?'disabled':''}>
@@ -10018,6 +10187,7 @@ async function saveUserAsync(id,n,un,p,email){
   const cmpIds=role==='admin'?[]:(oneCmp?[oneCmp]:[]);
   if(role!=='admin'&&!cmpIds.length)return toast(lb(' اختر أصلاً لهذا المستخدم|| Pick an asset for this user'),'err');
   const phone=$('fu_ph').value.trim();
+  const rate=$('fu_rt')&&$('fu_rt').value!==''?Math.max(0,+$('fu_rt').value||0):null;
   const pHash=p?await hashLocalPw(p):'';    /* نُخزّن نسخة مشفّرة مطابقة للخادم */
   const targetId=id||uid('U');
   const checkedTeamIds=Array.from(document.querySelectorAll('.fu_team_ck:checked')).map(el=>el.value);
@@ -10029,11 +10199,11 @@ async function saveUserAsync(id,n,un,p,email){
     else if(!should&&had&&t.leaderId!==targetId) t.memberIds=t.memberIds.filter(mid=>mid!==targetId);
   });
   if(id){const x=db.users.find(y=>y.id===id);
-    const upd={name:n,u:un,email,role,phone,cmpIds,activeCmp:(x.activeCmp&&(cmpIds.includes(x.activeCmp)||role==='admin'))?x.activeCmp:''};
+    const upd={name:n,u:un,email,role,phone,rate,cmpIds,activeCmp:(x.activeCmp&&(cmpIds.includes(x.activeCmp)||role==='admin'))?x.activeCmp:''};
     if(p){upd.p=pHash;upd.defaultPw=(p==='1234');} /* فارغة = إبقاء القديمة؛ الجديدة الافتراضية تُعلَّم للتغيير */
     Object.assign(x,upd);
     if(id===me.id)AUTH.mustChange=false;}
-  else db.users.push({id:targetId,name:n,u:un,p:pHash,email,role,phone,cmpIds,activeCmp:'',defaultPw:(p==='1234')});
+  else db.users.push({id:targetId,name:n,u:un,p:pHash,email,role,phone,rate,cmpIds,activeCmp:'',defaultPw:(p==='1234')});
   SAVE.usersIntent=true;
   persist();closeModal();paintTab();toast(lb(' تم||Saved'),'ok');
 }
