@@ -99,7 +99,7 @@ async function runPm(s) {
     const far = new Date(Date.now() + 200 * 864e5).toISOString().slice(0, 10);
     d4.assets.push({ id: 'AM1', name: 'Generator', compoundId: C, meter: 1000, meterUnit: 'ساعة', status: 'ok' });
     d4.assets.push({ id: 'AM2', name: 'Pump', compoundId: C, meter: 1000, meterUnit: 'ساعة', status: 'ok' });
-    d4.pms.push({ id: 'PM1', name: 'Gen 500h', assetId: 'AM1', compoundId: C, freqVal: 12, freqUnit: 'months', nextDue: far, leadDays: 0, mEvery: 500, lastMeter: 400 });
+    d4.pms.push({ id: 'PM1', name: 'Gen 500h', assetId: 'AM1', compoundId: C, freqVal: 12, freqUnit: 'months', nextDue: far, leadDays: 0, mEvery: 500, lastMeter: 400, tasks: 'ضغط الزيت [رقم 2-5 بار]\nتسريب وقود [حرج]' });
     d4.pms.push({ id: 'PM2', name: 'Pump 500h', assetId: 'AM2', compoundId: C, freqVal: 12, freqUnit: 'months', nextDue: far, leadDays: 0, mEvery: 500, lastMeter: 900 });
     r = await save(admin, st.ver, d4);
     ok('admin seeded meter PMs', r.status === 200, r);
@@ -109,6 +109,9 @@ async function runPm(s) {
     const w1 = st.data.wos.find(w => w.pmId === 'PM1');
     ok('meter-due plan generated a WO flagged meterTrigger', w1 && w1.meterTrigger === true && w1.meterAt === 1000, w1);
     ok('not-yet-due meter plan did not generate', !st.data.wos.some(w => w.pmId === 'PM2'));
+    const ck = (w1 && w1.checklist) || [];
+    ok('scheduler builds typed checklist items', ck.length === 2 && ck[0].type === 'number' && ck[0].min === 2 && ck[0].max === 5
+      && ck[0].unit === 'بار' && ck[0].t === 'ضغط الزيت' && ck[1].crit === true && ck[1].type === 'check', ck);
 
     /* 5. مؤشرات الحالة: أمر واحد للقراءة خارج الحد، ولا تكرار مع أمر مفتوح، ولا أمر لقراءة سبقت إصلاحاً مغلقاً */
     const d5 = st.data, now = Date.now();

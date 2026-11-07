@@ -809,6 +809,7 @@ app.get('/api/files/:id', async (req,res)=>{
    فيقرؤها المتصفح بـ OCR ثم يرسل نصها إلى /api/receipts/parse. منطق الاستخراج في receipts.js */
 const RCPT_MAX_PAGES = Number(process.env.RECEIPT_MAX_PAGES || 60);
 const { splitReceiptText, extractReceiptFields, normDateStr, pageTextQuality, sniffMime, pageTextFromItems } = require('./receipts');
+const Checklist = require('./public/checklist.js');   /* بنود الفحص المُنمَّطة — نفس الملف الذي تحمّله الواجهة */
 /* نص كل صفحة على حدة، مع إعادة بناء الأسطر من إحداثيات العناصر (العربية من اليمين لليسار) */
 /* pdfjs-dist 4.x حزمة ES فقط (.mjs) — تُحمَّل مرة واحدة بـ import() الديناميكي */
 let _pdfjsP = null;
@@ -2114,7 +2115,7 @@ async function runPmScheduler(reason){
         reqParts:(p.parts||[]).map(x=>({name:x.name,qty:x.qty})),
         partsReady:missing.length===0,missingParts:missing,
         reportedBy:'Auto-scheduler',
-        checklist:tasksStr.split('\n').map(s=>s.trim()).filter(Boolean).map(t=>({t,done:false,v:''})),
+        checklist:Checklist.fromText(tasksStr),   /* نفس محلّل الواجهة — public/checklist.js */
       });
       if(!Array.isArray(d.audit))d.audit=[];
       d.audit.unshift({id:'L'+crypto.randomBytes(4).toString('hex'),at:Date.now(),by:'Auto-scheduler',byId:'',role:'system',
