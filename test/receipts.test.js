@@ -66,5 +66,29 @@ check('garbled no label', F("مؤسسة النور\nرقم القتررة:‎INV
 check('bare invoice code', F("مؤسسة النور\nINV-10234 5,00 4;\nالإجمالي 10.00"), { no: 'INV-10234' });
 check('vat no is not receipt no', F("مؤسسة النور\nرقم ضريبي 300123456700003\nالإجمالي 10.00"), { no: undefined });
 
+/* 15. بناء أسطر PDF من عناصر pdf.js: حروف عربية متلاصقة كل منها عنصر، والمسافة عنصر مستقل (طباعة Edge/Chrome) */
+const G = (s, x, w, y = 700, h = 15) => ({ str: s, transform: [h, 0, 0, h, x, y], width: w, height: h, dir: 'rtl' });
+const SP = (x, w, y = 700) => ({ str: ' ', transform: [1, 0, 0, 1, x, y], width: w, height: 0, dir: 'ltr' });
+/* "مؤسسة النور" مرسومة يساراً→يميناً بالإحداثيات: ر و ن ل ا [مسافة] ة س س ؤ م */
+const row1 = [G('ﺭ', 100, 7), G('ﻮ', 107, 9), G('ﻨ', 116, 6), G('ﻟ', 122, 5), G('ﺍ', 127, 5), SP(132, 6),
+  G('ﺔ', 138, 10), G('ﺴ', 148, 18), G('ﺳ', 166, 17), G('ﺆ', 183, 9), G('ﻣ', 192, 9)];
+check('pdf row: glued arabic glyphs + space item', { t: R.pageTextFromItems(row1) }, { t: 'مؤسسة النور' });
+/* بلا عنصر مسافة: الفجوة الأفقية وحدها تفصل الكلمتين */
+const row2 = row1.filter(i => i.str !== ' ');
+check('pdf row: word gap without space item', { t: R.pageTextFromItems(row2) }, { t: 'مؤسسة النور' });
+/* سطر عربي مع رقم (عنصر واحد) — الرقم لا ينعكس */
+const row3 = [{ str: '300123456700003', transform: [12, 0, 0, 12, 100, 650], width: 90, height: 12, dir: 'ltr' },
+  { str: ':', transform: [12, 0, 0, 12, 197, 650], width: 3, height: 12, dir: 'ltr' },   /* ملاصقة للتسمية، وبعدها فجوة قبل الرقم */
+  G('ﻲ', 200, 8, 650, 12), G('ﺒ', 208, 6, 650, 12), G('ﻳ', 214, 4, 650, 12), G('ﺮ', 218, 6, 650, 12), G('ﻀ', 224, 9, 650, 12), G('ﻟ', 233, 4, 650, 12), G('ﺍ', 237, 4, 650, 12)];
+check('pdf row: arabic label + number', { t: R.pageTextFromItems(row3) }, { t: 'الضريبي: 300123456700003' });
+/* لاتيني: عناصر كاملة متباعدة تبقى كلمات منفصلة، وعرض مجهول (0) يفصل احتياطاً */
+const row4 = [{ str: 'TOTAL', transform: [12, 0, 0, 12, 50, 600], width: 34, height: 12 }, { str: 'SAR', transform: [12, 0, 0, 12, 88, 600], width: 22, height: 12 },
+  { str: '94.88', transform: [12, 0, 0, 12, 200, 600], width: 30, height: 12 }, { str: 'x', transform: [12, 0, 0, 12, 230, 600], width: 0, height: 12 }];
+check('pdf row: latin words and columns', { t: R.pageTextFromItems(row4) }, { t: 'TOTAL SAR 94.88 x' });
+/* أسطر متعددة تُرتَّب من الأعلى للأسفل */
+check('pdf rows order', { t: R.pageTextFromItems(row4.slice(0, 2).concat(row1)) }, { t: 'مؤسسة النور\nTOTAL SAR' });
+/* حروف فارسية من خطوط PDF تُوحَّد للعربية */
+check('arabic fold', { t: R.arabicFold('الكھربائیة ﻻ کهرباء') }, { t: 'الكهربائية لا كهرباء' });
+
 console.log(fail ? `\n${fail} FAILED` : '\nALL PASS');
 process.exit(fail ? 1 : 0);
