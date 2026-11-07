@@ -1747,6 +1747,7 @@ mark.gs-hl{background:#fef08a;color:#713f12;font-weight:800;padding:0 3px;border
 <div id="app"></div>
 <div class="toast" id="toast"></div>
 
+<script src="/checklist.js"></script>
 <script>
 /* ===== SERVER API (WEB EDITION) ===== */
 /* Production: same-origin /api on any hosted domain. Local file:// falls back to localhost. */
@@ -2156,6 +2157,7 @@ function phReg(d){const k='K'+(++_phSeq);PH[k]=d;return k;}
 function safeMediaUrl(u){
   const s = String(u || '').trim();
   if(/^\/uploads\/[a-zA-Z0-9._-]+$/.test(s)) return s;
+  if(/^\/api\/files\/[A-Za-z0-9_-]+$/.test(s)) return s;   /* ملفات مرفوعة عبر /api/uploads (نفس الأصل) — كانت تُحجب فلا تظهر صور قبل/بعد والتوقيع */
   if(/^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(s)) return s;
   if(/^https?:\/\/[^\s"'<>]+$/i.test(s)) return s;
   return '';
@@ -3937,7 +3939,7 @@ function pmGen(onlyId,force){
           steps:(p.steps||[]).map(x=>Object.assign({},x)),
           reqParts:(p.parts||[]).map(x=>({name:x.name,qty:x.qty})),
           reportedBy:lb('الجدولة التلقائية||Auto-scheduler'),
-          checklist:(p.tasks||'').split('\n').map(s=>s.trim()).filter(Boolean).map(t=>({t,done:false,v:''}))});
+          checklist:Checklist.fromText(p.tasks||'')});   /* بنود مُنمَّطة من وسوم [رقم]/[اختيار]/[صورة]… — public/checklist.js */
         created++;
       }
     }
@@ -3990,7 +3992,7 @@ function pmView(pid){
   <h3>${lb('خطوات العمل||Job steps')} ${steps.length?`(${steps.length} · ${stepsMins(steps)} ${lb('دقيقة||min')})`:''}</h3>
   ${steps.length?`<div class="tbl-wrap"><table><tr><th>#</th><th>${lb('المهمة||Task')}</th><th>${lb('دقائق||Min')}</th><th>${lb('التخصص||Trade')}</th><th>${lb('المواد||Materials')}</th><th>${lb('الأدوات||Tools')}</th><th>${lb('السلامة||Safety')}</th></tr>
    ${steps.map(s=>`<tr><td>${s.seq||''}</td><td>${esc(s.t||'')}</td><td>${s.mins||''}</td><td>${esc(s.trade||'')}</td><td>${esc(s.mats||'')}</td><td>${esc(s.tools||'')}</td><td>${esc(s.safety||'')}</td></tr>`).join('')}</table></div>`:`<p class="muted">${lb('لا خطوات بعد — أضفها من زر التعديل||No steps yet — add them via Edit')}</p>`}
-  ${(p.tasks||'').trim()?`<label>${lb('قائمة الفحص||Checklist')}</label><ul style="padding-inline-start:18px">${p.tasks.split('\n').map(s=>s.trim()).filter(Boolean).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:''}
+  ${(p.tasks||'').trim()?`<label>${lb('قائمة الفحص||Checklist')}</label><ul style="padding-inline-start:18px">${Checklist.fromText(p.tasks).map(c=>`<li>${esc(c.t)}${ckTypeChip(c)}</li>`).join('')}</ul>`:''}
   <label>${lb('التوقعات (90 يوم)||Forecast (90 days)')}</label>
   ${occ.length?`<ul style="padding-inline-start:18px">${occ.slice(0,12).map(o=>`<li>${fmtD(o.date)} ${o.days<0?`<span class="badge b-urgent">${-o.days} ${lb('متأخرة||late')}</span>`:`(${o.days} ${lb('يوم||d')})`}</li>`).join('')}</ul>`:`<p class="muted">${lb('لا توقعات||none')}</p>`}
   <div class="ma">
@@ -4194,7 +4196,7 @@ function pmForm(pid){
     </div>
     <div><label>${lb('الفني المسؤول||Technician')}</label><select id="fp_as"><option value="">—</option>${techs.map(t=>`<option value="${t.id}" ${p.assigneeId===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
   </div>
-  <label>${lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')}</label><textarea id="fp_t" rows="3">${esc(p.tasks||'')}</textarea>
+  <label>${lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')}</label><textarea id="fp_t" rows="3">${esc(p.tasks||'')}</textarea>${ckSyntaxHint('fp_t')}
   <label>${lb('خطوات العمل (Job Plan): المهمة | دقائق | التخصص | المواد | الأدوات | السلامة||Job steps (Job Plan): task | mins | trade | materials | tools | safety')}</label>
   <textarea id="fp_st" rows="3" placeholder="${lb('فك الفلتر | 15 | تكييف | فلتر جديد | مفكات | افصل الكهرباء||Remove filter | 15 | HVAC | new filter | screwdrivers | isolate power')}">${esc(stepsText(p.steps))}</textarea>
   <label style="font-weight:400"><input type="checkbox" id="fp_ac" ${p.active!==false?'checked':''}> ${lb('فعّالة||Active')}</label>
@@ -4850,7 +4852,7 @@ function tplForm(tid){
     <div><label>${lb('التصاريح/العزل||Permits / isolation')}</label><input id="ft_pm" value="${esc(t.permits||'')}"></div>
     <div><label>${lb('خطوات السلامة||Safety steps')}</label><input id="ft_sf" value="${esc(t.safety||'')}"></div>
   </div>
-  <label>${lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')}</label><textarea id="ft_t" rows="4">${esc(t.tasks||'')}</textarea>
+  <label>${lb('قائمة الفحص (سطر لكل بند)||Checklist (one per line)')}</label><textarea id="ft_t" rows="4">${esc(t.tasks||'')}</textarea>${ckSyntaxHint('ft_t')}
   <label>${lb('خطوات العمل (Job Plan): المهمة | دقائق | التخصص | المواد | الأدوات | السلامة||Job steps (Job Plan): task | mins | trade | materials | tools | safety')}</label>
   <textarea id="ft_st" rows="3" placeholder="${lb('فك الفلتر | 15 | تكييف | فلتر جديد | مفكات | افصل الكهرباء||Remove filter | 15 | HVAC | new filter | screwdrivers | isolate power')}">${esc(stepsText(t.steps))}</textarea>
   <label>${lb('قطع الغيار المطلوبة (اسم × كمية — سطر لكل قطعة)||Required parts (name × qty — one per line)')}</label><textarea id="ft_pt" rows="2">${esc(partsTxt(t.parts))}</textarea>
@@ -7713,7 +7715,11 @@ function woView(i){
   }).join('')}</div>`:''}
   ${w.sig?`<label> ${lb('توقيع المنفّذ||Technician Signature')}</label><br><img class="sigimg" src="${esc(safeMediaUrl(w.sig))}">`:''}
   ${(w.parts&&w.parts.length)?`<label>${lb('قطع الغيار المستخدمة||Parts Used')}</label><ul style="padding-inline-start:18px">${w.parts.map(p=>`<li>${esc(p.name)} × ${p.qty}</li>`).join('')}</ul>`:''}
-  ${(w.checklist&&w.checklist.length)?`<label>${lb('قائمة الفحص||Checklist')}</label><ul class="tl">${w.checklist.map(c=>`<li>${c.done?ic('check',12):'<span class="muted">–</span>'} ${esc(c.t)}${c.v?' — <b>'+esc(c.v)+'</b>':''}</li>`).join('')}</ul>`:''}
+  ${(w.checklist&&w.checklist.length)?`<label>${lb('قائمة الفحص||Checklist')}</label><ul class="tl">${w.checklist.map(c=>{
+    const st=c.status||(w.status==='closed'?(c.done?'pass':'fail'):'');
+    const rng=(c.type==='number'&&Checklist.rangeText(c))?` <span class="muted">(${esc(Checklist.rangeText(c))})</span>`:'';
+    const ph=c.photo?` <img class="pthumb" style="width:30px;height:30px;vertical-align:middle" src="${esc(safeMediaUrl(c.photo))}" onclick="lbShow('${phReg(safeMediaUrl(c.photo))}')">`:'';
+    return `<li>${st?ckBadge(st):'<span class="muted">–</span>'} ${esc(c.t)}${rng}${c.crit?` <span class="badge b-urgent">${lb('حرج||Critical')}</span>`:''}${c.v!==''&&c.v!=null?' — <b>'+esc(String(c.v))+(c.unit?' '+esc(c.unit):'')+'</b>':''}${ph}</li>`;}).join('')}</ul>`:''}
   ${w.closeNotes?`<label>${lb('ملاحظات الإغلاق||Closing Notes')}</label><p>${esc(w.closeNotes)}</p>`:''}
   ${w.status==='planned'?`<p class="muted">${lb('بانتظار الاعتماد — أُنشئ تلقائياً بواسطة المجدول||Awaiting approval — auto-generated by the scheduler')}${w.partsReady===false?` · ${lb('بعض القطع غير متوفرة||some parts are not available')}`:''}</p>`:''}
   <div class="ma">
@@ -7724,6 +7730,87 @@ function woView(i){
   ${(w.status!=='closed')?`<button class="btn ghost" onclick="closeModal();waModal(${i})"> ${lb('واتساب||WhatsApp')}</button>`:''}
   <button class="btn ghost" onclick="closeModal()">${lb('إغلاق النافذة||Close Window')}</button></div>`);
 }
+/* شارة نوع البند في عرض الخطة */
+function ckTypeChip(c){
+  const t=c.type==='number'?`🔢 ${esc(Checklist.rangeText(c)||lb('رقم||number'))}`
+    :c.type==='choice'?`☰ ${(c.options||[]).map(o=>(o.bad?'✗ ':'')+esc(o.v)).join(' / ')}`
+    :c.type==='text'?`✎ ${lb('نص||text')}`:'';
+  return (t?` <span class="badge" style="font-weight:500">${t}</span>`:'')
+    +(c.photoReq?` <span class="badge b-open">📷</span>`:'')+(c.crit?` <span class="badge b-urgent">${lb('حرج||Critical')}</span>`:'');
+}
+/* تلميح صيغة الوسوم + أزرار إدراج سريعة تحت حقل قائمة الفحص */
+function ckSyntaxHint(id){
+  const ins=(tag,label)=>`<button type="button" class="btn sm ghost" style="padding:2px 8px;font-size:11.5px" onclick="ckInsertTag('${id}','${tag}')">${label}</button>`;
+  return `<div class="muted" style="font-size:11.5px;margin:4px 0 8px;line-height:1.7">
+    ${lb('اختياري: أضف وسماً في آخر السطر لتحديد نوع البند — ||Optional: add a tag at the end of a line to set the item type — ')}
+    ${['[رقم 2-5 بار]','[اختيار: جيد|متوسط|!تالف]','[نص]','[صورة]','[حرج]'].map(t=>`<bdi style="background:rgba(14,116,144,.08);padding:0 5px;border-radius:5px;font-weight:600">${t}</bdi>`).join(' ')}<br>
+    ${ins('[رقم 0-10 ]',lb('＋ رقم بمدى||＋ number range'))} ${ins('[اختيار: سليم|!تالف]',lb('＋ اختيار||＋ choice'))} ${ins('[نص]',lb('＋ نص||＋ text'))} ${ins('[صورة]',lb('＋ صورة||＋ photo'))} ${ins('[حرج]',lb('＋ حرج||＋ critical'))}</div>`;
+}
+function ckInsertTag(id,tag){
+  const ta=$(id);if(!ta)return;
+  const pos=ta.selectionEnd!=null?ta.selectionEnd:ta.value.length;
+  const lineEnd=ta.value.indexOf('\n',pos);const at=lineEnd<0?ta.value.length:lineEnd;
+  ta.value=ta.value.slice(0,at).replace(/\s*$/,'')+' '+tag+ta.value.slice(at);
+  ta.focus();const p=at+tag.length+1;ta.setSelectionRange(p,p);
+}
+/* ===== بنود الفحص المُنمَّطة في نموذج الإغلاق (المحلّل في public/checklist.js) ===== */
+function ckBadge(st){
+  return st==='pass'?`<span class="badge b-done">✅ ${lb('مطابق||Pass')}</span>`
+    :st==='fail'?`<span class="badge b-urgent">❌ ${lb('عطل||Fail')}</span>`
+    :st==='flagged'?`<span class="badge b-wait">⚠️ ${lb('ملاحظة||Flag')}</span>`
+    :`<span class="badge">${lb('مطلوب||Required')}</span>`;
+}
+function ckRowHtml(c,j){
+  const type=c.type||'check',tags=(c.crit?` <span class="badge b-urgent">${lb('حرج||Critical')}</span>`:'')
+    +(c.photoReq?` <span class="badge b-open">📷 ${lb('صورة إلزامية||Photo required')}</span>`:'');
+  const photo=c.photoReq?`<button type="button" class="btn sm ghost" onclick="ckPhoto(${j})">📷</button><span id="ckph_${j}"></span>`:'';
+  if(type==='check')return `<div class="ckrow" style="grid-template-columns:auto 1fr 105px 130px auto;gap:6px;align-items:center">
+      <input type="checkbox" class="ck_c" id="ck_${j}" ${c.done?'checked':''}>
+      <span>${esc(c.t)}${tags}</span>
+      <select id="ckst_${j}" onchange="ckSync()" style="padding:4px 6px;font-size:11.5px;font-weight:700">
+        <option value="pass" ${(c.status||'pass')==='pass'?'selected':''}>✅ ${lb('مطابق||Pass')}</option>
+        <option value="fail" ${c.status==='fail'?'selected':''}>❌ ${lb('عطل||Fail')}</option>
+        <option value="flagged" ${c.status==='flagged'?'selected':''}>⚠️ ${lb('ملاحظة||Flag')}</option>
+      </select>
+      <input type="text" class="ck_v" id="ckv_${j}" placeholder="${lb('قياس/ملاحظة||Value/note')}" value="${esc(c.v||'')}"><span>${photo}</span></div>`;
+  const input=type==='number'
+    ?`<input type="number" step="any" id="ckv_${j}" oninput="ckSync()" value="${esc(c.v??'')}" placeholder="${esc(Checklist.rangeText(c)||lb('القيمة||Value'))}">`
+    :type==='choice'
+    ?`<select id="ckv_${j}" onchange="ckSync()"><option value="">— ${lb('اختر||Choose')} —</option>${(c.options||[]).map(o=>`<option ${c.v===o.v?'selected':''}>${esc(o.v)}</option>`).join('')}</select>`
+    :`<input type="text" id="ckv_${j}" oninput="ckSync()" value="${esc(c.v||'')}" placeholder="${lb('اكتب القيمة||Enter value')}">`;
+  return `<div class="ckrow" style="grid-template-columns:1fr 140px 90px auto;gap:6px;align-items:center">
+      <span>${esc(c.t)}${type==='number'&&Checklist.rangeText(c)?` <span class="muted">(${esc(Checklist.rangeText(c))})</span>`:''}${tags}</span>
+      ${input}<span id="ckb_${j}">${ckBadge('')}</span><span>${photo}</span></div>`;
+}
+function ckPhoto(j){
+  pickImages(imgs=>{if(!imgs.length)return;window._ckPh=window._ckPh||{};window._ckPh[j]=imgs[0].d;
+    const el=$('ckph_'+j);if(el)el.innerHTML=` <img src="${esc(safeMediaUrl(imgs[0].d))}" style="width:34px;height:34px;object-fit:cover;border-radius:6px;vertical-align:middle">`;});
+}
+/* الحالة الحالية لكل بند من مدخلات النموذج */
+function ckCollect(){
+  const w=woByNo(window._ckNo);if(!w||!w.checklist)return [];
+  return w.checklist.map((c,j)=>{
+    const type=c.type||'check',vv=$('ckv_'+j),st=$('ckst_'+j);
+    const r=Checklist.evaluate(c,vv?vv.value:'',st?st.value:undefined);
+    return {c,j,type,r,photo:(window._ckPh||{})[j]||c.photo||''};
+  });
+}
+/* شارات الحالة + ملخص + تعبئة الإجراء التصحيحي تلقائياً عند فشل بنود */
+function ckSync(){
+  const rows=ckCollect();if(!rows.length)return;
+  rows.forEach(x=>{const b=$('ckb_'+x.j);if(b)b.innerHTML=ckBadge(x.r.status);});
+  const failed=rows.filter(x=>x.r.status==='fail'),missing=rows.filter(x=>x.r.missing);
+  const sum=$('ck_sum');
+  if(sum)sum.innerHTML=failed.length?`<b style="color:var(--red,#dc2626)">${failed.length} ${lb('بند فاشل||failed item(s)')}</b>${failed.some(x=>x.c.crit)?' — '+lb('منها بنود حرجة: سيُفتح أمر متابعة عاجل||includes critical items: an urgent follow-up will open'):''}`
+    :missing.length?`${missing.length} ${lb('بند بلا قيمة بعد||item(s) still need a value')}`:lb('كل البنود مطابقة||All items pass');
+  const fu=$('wc_fu'),fud=$('wc_fud');if(!fu||!fud)return;
+  if(failed.length){
+    fu.checked=true;
+    if(!fud.value||fud.dataset.auto==='1'){
+      fud.value=lb('بنود فشلت في الفحص: ||Failed inspection items: ')+failed.map(x=>x.c.t+(x.r.value!=null&&x.r.value!==''?' ('+x.r.value+(x.c.unit?' '+x.c.unit:'')+')':'')).join('، ');
+      fud.dataset.auto='1';}
+  }else if(fud.dataset.auto==='1'){fu.checked=false;fud.value='';fud.dataset.auto='';}
+}
 function woCloseForm(i){
   const w=db.wos[i];if(!w)return;
   const a=w.assetId?db.assets.find(x=>x.id===w.assetId):null;
@@ -7731,16 +7818,10 @@ function woCloseForm(i){
   const wVendor=w.warrantyVendor||(a?(a.warrantyVendor||a.provider):'')||lb('المورّد الضامن||Warranty Provider');
   let ck='';
   if(w.checklist&&w.checklist.length){
+    window._ckNo=w.no;window._ckPh={};
     ck=`<label>${lb('قائمة الفحص والتحقق (Checklist Evidence)||Inspection Checklist')}</label>`+
-      w.checklist.map((c,j)=>`<div class="ckrow" style="grid-template-columns:auto 1fr 105px 130px;gap:6px;align-items:center">
-      <input type="checkbox" class="ck_c" id="ck_${j}" ${c.done?'checked':''}>
-      <span>${esc(c.t)}</span>
-      <select id="ckst_${j}" style="padding:4px 6px;font-size:11.5px;font-weight:700">
-        <option value="pass" ${(c.status||'pass')==='pass'?'selected':''}>✅ ${lb('مطابق||Pass')}</option>
-        <option value="fail" ${c.status==='fail'?'selected':''}>❌ ${lb('عطل||Fail')}</option>
-        <option value="flagged" ${c.status==='flagged'?'selected':''}>⚠️ ${lb('ملاحظة||Flag')}</option>
-      </select>
-      <input type="text" class="ck_v" id="ckv_${j}" placeholder="${lb('قياس/ملاحظة||Value/note')}" value="${esc(c.v||'')}"></div>`).join('');
+      w.checklist.map((c,j)=>ckRowHtml(c,j)).join('')+
+      `<div id="ck_sum" class="muted" style="margin:4px 0 8px"></div>`;
   }
   modal(`<h3> ${lb('إغلاق أمر الشغل||Close Work Order')} ${w.no}</h3>
   <p class="muted">${esc(w.title)}</p>
@@ -7775,10 +7856,11 @@ function woCloseForm(i){
   <div id="prows"></div><button class="btn ghost sm" onclick="addPartRow()">＋ ${lb('إضافة قطعة||Add Part')}</button>
   ${(w.reqParts&&w.reqParts.length)?`<div class="muted" style="margin-top:6px">${lb('مطلوب للخطة||Required by plan')}: ${w.reqParts.map(p=>esc(p.name)+' × '+p.qty).join('، ')} <button class="btn ghost sm" onclick="pmFillReqParts(${i})">${lb('تعبئة المطابق||Add matching')}</button></div>`:''}
   <label style="font-weight:400;margin-top:8px"><input type="checkbox" id="wc_fu"> ${lb('يتطلب إجراءً تصحيحياً / متابعة||Requires a corrective follow-up')}</label>
-  <input id="wc_fud" placeholder="${lb('وصف الإجراء التصحيحي المطلوب||Describe the required follow-up')}">
+  <input id="wc_fud" oninput="this.dataset.auto=''" placeholder="${lb('وصف الإجراء التصحيحي المطلوب||Describe the required follow-up')}">
   <div class="ma"><button class="btn ghost" onclick="closeModal()">${lb('إلغاء||Cancel')}</button>
   <button class="btn" style="background:linear-gradient(135deg,#159957,#22c55e)" onclick="doCloseWO(${i})">${lb('اعتماد وإغلاق||Approve Close')}</button></div>`);
   addPartRow();
+  if(w.checklist&&w.checklist.length)ckSync();
   window._woPhB=(w.photos||[]).filter(p=>p.tag==='before').map(p=>({d:p.d,n:p.n||''}));
   window._woPhA=(w.photos||[]).filter(p=>p.tag==='after').map(p=>({d:p.d,n:p.n||''}));
   renderWoPhGrids();initSig();
@@ -7814,12 +7896,24 @@ async function doCloseWO(i){
       used.push({it,q});
     }
   }
-  if(w.checklist)w.checklist.forEach((c,j)=>{
-    const cb=$('ck_'+j),vv=$('ckv_'+j),st=$('ckst_'+j);
-    if(cb){c.done=cb.checked;}
-    if(st){c.status=st.value;}else if(!c.status){c.status=c.done?'pass':'fail';}
-    if(vv){c.v=vv.value;}
-  });
+  /* قائمة الفحص المُنمَّطة: تحقق أولاً (قبل صرف أي قطعة) ثم احفظ الحالة المحسوبة */
+  let ckCritFail=false;
+  if(w.checklist&&w.checklist.length&&window._ckNo===w.no){
+    const rows=ckCollect();
+    const missing=rows.filter(x=>x.r.missing).map(x=>x.c.t);
+    const noPhoto=rows.filter(x=>x.c.photoReq&&!x.photo).map(x=>x.c.t);
+    if(missing.length)return toast(lb(' أكمل قيم البنود: || Fill in the items: ')+missing.join('، '),'err');
+    if(noPhoto.length)return toast(lb(' صورة إلزامية للبنود: || Photo required for: ')+noPhoto.join('، '),'err');
+    rows.forEach(x=>{
+      const c=x.c,cb=$('ck_'+x.j),vv=$('ckv_'+x.j);
+      c.status=x.r.status;
+      c.v=x.type==='check'?(vv?vv.value:c.v):(x.r.value!=null?x.r.value:'');
+      c.done=x.type==='check'?(cb?cb.checked:c.done):(x.r.status==='pass');
+      if(x.photo)c.photo=x.photo;
+      if(c.status==='fail'&&c.crit)ckCritFail=true;
+    });
+    w.ckFailed=rows.filter(x=>x.r.status==='fail').length;
+  }
   used.forEach(u=>{u.it.qty-=u.q;
     db.moves.unshift({date:todayISO(),item:u.it.name,invId:u.it.id,type:'out',qty:u.q,ref:w.no,by:me.name,compoundId:u.it.compoundId||w.compoundId});});
   w.parts=used.map(u=>({name:u.it.name,qty:u.q,unitCost:+u.it.unitCost||0}));   /* سعر الوحدة وقت الصرف — لتكلفة الأمر */
@@ -7853,14 +7947,16 @@ async function doCloseWO(i){
       notifResolvePm(p);}
   }
   /* إجراء تصحيحي تلقائي عند الحاجة */
-  const fu=$('wc_fu')?$('wc_fu').checked:false;
-  const fud=$('wc_fud')?$('wc_fud').value.trim():'';
+  let fu=$('wc_fu')?$('wc_fu').checked:false;
+  let fud=$('wc_fud')?$('wc_fud').value.trim():'';
+  /* فشل بند حرج = متابعة عاجلة إلزامية حتى لو أُلغي اختيارها */
+  if(ckCritFail){fu=true;if(!fud)fud=lb('بنود حرجة فشلت في الفحص: ||Critical inspection items failed: ')+(w.checklist||[]).filter(c=>c.crit&&c.status==='fail').map(c=>c.t).join('، ');}
   if(fu&&fud){
     db.seq++;const y=new Date().getFullYear();
     const nw={no:'WO-'+y+'-'+String(db.seq).padStart(4,'0'),type:'fault',compoundId:w.compoundId,
       title:lb('إجراء تصحيحي: ')+fud.slice(0,100),desc:lb('أمر تصحيحي ناتج عن ')+w.no+' — '+fud,
-      assetId:w.assetId||'',assetName:w.assetName||'',assetLabel:w.assetLabel||'',bname:w.bname||'',priority:'high',status:'open',
-      assigneeId:w.assigneeId||'',assigneeName:w.assigneeName||'',dueDate:addDays(todayISO(),3),
+      assetId:w.assetId||'',assetName:w.assetName||'',assetLabel:w.assetLabel||'',bname:w.bname||'',priority:ckCritFail?'urgent':'high',status:'open',
+      assigneeId:w.assigneeId||'',assigneeName:w.assigneeName||'',dueDate:addDays(todayISO(),ckCritFail?1:3),
       projectId:'',unitId:w.unitId||'',unitCode:w.unitCode||'',tenantName:w.tenantName||'',
       cost:0,closeNotes:'',parts:[],photos:[],sig:'',reportedBy:me?me.name:'',fromWo:w.no,source:'corrective',
       createdAt:Date.now(),startedAt:null,closedAt:null,checklist:[]};
@@ -7932,9 +8028,9 @@ function woEvidenceModal(i){
       `<span class="badge b-wait">⚠️ ${lb('ملاحظة حرجة||FLAGGED')}</span>`;
     return `<tr>
       <td style="font-weight:700">${idx+1}</td>
-      <td><b>${esc(c.t)}</b></td>
+      <td><b>${esc(c.t)}</b>${c.type==='number'&&Checklist.rangeText(c)?`<br><span class="muted">${esc(Checklist.rangeText(c))}</span>`:''}</td>
       <td>${badge}</td>
-      <td>${esc(c.v||'—')}</td>
+      <td>${c.v!==''&&c.v!=null?esc(String(c.v)+(c.unit?' '+c.unit:'')):'—'}</td>
     </tr>`;
   }).join(''):`<tr><td colspan="4" class="empty">${lb('لا توجد بنود فحص مسجلة||No checklist items recorded')}</td></tr>`;
 
