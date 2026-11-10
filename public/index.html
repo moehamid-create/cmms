@@ -2096,11 +2096,87 @@ function persist(){
   clearTimeout(persist._t);
   persist._t=setTimeout(queueSave,400);
 }
+/* ===== الحفظ التفاضلي: نحتفظ بلقطة نصية لما يملكه الخادم (SAVE.base) ونرسل الفرق فقط =====
+   المصفوفات ذات المعرّف (id أو no لأوامر العمل) تُرسل سجلاتها المتغيّرة فقط؛ غيرها يُرسل كاملاً.
+   أي شك في اللقطة (رقم نسخة مختلف، رفض الخادم) → الرجوع للحفظ الكامل القديم، فلا يضيع شيء. */
+const SAVE_REC_KEYS=['id','no'];
+function snapIds(arr,K){
+  const out=[],seen=new Set();
+  for(const r of arr){
+    if(!r||typeof r!=='object'||Array.isArray(r))return null;
+    const v=r[K];
+    if(!((typeof v==='string'&&v!=='')||typeof v==='number'))return null;
+    const s=String(v);if(seen.has(s))return null;
+    seen.add(s);out.push(s);
+  }
+  return out;
+}
+function snapEntry(v){
+  if(Array.isArray(v)){
+    const ids={};SAVE_REC_KEYS.forEach(K=>{ids[K]=snapIds(v,K);});
+    return {a:1,strs:v.map(r=>JSON.stringify(r)),ids};
+  }
+  return {a:0,s:JSON.stringify(v)};
+}
+function snapState(d){
+  const keys={};
+  Object.keys(d||{}).forEach(k=>{const v=d[k];if(v!==undefined&&typeof v!=='function')keys[k]=snapEntry(v);});
+  return keys;
+}
+/* تُستدعى بعد كل تحميل من الخادم وقبل migrate() (لأنه يعدّل البيانات في مكانها) */
+function setSaveBase(data,ver){SAVE.base=(data&&typeof ver==='number')?{ver,keys:snapState(data)}:null;}
+function buildPatch(payload,base){
+  const set={},unset=[],coll={},snap={};
+  let n=0;
+  const keys=new Set(Object.keys(payload).concat(Object.keys(base.keys)));
+  for(const k of keys){
+    const v=payload[k],b=base.keys[k];
+    if(v===undefined||typeof v==='function'){if(b){unset.push(k);n++;}continue;}
+    const e=snapEntry(v);snap[k]=e;
+    if(!b){set[k]=v;n++;continue;}
+    if(!e.a||!b.a){if(e.a!==b.a||e.s!==b.s){set[k]=v;n++;}continue;}
+    const K=SAVE_REC_KEYS.find(x=>e.ids[x]&&b.ids[x]);
+    if(!K){
+      if(e.strs.length!==b.strs.length||e.strs.some((s,i)=>s!==b.strs[i])){set[k]=v;n++;}
+      continue;
+    }
+    const bIds=b.ids[K],lIds=e.ids[K];
+    const bIdx=new Map(bIds.map((id,i)=>[id,i]));
+    const up=[],fresh=new Set();
+    lIds.forEach((id,i)=>{
+      const bi=bIdx.get(id);
+      if(bi===undefined){fresh.add(id);up.push(v[i]);}
+      else if(b.strs[bi]!==e.strs[i])up.push(v[i]);
+    });
+    const lSet=new Set(lIds);
+    const del=bIds.filter(id=>!lSet.has(id));
+    /* الترتيب: الجديد في البداية (unshift) أو النهاية (push) يُستنتج على الخادم؛ غير ذلك نرسل ترتيب المعرّفات */
+    let lead=0;while(lead<lIds.length&&fresh.has(lIds[lead]))lead++;
+    const head=lIds.slice(0,lead);
+    const expect=head.concat(bIds.filter(id=>lSet.has(id)),lIds.slice(lead).filter(id=>fresh.has(id)));
+    const sameOrder=expect.length===lIds.length&&expect.every((id,i)=>id===lIds[i]);
+    if(up.length||del.length||!sameOrder){
+      const c={key:K};
+      if(up.length)c.up=up;
+      if(del.length)c.del=del;
+      if(head.length)c.head=head;
+      if(!sameOrder)c.order=lIds;
+      coll[k]=c;n++;
+    }
+  }
+  const patch={};
+  if(Object.keys(set).length)patch.set=set;
+  if(unset.length)patch.unset=unset;
+  if(Object.keys(coll).length)patch.coll=coll;
+  return {patch,snap,empty:n===0};
+}
 async function queueSave(){
   if(SAVE.inflight){SAVE.dirt=true;return;}   /* يوجد حفظ جارٍ — سيُعاد الإرسال بعده */
   if(!SAVE.dirt)return;
   SAVE.dirt=false;
   SAVE.inflight=(async()=>{
+    /* ضروري: بدونه قد ينتهي المسار بلا انتظار (لا تغيير فعلي) فيعمل finally قبل إسناد SAVE.inflight ويبقى عالقاً */
+    await null;
     setSaveState('saving');
     try{
       /* للأدوار غير المدير: نُرسل نسخة الخادم من «users» كما هي — أي فرق يُرفض بـ USERS_FORBIDDEN (تعديل المستخدمين للمدير فقط).
@@ -2111,10 +2187,20 @@ async function queueSave(){
       for(const u of (payload.users||[])){
         if(u&&typeof u.p==='string'&&u.p&&u.p.indexOf('pbkdf2$')!==0)u.p=await hashLocalPw(u.p);
       }
-      const r=await api('/state',{method:'POST',body:JSON.stringify({baseVer:AUTH.ver,data:payload})});
+      /* اللقطة تُؤخذ قبل الإرسال: أي تعديل يصل أثناء الطلب يبقى فرقاً يُرسل في الحفظ التالي */
+      let body,snap,usedPatch=false;
+      if(SAVE.base&&SAVE.base.ver===AUTH.ver){
+        const d=buildPatch(payload,SAVE.base);
+        if(d.empty){SAVE.retry=0;setSaveState('saved');return;}   /* لا تغيير فعلي — لا طلب */
+        body={baseVer:AUTH.ver,patch:d.patch};snap=d.snap;usedPatch=true;
+      }else{
+        body={baseVer:AUTH.ver,data:payload};snap=snapState(payload);
+      }
+      const r=await api('/state',{method:'POST',body:JSON.stringify(body)});
       if(r.status===200){
         let j=null;try{j=await r.json();}catch(e){}
-        if(j&&typeof j.ver==='number')AUTH.ver=j.ver;   /* لا نثق بـ ver غير رقمي */
+        if(j&&typeof j.ver==='number'){AUTH.ver=j.ver;SAVE.base={ver:j.ver,keys:snap};}   /* لا نثق بـ ver غير رقمي */
+        else SAVE.base=null;
         AUTH.usersRaw=JSON.parse(JSON.stringify(payload.users||[]));
         SAVE.usersIntent=false;
         SAVE.retry=0;setSaveState('saved');
@@ -2126,6 +2212,8 @@ async function queueSave(){
         toast(lb(' ليس لديك صلاحية لحفظ هذا التغيير|| You do not have permission to save this change'),'err');
       }else if(r.status===409){
         await resolveConflict();
+      }else if(r.status===400&&usedPatch){
+        SAVE.base=null;SAVE.dirt=true;     /* الخادم لم يقبل التغييرات التفاضلية → إعادة فورية بالحفظ الكامل */
       }else if(r.status===413){
         setSaveState('error');
         toast(lb(' حجم البيانات كبير (صور) — لم يُحفظ. احذف بعض الصور ثم أعد المحاولة|| Payload too large (photos) — not saved. Remove some photos and retry'),'err');
@@ -2160,6 +2248,7 @@ async function rbacResync(keys){
     const r=await api('/state');if(!r.ok)return;
     const s=await r.json();if(!s||!s.data||typeof s.ver!=='number')return;
     if(SAVE.dirt||SAVE.timer&&SAVE.retry)return;   /* تعديل جديد في الطريق — سيتولاه الحفظ التالي */
+    setSaveBase(s.data,s.ver);
     keys.concat(['audit']).forEach(k=>{if(k in s.data)db[k]=s.data[k];});
     AUTH.ver=s.ver;saveLocalCopy();
     let seen={};try{seen=JSON.parse(sessionStorage.getItem('rbacDropSeen')||'{}');}catch(e){}
@@ -2198,6 +2287,7 @@ async function resolveConflict(){
     if(!r.ok){setSaveState('error');toast(lb(' تعارض في الحفظ وتعذّر تحميل النسخة الأحدث|| Save conflict and the latest copy could not be loaded'),'err');return;}
     const s=await r.json();
     if(!s||!s.data||typeof s.ver!=='number'){setSaveState('error');toast(lb(' تعارض في الحفظ — نسخة الخادم غير صالحة|| Save conflict — server copy invalid'),'err');return;}
+    setSaveBase(s.data,s.ver);
     const serverDb = migrate(s.data);
     const localDb = db;
     const collections = ['compounds','buildings','assets','wos','pms','inv','suppliers','prs','pos','contracts','units','tenants','projects','employees','shifts','teams','notifs','providers','rfqs'];
@@ -2629,6 +2719,7 @@ async function boot(){
     const j=await r.json();
     if(j.data){
       db=j.data;AUTH.ver=j.ver;if(j.csrf)AUTH.csrf=j.csrf;
+      setSaveBase(j.data,j.ver);
       AUTH.usersRaw=JSON.parse(JSON.stringify(j.data.users||[]));
       if(j.marketplace){ me = { id:j.userId, role:j.role, name:(j.data.users[0]||{}).name||'' }; await marketBootstrap(); return; }
       db=migrate(db);
@@ -3121,7 +3212,7 @@ async function changeMyPassword(cur,next){
   const u=db.users.find(x=>x.id===(me&&me.id));if(u)u.defaultPw=false;
   try{
     const s=await(await api('/state')).json();
-    if(s&&s.data){AUTH.ver=s.ver;db=migrate(s.data);AUTH.usersRaw=JSON.parse(JSON.stringify(s.data.users||[]));me=db.users.find(x=>x.id===(me&&me.id))||me;}
+    if(s&&s.data){AUTH.ver=s.ver;setSaveBase(s.data,s.ver);db=migrate(s.data);AUTH.usersRaw=JSON.parse(JSON.stringify(s.data.users||[]));me=db.users.find(x=>x.id===(me&&me.id))||me;}
   }catch(e){}
   saveLocalCopy();render();
   return { ok:true };
@@ -3184,7 +3275,7 @@ async function doLogin(e){
       const j = await r.json();
       AUTH.csrf = j.csrf || ''; AUTH.ver = j.ver; AUTH.mustChange = !!j.mustChange;
       const s = await(await api('/state')).json();
-      db = s.data; AUTH.ver = s.ver;
+      db = s.data; AUTH.ver = s.ver; setSaveBase(s.data, s.ver);
       AUTH.usersRaw = JSON.parse(JSON.stringify((s.data&&s.data.users)||[]));
       if(s.marketplace){ me = { id:j.userId, role:j.role, name:(s.data.users[0]||{}).name||'' }; await marketBootstrap(); render(); return; }
       db = migrate(db);
@@ -11140,7 +11231,7 @@ function providerCard(p,withActions){
 async function mktVerify(pid,action){
   const r=await api('/market/providers/'+pid+'/verify',{method:'POST',body:JSON.stringify({action})});
   if(!r.ok)return toast(lb(' تعذر التحديث|| Update failed'),'err');
-  const s=await(await api('/state')).json(); db=s.data; AUTH.ver=s.ver; db=migrate(db); paintTab();
+  const s=await(await api('/state')).json(); db=s.data; AUTH.ver=s.ver; setSaveBase(s.data,s.ver); db=migrate(db); paintTab();
   toast(lb(' تم التحديث|| Updated'),'ok');
 }
 
