@@ -170,6 +170,11 @@ app.use('/vendor/pdfjs', express.static(path.join(NM, 'pdfjs-dist', 'legacy', 'b
 /* خطوط PDF القياسية (Helvetica/Times… غير المضمّنة) وخرائط CMap للخطوط CID — بدونها تُرسم الصفحة بلا نص */
 app.use('/vendor/pdfjs-fonts', express.static(path.join(NM, 'pdfjs-dist', 'standard_fonts'), vendorOpts));
 app.use('/vendor/pdfjs-cmaps', express.static(path.join(NM, 'pdfjs-dist', 'cmaps'), vendorOpts));
+/* خطوط الواجهة (عربي + لاتيني) من نفس الأصل — CSP لا تسمح بخطوط من طرف ثالث، وتعمل دون إنترنت خارجي */
+app.use('/vendor/fonts/alexandria', express.static(path.join(NM, '@fontsource-variable', 'alexandria', 'files'), vendorOpts));
+app.use('/vendor/fonts/space-grotesk', express.static(path.join(NM, '@fontsource-variable', 'space-grotesk', 'files'), vendorOpts));
+app.use('/vendor/fonts/inter', express.static(path.join(NM, '@fontsource-variable', 'inter', 'files'), vendorOpts));
+app.use('/vendor/fonts/plex-arabic', express.static(path.join(NM, '@fontsource', 'ibm-plex-sans-arabic', 'files'), vendorOpts));
 /* قراءة رموز QR لفواتير هيئة الزكاة (ZXing — WebAssembly) */
 app.get('/vendor/zxing/zxing-reader.js', (req, res) => { res.set('Cache-Control', 'public, max-age=2592000, immutable');
   res.sendFile(path.join(NM, 'zxing-wasm', 'dist', 'iife', 'reader', 'index.js')); });

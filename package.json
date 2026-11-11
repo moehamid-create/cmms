@@ -7,6 +7,10 @@
     "test": "node test/receipts.test.js && node test/pdf-text.test.js && node test/checklist.test.js && node test/state-guard.test.js && node test/state-patch.test.js"
   },
   "dependencies": {
+    "@fontsource-variable/alexandria": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
+    "@fontsource/ibm-plex-sans-arabic": "^5.3.0",
     "@neon/config": "^1.3.0",
     "@neon/env": "^1.2.1",
     "@tesseract.js-data/ara": "^1.0.0",

@@ -11,15 +11,60 @@
 <meta property="og:image" content="/logo.svg">
 <meta name="twitter:card" content="summary">
 <link rel="canonical" href="/request.html">
+<link rel="stylesheet" href="/fonts.css">
 <style>
-:root{--navy:#102a43;--teal:#0f766e;--mint:#dff7f1;--paper:#f7fafc;--ink:#17324d;--muted:#60758a;--line:#d7e2ea;--danger:#a33a3a}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(145deg,#e9f5f4,#f7fafc 52%,#e7eef6);font-family:"Segoe UI",Tahoma,Arial,sans-serif;color:var(--ink);padding:24px 16px 56px}.shell{max-width:760px;margin:auto}.hero{display:flex;align-items:center;gap:14px;margin:10px 0 22px}.mark{width:52px;height:52px;border-radius:16px;overflow:hidden;box-shadow:0 12px 24px #102a4330;flex:0 0 auto}.mark img{width:52px;height:52px;display:block}.hero h1{margin:0;font-size:22px}.hero p{margin:4px 0;color:var(--muted);font-size:13px}.langrow{text-align:center;margin-bottom:12px}.langrow button{border:1px solid var(--line);border-radius:99px;padding:6px 18px;font-size:12.5px;font-weight:800;cursor:pointer;background:#ffffffb8;color:var(--navy);font:inherit}.tabs{display:flex;gap:8px;margin-bottom:12px}.tab{flex:1;padding:13px;border:1px solid var(--line);border-radius:14px;background:#ffffffb8;color:var(--navy);font:inherit;font-weight:800;cursor:pointer}.tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:0 18px 45px #102a4314;margin-bottom:14px}h2{font-size:17px;margin:0 0 18px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}.field.full{grid-column:1/-1}label{font-size:13px;font-weight:800}input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--paper);color:var(--ink);font:inherit}textarea{min-height:110px;resize:vertical}input:focus,select:focus,textarea:focus{outline:3px solid #0f766e2b;border-color:var(--teal)}button.submit{width:100%;border:0;border-radius:12px;padding:13px;background:var(--teal);color:#fff;font:inherit;font-weight:900;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.notice{background:var(--mint);border:1px solid #a6dfd2;border-radius:13px;padding:13px;margin-bottom:16px;font-size:13px;line-height:1.7}.success{background:#effaf5;border:1px solid #9ad6b8;border-radius:13px;padding:16px;text-align:center;margin-bottom:16px}.success strong{display:block;color:#116149;font-size:22px;letter-spacing:1px;margin-top:6px}.error{color:var(--danger);background:#fff3f3;border:1px solid #efb6b6;border-radius:11px;padding:10px;font-size:13px;margin:10px 0}.hidden{display:none!important}.hint{text-align:center;color:var(--muted);font-size:12px;line-height:1.7}.result{border:1px solid var(--line);border-radius:13px;padding:13px;margin-top:10px}.result strong{display:block}.badge{display:inline-block;margin-top:7px;border-radius:99px;padding:4px 9px;background:var(--mint);color:#116149;font-size:12px;font-weight:800}@media(max-width:560px){body{padding:16px 12px 40px}.card{padding:18px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.hero h1{font-size:19px}}
+:root{--navy:#0b1020;--teal:#2f55f5;--mint:#edf1ff;--paper:#f7f8fc;--ink:#0b1020;--muted:#5c667c;--line:#e2e6f0;--line-strong:#cdd3e1;--danger:#c42b2b;
+  --font-ui:"Inter","IBM Plex Sans Arabic","Segoe UI",system-ui,-apple-system,"Noto Sans Arabic",Tahoma,sans-serif;
+  --font-display:"Space Grotesk","Alexandria","Inter","IBM Plex Sans Arabic","Segoe UI",system-ui,Tahoma,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);padding:28px 16px 56px;font-family:var(--font-ui);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  background:radial-gradient(900px 420px at 88% -10%,rgba(47,85,245,.12),transparent 64%),radial-gradient(720px 380px at 4% -6%,rgba(18,200,238,.09),transparent 60%),#f4f6fb;background-attachment:fixed}
+.shell{max-width:760px;margin:auto}
+.hero{display:flex;align-items:center;gap:14px;margin:8px 0 22px}
+.mark{width:52px;height:52px;border-radius:15px;overflow:hidden;box-shadow:0 12px 28px -10px rgba(47,85,245,.75);flex:0 0 auto}
+.mark img{width:52px;height:52px;display:block}
+.hero h1{margin:0;font-family:var(--font-display);font-size:24px;font-weight:700;line-height:1.4}
+.hero p{margin:2px 0 0;color:var(--muted);font-size:13.5px}
+.langrow{text-align:center;margin-bottom:12px}
+.langrow button{border:1px solid var(--line);border-radius:99px;padding:7px 18px;cursor:pointer;background:#fff;color:var(--ink);font:inherit;font-family:var(--font-display);font-size:12.5px;font-weight:500;transition:border-color .15s ease,color .15s ease}
+.langrow button:hover{color:var(--teal);border-color:#9fb0fb}
+.tabs{display:flex;gap:4px;margin-bottom:14px;padding:4px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.tab{flex:1;padding:11px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-weight:600;cursor:pointer;transition:background .15s ease,color .15s ease}
+.tab:hover{color:var(--ink)}
+.tab.active{background:linear-gradient(180deg,#3a5cf7,#2f55f5);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 8px 20px -10px rgba(47,85,245,.8)}
+.card{position:relative;background:#fff;border:1px solid var(--line);border-radius:22px;padding:26px;box-shadow:0 1px 2px rgba(11,16,32,.04),0 28px 64px -32px rgba(47,85,245,.3);margin-bottom:14px}
+.card::before{content:"";position:absolute;top:-1px;inset-inline:32px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#2f55f5 30%,#12c8ee 70%,transparent)}
+h2{font-family:var(--font-display);font-size:18px;font-weight:600;margin:0 0 18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field.full{grid-column:1/-1}
+label{font-size:12.5px;font-weight:600;color:#2f384d}
+input,select,textarea{width:100%;min-height:46px;padding:11px 13px;border:1px solid var(--line-strong);border-radius:12px;background:var(--paper);color:var(--ink);font:inherit;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}
+textarea{min-height:110px;resize:vertical;line-height:1.7}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px rgba(47,85,245,.2)}
+button.submit{width:100%;min-height:48px;border:0;border-radius:12px;padding:13px;background:linear-gradient(180deg,#3a5cf7,#2f55f5);color:#fff;font:inherit;font-size:15px;font-weight:600;cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 10px 24px -10px rgba(47,85,245,.75);transition:filter .15s ease,box-shadow .15s ease}
+button.submit:hover{filter:brightness(1.07);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 16px 32px -10px rgba(47,85,245,.85)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+button:disabled{opacity:.55;cursor:not-allowed;filter:none}
+.notice{background:var(--mint);border:1px solid #cdd8fd;border-radius:13px;padding:13px 14px;margin-bottom:16px;font-size:13px;line-height:1.8;color:#2f384d}
+.success{background:#e2f6ee;border:1px solid #a9dcc6;border-radius:13px;padding:16px;text-align:center;margin-bottom:16px}
+.success strong{display:block;color:#04795a;font-family:var(--font-display);font-size:24px;font-weight:600;letter-spacing:1px;margin-top:6px}
+.error{color:var(--danger);background:#fdecec;border:1px solid #f2bcbc;border-radius:12px;padding:10px 12px;font-size:13px;margin:10px 0}
+.hidden{display:none!important}
+.hint{text-align:center;color:var(--muted);font-size:12px;line-height:1.8}
+.hint a{color:var(--teal);font-weight:600}
+.result{border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px;background:var(--paper)}
+.result strong{display:block;font-weight:600}
+.badge{display:inline-block;margin-top:7px;border-radius:7px;padding:3px 10px;background:var(--mint);border:1px solid #cdd8fd;color:#2447e8;font-size:12px;font-weight:600}
+@media(max-width:560px){body{padding:16px 12px 40px}.card{padding:20px 16px;border-radius:20px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.hero h1{font-size:20px}}
 </style></head>
 <body><main class="shell">
 <header class="hero"><div class="mark" aria-hidden="true"><img src="/logo-mark.svg" alt=""></div><div><h1 data-t="title">بوابة بلاغات الصيانة</h1><p data-t="subtitle">أرسل طلبك إلى إدارة المجمع بأمان وبدون تسجيل دخول</p></div></header>
 <div class="langrow"><button id="langBtn" onclick="toggleLang()">English</button></div>
 <div class="tabs" role="tablist"><button class="tab active" id="newTab" onclick="show('new')" data-t="tabNew">بلاغ جديد</button><button class="tab" id="trackTab" onclick="show('track')" data-t="tabTrack">تتبع بلاغ</button></div>
 <section class="card" id="newPane"><div class="notice" data-t="emergencyTop">للحالات الطارئة مثل الحريق أو التسريب الكبير، تواصل مع إدارة المجمع مباشرة.</div><div id="success" class="success hidden"><span data-t="doneOk">تم استلام بلاغك. احتفظ برقم البلاغ ورمز المتابعة.</span><strong id="successNo"></strong><div id="successToken" class="hint"></div></div><h2 data-t="formH">تفاصيل البلاغ</h2><form id="form"><div class="grid"><div class="field"><label for="compound" data-t="compound">المجمع *</label><select id="compound" required><option>جارِ التحميل…</option></select></div><div class="field"><label for="name" data-t="name">الاسم *</label><input id="name" required maxlength="80" autocomplete="name"></div><div class="field"><label for="phone" data-t="phone">الجوال *</label><input id="phone" required maxlength="20" inputmode="tel" dir="ltr" autocomplete="tel" placeholder="05xxxxxxxx"></div><div class="field"><label for="unit" data-t="unit">الوحدة</label><input id="unit" maxlength="30"></div><div class="field"><label for="category" data-t="cat">التصنيف</label><select id="category"></select></div><div class="field full"><label for="title" data-t="reqTitle">عنوان البلاغ *</label><input id="title" required maxlength="140"></div><div class="field full"><label for="details" data-t="details">شرح المشكلة</label><textarea id="details" maxlength="2000"></textarea></div></div><div id="error" class="error hidden" role="alert"></div><button class="submit" id="send" data-t="send">إرسال البلاغ</button></form></section>
-<section class="card hidden" id="trackPane"><h2 data-t="trackH">تتبع بلاغك</h2><div class="notice" data-t="trackNote">أدخل رمز المتابعة الذي ظهر لك بعد إرسال البلاغ. لا نعرض البلاغات بالبحث عن رقم الجوال حفاظاً على الخصوصية.</div><div class="field"><label for="token" data-t="tokenLbl">رمز المتابعة</label><input id="token" dir="ltr" autocomplete="one-time-code"></div><div id="trackError" class="error hidden" role="alert"></div><button class="submit" id="trackBtn" onclick="track()" data-t="trackBtn">عرض حالة البلاغ</button><div id="results" aria-live="polite"></div></section><p class="hint" data-t="privacy">تُستخدم بياناتك لمعالجة طلب الصيانة فقط، ولا تشارك مع جهات تسويقية.</p><p class="hint"><a href="/privacy.html" data-t="privacyLink" style="color:#0f766e">الخصوصية</a></p></main>
+<section class="card hidden" id="trackPane"><h2 data-t="trackH">تتبع بلاغك</h2><div class="notice" data-t="trackNote">أدخل رمز المتابعة الذي ظهر لك بعد إرسال البلاغ. لا نعرض البلاغات بالبحث عن رقم الجوال حفاظاً على الخصوصية.</div><div class="field"><label for="token" data-t="tokenLbl">رمز المتابعة</label><input id="token" dir="ltr" autocomplete="one-time-code"></div><div id="trackError" class="error hidden" role="alert"></div><button class="submit" id="trackBtn" onclick="track()" data-t="trackBtn">عرض حالة البلاغ</button><div id="results" aria-live="polite"></div></section><p class="hint" data-t="privacy">تُستخدم بياناتك لمعالجة طلب الصيانة فقط، ولا تشارك مع جهات تسويقية.</p><p class="hint"><a href="/privacy.html" data-t="privacyLink">الخصوصية</a></p></main>
 <script>
 const $=id=>document.getElementById(id), qs=new URLSearchParams(location.search);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
