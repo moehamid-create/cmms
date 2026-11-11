@@ -170,6 +170,11 @@ app.use('/vendor/pdfjs', express.static(path.join(NM, 'pdfjs-dist', 'legacy', 'b
 /* خطوط PDF القياسية (Helvetica/Times… غير المضمّنة) وخرائط CMap للخطوط CID — بدونها تُرسم الصفحة بلا نص */
 app.use('/vendor/pdfjs-fonts', express.static(path.join(NM, 'pdfjs-dist', 'standard_fonts'), vendorOpts));
 app.use('/vendor/pdfjs-cmaps', express.static(path.join(NM, 'pdfjs-dist', 'cmaps'), vendorOpts));
+/* خطوط الواجهة (عربي + لاتيني) من نفس الأصل — CSP لا تسمح بخطوط من طرف ثالث، وتعمل دون إنترنت خارجي */
+app.use('/vendor/fonts/alexandria', express.static(path.join(NM, '@fontsource-variable', 'alexandria', 'files'), vendorOpts));
+app.use('/vendor/fonts/space-grotesk', express.static(path.join(NM, '@fontsource-variable', 'space-grotesk', 'files'), vendorOpts));
+app.use('/vendor/fonts/inter', express.static(path.join(NM, '@fontsource-variable', 'inter', 'files'), vendorOpts));
+app.use('/vendor/fonts/plex-arabic', express.static(path.join(NM, '@fontsource', 'ibm-plex-sans-arabic', 'files'), vendorOpts));
 /* قراءة رموز QR لفواتير هيئة الزكاة (ZXing — WebAssembly) */
 app.get('/vendor/zxing/zxing-reader.js', (req, res) => { res.set('Cache-Control', 'public, max-age=2592000, immutable');
   res.sendFile(path.join(NM, 'zxing-wasm', 'dist', 'iife', 'reader', 'index.js')); });
@@ -1031,6 +1036,73 @@ function rbacGuard(role, cur, next){
   return dropped;
 }
 
+/* ---- الحفظ التفاضلي: العميل يرسل التغييرات فقط بدل الحالة كاملة ----
+   patch = { set:{key:value}, unset:[key], coll:{key:{key:'id'|'no', up:[records], del:[keys], head:[keys], order:[keys]}} }
+   · set/unset: استبدال/حذف مفتاح كامل (قيم بسيطة أو مصفوفات بلا معرّفات)
+   · coll: تعديل سجلات مصفوفة بمعرّفها: up يستبدل السجل كاملاً أو يضيفه (الجديد يُلحق بالنهاية إلا من في head فيُقدَّم)،
+     del يحذف، وorder (اختياري) يعيد ترتيب المصفوفة كاملة.
+   تُبنى الحالة الكاملة الجديدة على الخادم ثم تمر بنفس مسار التحقق والصلاحيات كالحفظ الكامل. */
+const PATCH_BAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const PATCH_REC_KEYS = new Set(['id', 'no']);
+function badPatch(msg) { const e = new Error(msg); e.badPatch = true; return e; }
+function patchKey(k) {
+  if (typeof k !== 'string' || !k || k.length > 64 || PATCH_BAD_KEYS.has(k)) throw badPatch('bad key');
+  return k;
+}
+function isPlainObj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
+function recId(v) { return (typeof v === 'string' || typeof v === 'number') && v !== '' ? String(v) : null; }
+function applyStatePatch(curData, patch) {
+  if (!isPlainObj(patch)) throw badPatch('patch must be an object');
+  const next = JSON.parse(JSON.stringify(curData || {}));
+  const { set, unset, coll } = patch;
+  if (set != null) {
+    if (!isPlainObj(set)) throw badPatch('set must be an object');
+    for (const k of Object.keys(set)) next[patchKey(k)] = set[k];
+  }
+  if (unset != null) {
+    if (!Array.isArray(unset)) throw badPatch('unset must be an array');
+    for (const k of unset) delete next[patchKey(k)];
+  }
+  if (coll != null) {
+    if (!isPlainObj(coll)) throw badPatch('coll must be an object');
+    for (const k of Object.keys(coll)) {
+      patchKey(k);
+      const spec = coll[k];
+      if (!isPlainObj(spec) || !PATCH_REC_KEYS.has(spec.key)) throw badPatch('bad coll spec: ' + k);
+      const K = spec.key;
+      const up = spec.up == null ? [] : spec.up, del = spec.del == null ? [] : spec.del;
+      const head = spec.head == null ? [] : spec.head;
+      if (!Array.isArray(up) || !Array.isArray(del) || !Array.isArray(head) || (spec.order != null && !Array.isArray(spec.order)))
+        throw badPatch('bad coll arrays: ' + k);
+      const dels = new Set(del.map(recId));
+      let arr = (Array.isArray(next[k]) ? next[k] : []).filter(r => !(isPlainObj(r) && dels.has(recId(r[K]))));
+      const pos = new Map();
+      arr.forEach((r, i) => { const id = isPlainObj(r) ? recId(r[K]) : null; if (id != null && !pos.has(id)) pos.set(id, i); });
+      const headSet = new Set(head.map(recId));
+      const headRecs = new Map(), tail = [], tailPos = new Map();
+      for (const rec of up) {
+        const id = isPlainObj(rec) ? recId(rec[K]) : null;
+        if (id == null) throw badPatch('record without ' + K + ' in ' + k);
+        if (pos.has(id)) arr[pos.get(id)] = rec;
+        else if (headSet.has(id)) headRecs.set(id, rec);
+        else if (tailPos.has(id)) tail[tailPos.get(id)] = rec;
+        else { tailPos.set(id, tail.length); tail.push(rec); }
+      }
+      const lead = head.map(recId).filter(id => headRecs.has(id)).map(id => headRecs.get(id));
+      arr = lead.concat(arr, tail);
+      if (spec.order != null) {
+        const byId = new Map(), rest = [];
+        arr.forEach(r => { const id = isPlainObj(r) ? recId(r[K]) : null; if (id != null && !byId.has(id)) byId.set(id, r); else rest.push(r); });
+        const out = [];
+        for (const id of spec.order.map(recId)) if (byId.has(id)) { out.push(byId.get(id)); byId.delete(id); }
+        arr = out.concat(Array.from(byId.values()), rest);   /* ما لم يذكره الترتيب لا يضيع */
+      }
+      next[k] = arr;
+    }
+  }
+  return next;
+}
+
 /* ---- حفظ الحالة (مع كشف تعارض التعديل المتزامن + RBAC على المستخدمين) ---- */
 app.post('/api/state', async (req,res)=>{
   let cur;
@@ -1044,10 +1116,20 @@ app.post('/api/state', async (req,res)=>{
   /* دور "مُطّلع" للقراءة فقط — لا يكتب الحالة */
   if(cur.data && actor.session.role==='viewer')
     return res.status(403).json({error:'READONLY'});
-  const {baseVer,data} = req.body || {};
-  if(!data) return res.status(400).json({error:'NO_DATA'});
+  const {baseVer, patch} = req.body || {};
+  let data = (req.body || {}).data;
+  if(!data && patch == null) return res.status(400).json({error:'NO_DATA'});
   if(cur.data && Number(baseVer) !== cur.ver)
     return res.status(409).json({error:'CONFLICT', ver:cur.ver});
+  /* حفظ تفاضلي: نبني الحالة الكاملة من المخزّنة + التغييرات، ثم نكمل بنفس الفحوص */
+  if(!data){
+    if(!cur.data) return res.status(400).json({error:'NO_DATA'});
+    try { data = applyStatePatch(cur.data, patch); }
+    catch (e) {
+      if (e.badPatch) return res.status(400).json({error:'BAD_PATCH', detail:e.message});
+      console.error('patch apply failed:', e.message); return res.status(500).json({error:'PATCH'});
+    }
+  }
   /* إدارة المستخدمين للمدير فقط — تُقارن بعد تطبيع الحقول حتى لا يُرفض الحفظ بسبب فروق تنسيقية */
   if (cur.data && actor.session.role !== 'admin') {
     const nextU = canonUsers(normalizeUserList(JSON.parse(JSON.stringify(data.users || [])), data.compounds || []));
